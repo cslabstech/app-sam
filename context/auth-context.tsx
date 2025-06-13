@@ -9,6 +9,8 @@ interface AuthContextProps {
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   loginWithToken: (token: string, user: any) => Promise<void>;
+  requestOtp: (phone: string) => Promise<any>;
+  verifyOtp: (phone: string, otp: string) => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -22,10 +24,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
     refreshUser,
     loginWithToken,
+    requestOtp,
+    verifyOtp,
   } = useAuthLogic();
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, refreshUser, loginWithToken }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, refreshUser, loginWithToken, requestOtp, verifyOtp }}>
       {children}
     </AuthContext.Provider>
   );

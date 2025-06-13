@@ -10,7 +10,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
   Image,
   Keyboard,
   KeyboardAvoidingView,
@@ -77,10 +76,9 @@ export default function LoginScreen() {
       router.replace('/(tabs)');
     } catch (e: any) {
       if (e.message?.includes('Network') || e.code === 'ECONNABORTED') {
-        Alert.alert('Tidak dapat terhubung ke server', 'Periksa koneksi internet Anda.');
+        setError('Tidak dapat terhubung ke server. Periksa koneksi internet Anda.');
       } else {
-        setError(e?.response?.data?.message || 'Periksa email/kata sandi Anda');
-        Alert.alert('Login Gagal', e?.response?.data?.message || 'Periksa email/kata sandi Anda');
+        setError(e?.response?.data?.message || e?.message || 'Periksa email/kata sandi Anda');
       }
     } finally {
       setLoading(false);
@@ -177,7 +175,17 @@ export default function LoginScreen() {
                 title="Login dengan WhatsApp"
                 variant="secondary"
                 onPress={() => router.push('/login-otp')}
-                style={{ marginTop: 8, backgroundColor: '#25D366' }}
+                style={{
+                  marginTop: 8,
+                  backgroundColor: '#25D366',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                textStyle={{ color: '#fff', fontWeight: 'bold' }}
+                leftIcon={
+                  <Ionicons name="logo-whatsapp" size={22} color="#fff" />
+                }
                 accessibilityLabel="Login dengan WhatsApp"
                 accessibilityHint="Login menggunakan OTP yang dikirim ke WhatsApp"
                 accessibilityRole="button"

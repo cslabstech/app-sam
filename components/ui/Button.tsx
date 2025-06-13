@@ -25,6 +25,7 @@ interface ButtonProps extends TouchableOpacityProps {
   loading?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
+  leftIcon?: React.ReactNode;
 }
 
 export function Button({
@@ -36,6 +37,7 @@ export function Button({
   disabled,
   style,
   textStyle,
+  leftIcon,
   ...props
 }: ButtonProps) {
   const colorScheme = useColorScheme();
@@ -140,18 +142,22 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={getTextColor()} size="small" />
       ) : (
-        <Text
-          style={[
-            styles.buttonText,
-            {
-              color: getTextColor(),
-              fontSize: getFontSize(),
-            },
-            textStyle,
-          ]}
-        >
-          {title}
-        </Text>
+        <>
+          {leftIcon ? <>{leftIcon}</> : null}
+          <Text
+            style={[
+              styles.buttonText,
+              {
+                color: getTextColor(),
+                fontSize: getFontSize(),
+                marginLeft: leftIcon ? 8 : 0,
+              },
+              textStyle,
+            ]}
+          >
+            {title}
+          </Text>
+        </>
       )}
     </TouchableOpacity>
   );

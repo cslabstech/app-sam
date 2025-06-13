@@ -33,46 +33,43 @@ export function useAuthLogic() {
     loadAuth();
   }, []);
 
+  // Helper untuk fetch + log + error handling
+  async function fetchWithLog({ url, method = 'POST', body, logLabel }: { url: string, method?: string, body?: any, logLabel: string }) {
+    log(`[${logLabel}] Request:`, { url, method, body });
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      ...(body ? { body: JSON.stringify(body) } : {})
+    });
+    log(`[${logLabel}] Response status:`, res.status);
+    const data = await res.json();
+    log(`[${logLabel}] Response body:`, data);
+    if (!res.ok || (data?.meta && data?.meta?.code && data.meta.code !== 200)) {
+      log(`[${logLabel}] Failed:`, data?.meta?.message || data?.message);
+      throw new Error(data?.meta?.message || data?.message || 'Request gagal');
+    }
+    return data;
+  }
+
   const login = async (username: string, password: string) => {
     setLoading(true);
     try {
       if (notifIdLoading) {
+        log('[LOGIN] notif_id OneSignal sedang diproses.');
         throw new Error('notif_id OneSignal sedang diproses. Silakan tunggu sebentar dan coba lagi.');
       }
       let notif_id: string | null = notifId;
       if (!notif_id) {
+        log('[LOGIN] notif_id OneSignal tidak tersedia.');
         throw new Error('notif_id OneSignal tidak tersedia. Pastikan aplikasi sudah terdaftar di OneSignal.');
       }
-      const payload = {
-        version: '1.0.3',
-        username,
-        password,
-        notif_id,
-      };
-      log('[LOGIN] Request payload:', payload);
-      const response = await fetch(`${BASE_URL}/user/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+      const data = await fetchWithLog({
+        url: `${BASE_URL}/user/login`,
+        body: { version: '1.0.3', username, password, notif_id },
+        logLabel: 'LOGIN'
       });
-      log('[LOGIN] Response status:', response.status);
-      const result = await response.json();
-      log('[LOGIN] Response body:', result);
-      if (
-        response.ok &&
-        result.meta && result.meta.code === 200 &&
-        result.data && result.data.access_token && result.data.user
-      ) {
-        await AsyncStorage.setItem('token', result.data.access_token);
-        await AsyncStorage.setItem('user', JSON.stringify(result.data.user));
-        setToken(result.data.access_token);
-        setUser(result.data.user);
-        log('[LOGIN] Login success, token set');
-      } else {
-        const msg = (result.meta && result.meta.message) || result.message || 'Login gagal';
-        log('[LOGIN] Login failed:', msg);
-        throw new Error(msg);
-      }
+      await loginWithToken(data.data.access_token, data.data.user);
+      log('[LOGIN] Login success, token set');
     } catch (err) {
       log('[LOGIN] Error:', err);
       throw err;
@@ -105,18 +102,17 @@ export function useAuthLogic() {
     if (!token) return;
     setLoading(true);
     try {
-      const response = await fetch(`${BASE_URL}/user`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const data = await fetchWithLog({
+        url: `${BASE_URL}/user`,
+        method: 'GET',
+        logLabel: 'REFRESH_USER'
       });
-      const result = await response.json();
-      if (response.ok && result.status === 200) {
-        setUser(result.data);
-        await AsyncStorage.setItem('user', JSON.stringify(result.data));
-        log('[REFRESH_USER] User data refreshed:', result.data);
-      } else {
-        log('[REFRESH_USER] Failed:', result.message || 'Gagal mendapatkan data user');
-        throw new Error(result.message || 'Gagal mendapatkan data user');
-      }
+      setUser(data.data);
+      await AsyncStorage.setItem('user', JSON.stringify(data.data));
+      log('[REFRESH_USER] User data refreshed:', data.data);
+    } catch (err) {
+      log('[REFRESH_USER] Failed:', err);
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -130,6 +126,27 @@ export function useAuthLogic() {
     log('[LOGIN_WITH_TOKEN] Token and user set from OTP login');
   };
 
+  // Request OTP
+  const requestOtp = async (phone: string) => {
+    return fetchWithLog({
+      url: `${BASE_URL}/user/send-otp`,
+      body: { phone },
+      logLabel: 'OTP'
+    });
+  };
+
+  // Verify OTP
+  const verifyOtp = async (phone: string, otp: string) => {
+    const data = await fetchWithLog({
+      url: `${BASE_URL}/user/verify-otp`,
+      body: { phone, otp },
+      logLabel: 'OTP_VERIFY'
+    });
+    await loginWithToken(data.data.access_token, data.data.user);
+    log('[OTP] Login success from OTP, token set');
+    return data;
+  };
+
   return {
     user,
     token,
@@ -140,5 +157,7 @@ export function useAuthLogic() {
     loginWithToken,
     setUser,
     setToken,
+    requestOtp,
+    verifyOtp,
   };
 }

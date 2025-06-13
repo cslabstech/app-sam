@@ -1,6 +1,5 @@
 import { AuthProvider } from '@/context/auth-context';
 import { NotifIdProvider, useNotifId } from '@/context/notifid-context';
-import { useColorScheme } from '@/hooks/useColorScheme';
 import Constants from 'expo-constants';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -77,7 +76,6 @@ function NotifIdInitializer({ children }: { children: React.ReactNode }) {
 }
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
