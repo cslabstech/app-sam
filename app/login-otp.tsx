@@ -3,7 +3,6 @@ import { Input as FormInput } from '@/components/ui/Input';
 import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/context/auth-context';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { useOtpLogin } from '@/hooks/useOtpLogin';
 import { spacing } from '@/styles/spacing';
 import { typography } from '@/styles/typography';
 import { useRouter } from 'expo-router';
@@ -18,23 +17,57 @@ export default function LoginOtpScreen() {
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [showOtp, setShowOtp] = useState(false);
-  const { loading, error, success, sendOtp, verifyOtp } = useOtpLogin();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const auth = useAuth();
 
   const handleRequestOtp = async () => {
-    const ok = await sendOtp(phone);
-    if (ok) {
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
+    try {
+      const res = await fetch(`${process.env.EXPO_PUBLIC_BASE_URL}/user/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      });
+      const data = await res.json();
+      if (!res.ok || data?.meta?.code !== 200) {
+        throw new Error(data?.meta?.message || 'Gagal mengirim OTP');
+      }
+      setSuccess(true);
       setShowOtp(true);
       Alert.alert('OTP Terkirim', 'Kode OTP sudah dikirim ke WhatsApp Anda.');
+    } catch (err: any) {
+      setError(err.message || 'Gagal mengirim OTP');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleVerifyOtp = async () => {
-    const data = await verifyOtp(phone, otp);
-    if (data && data.access_token) {
-      await auth.loginWithToken(data.access_token, data.user);
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
+    try {
+      const res = await fetch(`${process.env.EXPO_PUBLIC_BASE_URL}/user/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, otp }),
+      });
+      const data = await res.json();
+      if (!res.ok || data?.meta?.code !== 200) {
+        throw new Error(data?.meta?.message || 'OTP salah atau login gagal');
+      }
+      setSuccess(true);
+      await auth.loginWithToken(data.data.access_token, data.data.user);
       Alert.alert('Login Berhasil', 'Anda berhasil login dengan OTP WhatsApp!');
       router.replace('/(tabs)');
+    } catch (err: any) {
+      setError(err.message || 'OTP salah atau login gagal');
+    } finally {
+      setLoading(false);
     }
   };
 

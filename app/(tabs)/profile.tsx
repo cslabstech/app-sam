@@ -147,7 +147,7 @@ export default function ProfileScreen() {
             styles.addUserButton,
             { backgroundColor: colors.primary, marginBottom: spacing.lg },
           ]}
-          onPress={() => router.push('/tambah-user')}
+          onPress={() => router.push('/add-user')}
           activeOpacity={0.85}
         >
           <IconSymbol name={ICONS.person as any} size={20} color={'#fff'} />
