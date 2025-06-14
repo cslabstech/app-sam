@@ -11,7 +11,7 @@ import ViewShot, { captureRef } from 'react-native-view-shot';
 
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { useOutlets } from '@/hooks/useOutlets';
+import { useOutlet } from '@/hooks/useOutlet';
 import { useVisits } from '@/hooks/useVisits';
 
 // Tambahkan ulang tipe ini karena sudah tidak ada di OutletAPI
@@ -44,7 +44,8 @@ export default function CheckInScreen() {
   const outletId = params.id as string;
 
   const [selectedOutletId, setSelectedOutletId] = useState<string | null>(outletId || null);
-  const { outlets, loading: loadingOutlets } = useOutlets('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const { outlets, loading } = useOutlet(searchQuery);
   const selectedOutlet = outlets.find(o => o.id === selectedOutletId) || null;
 
   const { submitVisit } = useVisits();
@@ -496,7 +497,7 @@ export default function CheckInScreen() {
             </TouchableOpacity>
             {showOutletDropdown && currentStep !== 2 && (
               <View style={{ maxHeight: 320, backgroundColor: '#fff', borderTopWidth: 1, borderColor: colors.border }}>
-                {loadingOutlets ? (
+                {loading ? (
                   <Text style={{ padding: 16, color: colors.textSecondary }}>Memuat outlet...</Text>
                 ) : (
                   <>

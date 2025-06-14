@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { useOutletDetail } from '@/hooks/useOutletDetail';
+import { useOutlet } from '@/hooks/useOutlet';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -11,8 +11,8 @@ export default function OutletEditPage() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
-  const { kode } = useLocalSearchParams<{ kode: string }>();
-  const { outlet, loading, error, fetchOutlet, updateOutlet } = useOutletDetail();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { outlet, loading, error, fetchOutlet, updateOutlet } = useOutlet('');
   const [form, setForm] = useState({
     kodeOutlet: '',
     namaPemilikOutlet: '',
@@ -21,8 +21,8 @@ export default function OutletEditPage() {
   });
 
   useEffect(() => {
-    if (kode) fetchOutlet(kode as string);
-  }, [kode]);
+    if (id) fetchOutlet(id as string);
+  }, [id]);
 
   useEffect(() => {
     if (outlet) {
@@ -40,7 +40,8 @@ export default function OutletEditPage() {
   };
 
   const handleUpdate = async () => {
-    const result = await updateOutlet(form);
+    if (!outlet) return;
+    const result = await updateOutlet(outlet.id, form);
     if (result.success) {
       Alert.alert('Success', 'Outlet updated successfully');
       router.back();

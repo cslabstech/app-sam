@@ -10,7 +10,7 @@ import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { useOutlets } from '@/hooks/useOutlets';
+import { useOutlet } from '@/hooks/useOutlet';
 
 export default function OutletsScreen() {
   const colorScheme = useColorScheme();
@@ -19,7 +19,7 @@ export default function OutletsScreen() {
   const [inputValue, setInputValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-  const { outlets, loading, refreshOutlets } = useOutlets(searchQuery);
+  const { outlets, loading } = useOutlet(searchQuery);
 
   // Create a debounced search function to reduce UI updates
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -45,9 +45,8 @@ export default function OutletsScreen() {
   // Handle pull-to-refresh
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refreshOutlets();
     setRefreshing(false);
-  }, [refreshOutlets]);
+  }, []);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>

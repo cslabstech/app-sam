@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { OutletAPI } from '@/hooks/useOutlets';
+import { OutletAPI } from '@/hooks/useOutlet';
 
 interface OutletItemProps {
   outlet: OutletAPI;
@@ -34,7 +34,7 @@ const OutletItem: React.FC<OutletItemProps> = ({ outlet }) => {
   
   return (
     <TouchableOpacity
-      onPress={() => router.push({ pathname: '/outlet/[kode]/view', params: { kode: outlet.kodeOutlet } })}
+      onPress={() => router.push({ pathname: '/outlet/[kode]/view', params: { kode: outlet.id } })}
       style={{ 
         marginBottom: 12, 
         marginHorizontal: 2,

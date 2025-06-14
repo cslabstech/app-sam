@@ -30,7 +30,8 @@ export function useReferenceDropdowns() {
       },
     })
       .then((res) => res.json())
-      .then((data: Role[]) => {
+      .then((res) => {
+        const data = res.data || res; // support both new and old response
         log('[useReferenceDropdowns] roles:', data);
         setRoles(data);
       })
@@ -50,7 +51,8 @@ export function useReferenceDropdowns() {
       },
     })
       .then((res) => res.json())
-      .then((data: Record<string, string>) => {
+      .then((res) => {
+        const data = res.data || res;
         log('[useReferenceDropdowns] badanUsaha:', data);
         setBadanUsaha(data);
       })
@@ -69,7 +71,8 @@ export function useReferenceDropdowns() {
       },
     })
       .then((res) => res.json())
-      .then((data: Record<string, string>) => {
+      .then((res) => {
+        const data = res.data || res;
         log('[useReferenceDropdowns] divisions:', data);
         setDivisions(data);
       })
@@ -88,7 +91,8 @@ export function useReferenceDropdowns() {
       },
     })
       .then((res) => res.json())
-      .then((data: Record<string, string>) => {
+      .then((res) => {
+        const data = res.data || res;
         log('[useReferenceDropdowns] regions:', data);
         setRegions(data);
       })
@@ -107,7 +111,8 @@ export function useReferenceDropdowns() {
       },
     })
       .then((res) => res.json())
-      .then((data: Record<string, string>) => {
+      .then((res) => {
+        const data = res.data || res;
         log('[useReferenceDropdowns] clusters:', data);
         setClusters(data);
       })

@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { useOutletDetail } from '@/hooks/useOutletDetail';
+import { useOutlet } from '@/hooks/useOutlet';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import React, { useEffect, useState } from 'react';
@@ -16,8 +16,8 @@ export default function OutletViewPage() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
-  const { kode } = useLocalSearchParams<{ kode: string }>();
-  const { outlet, loading, error, fetchOutlet } = useOutletDetail();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { outlet, loading, error, fetchOutlet } = useOutlet('');
   const [activeTab, setActiveTab] = useState('info');
 
   // --- MEDIA TAB STATE ---
@@ -33,8 +33,8 @@ export default function OutletViewPage() {
   const videoPlayer = useVideoPlayer({ uri: outlet?.video ? `${BASE_URL_STORAGE}/${outlet.video}` : '' });
 
   useEffect(() => {
-    if (kode) fetchOutlet(kode as string);
-  }, [kode]);
+    if (id) fetchOutlet(id as string);
+  }, [id]);
 
   // Debug: log outlet setiap render
   useEffect(() => {
@@ -90,7 +90,7 @@ export default function OutletViewPage() {
           </Text>
         </View>
         <TouchableOpacity
-          onPress={() => router.push(`/outlet/${outlet?.kodeOutlet}/edit`)}
+          onPress={() => router.push(`/outlet/${outlet?.id}/edit`)}
           style={{ padding: 8, marginRight: 4 }}
         >
           <IconSymbol name="pencil" size={22} color={colors.primary} />
