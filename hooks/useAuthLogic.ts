@@ -38,7 +38,10 @@ export function useAuthLogic() {
     log(`[${logLabel}] Request:`, { url, method, body });
     const res = await fetch(url, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
       ...(body ? { body: JSON.stringify(body) } : {})
     });
     log(`[${logLabel}] Response status:`, res.status);

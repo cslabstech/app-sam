@@ -38,20 +38,24 @@ export function useAddUser(): UseAddUserResult {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });
       logger.log('[useAddUser] Response status:', res.status);
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        logger.error('[useAddUser] Error response:', data);
-        throw new Error(data?.message || 'Gagal menambah user');
+      const data = await res.json();
+      if (res.ok && data?.meta?.code === 200) {
+        setSuccess(true);
+        logger.log('[useAddUser] User added successfully');
+      } else {
+        setError(data?.meta?.message || 'Gagal menambah user');
+        setSuccess(false);
+        logger.log('[useAddUser] Failed:', data?.meta?.message || data?.message);
       }
-      setSuccess(true);
-      logger.log('[useAddUser] User added successfully');
     } catch (err: any) {
       setError(err.message || 'Gagal menambah user');
+      setSuccess(false);
       logger.error('[useAddUser] Exception:', err);
     } finally {
       setLoading(false);

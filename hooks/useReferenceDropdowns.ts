@@ -24,7 +24,10 @@ export function useReferenceDropdowns() {
   useEffect(() => {
     if (!token) return;
     fetch(`${BASE_URL}/role`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
     })
       .then((res) => res.json())
       .then((data: Role[]) => {
@@ -41,7 +44,10 @@ export function useReferenceDropdowns() {
   useEffect(() => {
     if (!token) return;
     fetch(`${BASE_URL}/badanusaha`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
     })
       .then((res) => res.json())
       .then((data: Record<string, string>) => {
@@ -57,7 +63,10 @@ export function useReferenceDropdowns() {
   const fetchDivisions = (badanUsahaId: string) => {
     if (!token) return;
     fetch(`${BASE_URL}/division?badan_usaha_id=${badanUsahaId}`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
     })
       .then((res) => res.json())
       .then((data: Record<string, string>) => {
@@ -73,7 +82,10 @@ export function useReferenceDropdowns() {
   const fetchRegions = (divisionId: string) => {
     if (!token) return;
     fetch(`${BASE_URL}/region?division_id=${divisionId}`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
     })
       .then((res) => res.json())
       .then((data: Record<string, string>) => {
@@ -89,7 +101,10 @@ export function useReferenceDropdowns() {
   const fetchClusters = (regionId: string) => {
     if (!token) return;
     fetch(`${BASE_URL}/cluster?region_id=${regionId}`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
     })
       .then((res) => res.json())
       .then((data: Record<string, string>) => {

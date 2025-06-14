@@ -53,6 +53,16 @@ export default function AddUserScreen() {
     };
   }, []);
 
+  React.useEffect(() => {
+    if (success && !error) {
+      Alert.alert('Sukses', 'User berhasil ditambahkan!', [
+        { text: 'OK', onPress: () => router.back() }
+      ]);
+    } else if (error) {
+      Alert.alert('Gagal', error);
+    }
+  }, [success, error]);
+
   const handleSubmit = async () => {
     await addUser({
       name,
@@ -64,14 +74,6 @@ export default function AddUserScreen() {
       region,
       cluster,
     });
-    setTimeout(() => {
-      if (success && !error) {
-        Alert.alert('Sukses', 'User berhasil ditambahkan!');
-        router.back();
-      } else if (error) {
-        Alert.alert('Gagal', error);
-      }
-    }, 100);
   };
 
   return (
