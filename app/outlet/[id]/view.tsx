@@ -36,9 +36,11 @@ export default function OutletViewPage() {
     if (id) fetchOutlet(id as string);
   }, [id]);
 
-  // Debug: log outlet setiap render
+  // Debug: log outlet setiap render, hanya jika outlet sudah ada
   useEffect(() => {
-    console.log('OutletViewPage outlet:', outlet);
+    if (outlet) {
+      console.log('OutletViewPage outlet:', outlet);
+    }
   }, [outlet]);
 
   const getStatusColor = (status: string) => {
@@ -69,7 +71,8 @@ export default function OutletViewPage() {
     </SafeAreaView>
   );
 
-  if (!outlet) return (
+  // Jangan render "Data outlet tidak ditemukan" jika masih loading
+  if (!outlet && !loading) return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
       <IconSymbol name="exclamationmark.triangle" size={48} color={colors.danger} />
       <Text style={{ color: colors.danger, margin: 20, textAlign: 'center' }}>Data outlet tidak ditemukan.</Text>

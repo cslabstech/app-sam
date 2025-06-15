@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import React, { useState } from 'react';
+import { useRouter } from 'expo-router';
+import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,122 +9,30 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Input } from '@/components/ui/Input';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-
-type OutletType = 'Retail' | 'Store' | 'Distributor' | 'Other';
-
-interface FormData {
-  name: string;
-  type: OutletType | '';
-  address: string;
-  contactName: string;
-  contactPhone: string;
-  notes: string;
-}
-
-interface FormErrors {
-  name?: string;
-  type?: string;
-  address?: string;
-  contactName?: string;
-  contactPhone?: string;
-}
+import { useRegisterOutletForm } from '@/hooks/useRegisterOutletForm';
 
 export default function RegisterOutletScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  
-  const [formData, setFormData] = useState<FormData>({
-    name: '',
-    type: '',
-    address: '',
-    contactName: '',
-    contactPhone: '',
-    notes: '',
-  });
-  
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedType, setSelectedType] = useState<OutletType | ''>('');
-  const [showTypeDropdown, setShowTypeDropdown] = useState(false);
-  
-  const outletTypes: OutletType[] = ['Retail', 'Store', 'Distributor', 'Other'];
-  
-  const handleInputChange = (field: keyof FormData, value: string) => {
-    setFormData({
-      ...formData,
-      [field]: value,
-    });
-    
-    // Clear error when user starts typing
-    if (errors[field as keyof FormErrors]) {
-      setErrors({
-        ...errors,
-        [field]: undefined,
-      });
-    }
-  };
-  
-  const handleTypeSelect = (type: OutletType) => {
-    setSelectedType(type);
-    setFormData({
-      ...formData,
-      type,
-    });
-    setShowTypeDropdown(false);
-    
-    if (errors.type) {
-      setErrors({
-        ...errors,
-        type: undefined,
-      });
-    }
-  };
-  
-  const validate = (): boolean => {
-    const newErrors: FormErrors = {};
-    
-    if (!formData.name.trim()) {
-      newErrors.name = 'Outlet name is required';
-    }
-    
-    if (!formData.type) {
-      newErrors.type = 'Please select outlet type';
-    }
-    
-    if (!formData.address.trim()) {
-      newErrors.address = 'Address is required';
-    }
-    
-    if (!formData.contactName.trim()) {
-      newErrors.contactName = 'Contact name is required';
-    }
-    
-    if (!formData.contactPhone.trim()) {
-      newErrors.contactPhone = 'Contact phone is required';
-    } else if (!/^[0-9]{10,15}$/.test(formData.contactPhone.replace(/[^0-9]/g, ''))) {
-      newErrors.contactPhone = 'Please enter a valid phone number';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-  
-  const handleSubmit = () => {
-    if (validate()) {
-      setIsSubmitting(true);
-      
-      // Simulate API call
-      setTimeout(() => {
-        setIsSubmitting(false);
-        // Navigate back to outlets screen
-        router.push('/(tabs)/outlets');
-      }, 1500);
-    }
-  };
-  
+  const router = useRouter();
+  const {
+    formData,
+    setFormData,
+    errors,
+    isSubmitting,
+    selectedType,
+    setSelectedType,
+    showTypeDropdown,
+    setShowTypeDropdown,
+    outletTypes,
+    handleInputChange,
+    handleTypeSelect,
+    handleSubmit,
+  } = useRegisterOutletForm();
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-            <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+      <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
         <TouchableOpacity 
           style={[styles.backButton, { borderWidth: 1, borderColor: colors.border }]} 
           onPress={() => router.back()}
@@ -134,11 +42,9 @@ export default function RegisterOutletScreen() {
         <Text style={[styles.screenTitle, { color: colors.text }]}>Register New Outlet</Text>
         <View style={styles.placeholder} />
       </View>
-      
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
         <Card>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Outlet Information</Text>
-          
           <Input
             label="Outlet Name"
             placeholder="Enter outlet name"
@@ -147,7 +53,6 @@ export default function RegisterOutletScreen() {
             error={errors.name}
             leftIcon={<IconSymbol name="building.2.fill" size={18} color={colors.textSecondary} />}
           />
-          
           <View style={styles.formGroup}>
             <Text style={[styles.label, { color: colors.text }]}>Outlet Type</Text>
             <TouchableOpacity
@@ -203,7 +108,6 @@ export default function RegisterOutletScreen() {
               <Text style={[styles.errorText, { color: colors.danger }]}>{errors.type}</Text>
             )}
           </View>
-          
           <Input
             label="Address"
             placeholder="Enter outlet address"
@@ -216,10 +120,8 @@ export default function RegisterOutletScreen() {
             leftIcon={<IconSymbol name="mappin.and.ellipse" size={18} color={colors.textSecondary} />}
           />
         </Card>
-        
         <Card>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Contact Information</Text>
-          
           <Input
             label="Contact Person Name"
             placeholder="Enter contact person name"
@@ -228,7 +130,6 @@ export default function RegisterOutletScreen() {
             error={errors.contactName}
             leftIcon={<IconSymbol name="person.fill" size={18} color={colors.textSecondary} />}
           />
-          
           <Input
             label="Contact Phone Number"
             placeholder="Enter contact phone number"
@@ -238,7 +139,6 @@ export default function RegisterOutletScreen() {
             keyboardType="phone-pad"
             leftIcon={<IconSymbol name="phone.fill" size={18} color={colors.textSecondary} />}
           />
-          
           <Input
             label="Notes (Optional)"
             placeholder="Enter additional notes"
@@ -250,7 +150,6 @@ export default function RegisterOutletScreen() {
             leftIcon={<IconSymbol name="text.alignleft" size={18} color={colors.textSecondary} />}
           />
         </Card>
-        
         <View style={styles.footer}>
           <Button
             title="Set Location"
@@ -258,7 +157,6 @@ export default function RegisterOutletScreen() {
             style={styles.locationButton}
             onPress={() => router.push('/map-picker')}
           />
-          
           <Button
             title={isSubmitting ? 'Submitting...' : 'Submit'}
             onPress={handleSubmit}

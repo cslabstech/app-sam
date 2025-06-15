@@ -11,8 +11,8 @@ import ViewShot, { captureRef } from 'react-native-view-shot';
 
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { useOutlet } from '@/hooks/useOutlet';
-import { useVisits } from '@/hooks/useVisits';
+import { useOutlet } from '@/hooks/useOutlet'; // Changed from useOutlets to useOutlet
+import { useUserVisit } from '@/hooks/useUserVisit';
 
 // Tambahkan ulang tipe ini karena sudah tidak ada di OutletAPI
 interface LocationCoords {
@@ -44,11 +44,10 @@ export default function CheckInScreen() {
   const outletId = params.id as string;
 
   const [selectedOutletId, setSelectedOutletId] = useState<string | null>(outletId || null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const { outlets, loading } = useOutlet(searchQuery);
+  const { outlets, loading: loadingOutlets } = useOutlet('');
   const selectedOutlet = outlets.find(o => o.id === selectedOutletId) || null;
 
-  const { submitVisit } = useVisits();
+  const { checkInVisit } = useUserVisit();
 
   const [isLoading, setIsLoading] = useState(false);
   const [storePhoto, setStorePhoto] = useState<PhotoMeta | null>(null);
@@ -412,7 +411,7 @@ export default function CheckInScreen() {
             const uri = await captureRef(viewShotRef, { format: 'jpg', quality: 0.5 });
             // Submit check-in
             const formData = new FormData();
-            formData.append('kode_outlet', selectedOutlet!.kodeOutlet);
+            formData.append('outlet_id', selectedOutletId); // Correct key for backend validation
             formData.append('latlong_in', `${currentLocation.latitude},${currentLocation.longitude}`);
             formData.append('tipe_visit', 'EXTRACALL');
             formData.append('picture_visit', {
@@ -420,7 +419,7 @@ export default function CheckInScreen() {
               name: `checkin-${Date.now()}.jpg`,
               type: 'image/jpeg',
             } as any);
-            const res = await submitVisit(formData);
+            const res = await checkInVisit(formData);
             if (res?.meta?.code === 200) {
               Alert.alert('Check In Berhasil', 'Data berhasil disimpan.');
               setStorePhoto(null);
@@ -497,7 +496,7 @@ export default function CheckInScreen() {
             </TouchableOpacity>
             {showOutletDropdown && currentStep !== 2 && (
               <View style={{ maxHeight: 320, backgroundColor: '#fff', borderTopWidth: 1, borderColor: colors.border }}>
-                {loading ? (
+                {loadingOutlets ? (
                   <Text style={{ padding: 16, color: colors.textSecondary }}>Memuat outlet...</Text>
                 ) : (
                   <>

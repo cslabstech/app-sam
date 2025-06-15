@@ -15,8 +15,8 @@ export default function OutletEditPage() {
   const { outlet, loading, error, fetchOutlet, updateOutlet } = useOutlet('');
   const [form, setForm] = useState({
     kodeOutlet: '',
-    namaPemilikOutlet: '',
-    nomerTlpOutlet: '',
+    nama_pemilik_outlet: '',
+    nomer_tlp_outlet: '',
     latlong: '',
   });
 
@@ -24,12 +24,19 @@ export default function OutletEditPage() {
     if (id) fetchOutlet(id as string);
   }, [id]);
 
+  // Log hanya jika outlet sudah ada dan bukan null
+  useEffect(() => {
+    if (outlet) {
+      console.log('OutletEditPage outlet:', outlet);
+    }
+  }, [outlet]);
+
   useEffect(() => {
     if (outlet) {
       setForm({
         kodeOutlet: outlet.kodeOutlet || '',
-        namaPemilikOutlet: outlet.namaPemilikOutlet || '',
-        nomerTlpOutlet: outlet.nomerTlpOutlet || '',
+        nama_pemilik_outlet: outlet.namaPemilikOutlet || outlet.nama_pemilik_outlet || '',
+        nomer_tlp_outlet: outlet.nomerTlpOutlet || outlet.nomer_tlp_outlet || '',
         latlong: outlet.latlong || '',
       });
     }
@@ -41,7 +48,15 @@ export default function OutletEditPage() {
 
   const handleUpdate = async () => {
     if (!outlet) return;
-    const result = await updateOutlet(outlet.id, form);
+    // Pastikan field yang dikirim ke backend sesuai snake_case
+    const payload = {
+      ...form,
+      kode_outlet: form.kodeOutlet,
+      nama_pemilik_outlet: form.nama_pemilik_outlet,
+      nomer_tlp_outlet: form.nomer_tlp_outlet,
+      latlong: form.latlong,
+    };
+    const result = await updateOutlet(outlet.id, payload);
     if (result.success) {
       Alert.alert('Success', 'Outlet updated successfully');
       router.back();
@@ -64,7 +79,8 @@ export default function OutletEditPage() {
     </SafeAreaView>
   );
 
-  if (!outlet) return (
+  // Jangan render "Data outlet tidak ditemukan" jika masih loading
+  if (!outlet && !loading) return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
       <Text style={{ color: colors.danger, margin: 20, textAlign: 'center' }}>Data outlet tidak ditemukan.</Text>
       <Button title="Go Back" variant="primary" onPress={() => router.back()} />
@@ -87,16 +103,16 @@ export default function OutletEditPage() {
           <Text style={[styles.inputLabel, { color: colors.text }]}>Nama Pemilik</Text>
           <TextInput
             style={[styles.input, { color: colors.text, borderColor: colors.border }]}
-            value={form.namaPemilikOutlet}
-            onChangeText={v => handleChange('namaPemilikOutlet', v)}
+            value={form.nama_pemilik_outlet}
+            onChangeText={v => handleChange('nama_pemilik_outlet', v)}
           />
         </View>
         <View style={styles.inputGroup}>
           <Text style={[styles.inputLabel, { color: colors.text }]}>Nomor Telepon</Text>
           <TextInput
             style={[styles.input, { color: colors.text, borderColor: colors.border }]}
-            value={form.nomerTlpOutlet}
-            onChangeText={v => handleChange('nomerTlpOutlet', v)}
+            value={form.nomer_tlp_outlet}
+            onChangeText={v => handleChange('nomer_tlp_outlet', v)}
             keyboardType="phone-pad"
           />
         </View>
