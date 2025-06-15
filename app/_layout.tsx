@@ -1,4 +1,6 @@
+import { NetworkBanner } from '@/components/NetworkBanner';
 import { AuthProvider } from '@/context/auth-context';
+import { NetworkProvider } from '@/context/network-context';
 import { NotifIdProvider, useNotifId } from '@/context/notifid-context';
 import Constants from 'expo-constants';
 import { useFonts } from 'expo-font';
@@ -90,16 +92,19 @@ export default function RootLayout() {
   }
 
   return (
-    <NotifIdProvider>
-      <NotifIdInitializer>
-        <AuthProvider>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="+not-found" />
-          </Stack>
-          <StatusBar style="auto" />
-        </AuthProvider>
-      </NotifIdInitializer>
-    </NotifIdProvider>
+    <NetworkProvider>
+      <NotifIdProvider>
+        <NotifIdInitializer>
+          <AuthProvider>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="+not-found" />
+            </Stack>
+            <StatusBar style="auto" />
+          </AuthProvider>
+        </NotifIdInitializer>
+      </NotifIdProvider>
+      <NetworkBanner />
+    </NetworkProvider>
   );
 }

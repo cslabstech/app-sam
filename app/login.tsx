@@ -1,48 +1,84 @@
 import { Button } from '@/components/ui/Button';
 import { Input as FormInput } from '@/components/ui/Input';
 import { Colors } from '@/constants/Colors';
+import { useAuth } from '@/context/auth-context';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { useLoginForm } from '@/hooks/useLoginForm';
 import { shadow } from '@/styles/shadow';
 import { spacing } from '@/styles/spacing';
 import { typography } from '@/styles/typography';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Image,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableWithoutFeedback,
-    View
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableWithoutFeedback,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
-  const {
-    email,
-    setEmail,
-    password,
-    setPassword,
-    loading,
-    error,
-    touched,
-    formErrors,
-    showPassword,
-    setShowPassword,
-    handleBlur,
-    handleLogin,
-    isFormValid,
-    keyboardVisible,
-    scrollViewRef,
-  } = useLoginForm();
+  const { login } = useAuth();
+  const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const router = useRouter();
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [touched, setTouched] = useState({ email: false, password: false });
+  const [formErrors, setFormErrors] = useState({ email: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+    return () => {
+      keyboardDidHideListener.remove();
+      keyboardDidShowListener.remove();
+    };
+  }, []);
+
+  const isFormValid = useMemo(() => {
+    return !formErrors.email && !formErrors.password && email.trim() !== '' && password.trim() !== '';
+  }, [email, password, formErrors]);
+
+  const handleBlur = (field: keyof typeof touched) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  };
+
+  const validateForm = () => {
+    const errors = { email: '', password: '' };
+    if (!email) {
+      errors.email = 'Username tidak boleh kosong';
+    }
+    if (!password) {
+      errors.password = 'Kata sandi tidak boleh kosong';
+    }
+    setFormErrors(errors);
+    return !errors.email && !errors.password;
+  };
+
+  const handleLogin = async () => {
+    setError('');
+    setTouched({ email: true, password: true });
+    if (!validateForm()) return;
+    setLoading(true);
+    try {
+      await login(email, password);
+      router.replace('/(tabs)');
+    } catch (e: any) {
+      setError(e?.response?.data?.message || e?.message || 'Periksa email/kata sandi Anda');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loginButtonStyle = Platform.OS === 'android'
     ? Object.assign({}, styles.loginButton, styles.loginButtonAndroid)
@@ -57,15 +93,14 @@ export default function LoginScreen() {
             contentContainerStyle={[styles.scrollContainer, keyboardVisible && { paddingBottom: 120 }]}
             showsVerticalScrollIndicator={false}
           >
-            {/* Logo dan judul - disembunyikan saat keyboard muncul */}
-            {!keyboardVisible && (
-              <View style={styles.logoContainer}>
-                <Image source={require('@/assets/images/icon.png')} style={styles.logo} resizeMode="contain" accessible accessibilityLabel="Logo aplikasi Audit Mobile" />
-                <Text style={[styles.logoText, { color: colors.primary }]}>SAM</Text>
+            {/* Logo dihilangkan sesuai permintaan */}
+            {/* {!keyboardVisible && (
+              <View style={styles.logoLeftAligned}>
+                <Image source={require('@/assets/images/icon.png')} style={styles.logo} resizeMode="contain" accessible accessibilityLabel="Logo aplikasi SAM" />
               </View>
-            )}
+            )} */}
             <View style={styles.formContainer}>
-              <Text style={[styles.title, { color: colors.text }]}>Login</Text>
+              <Text style={[styles.title, { color: colors.text }]}>Selamat datang di SAM</Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Silakan login untuk masuk aplikasi</Text>
               {error ? (
                 <View style={styles.errorContainer} accessible accessibilityLabel={`Error: ${error}`} accessibilityRole="alert">
@@ -130,24 +165,29 @@ export default function LoginScreen() {
                 accessibilityRole="button"
                 accessibilityState={{ disabled: !isFormValid || loading, busy: loading }}
               />
+              <View style={styles.separatorContainer}>
+                <View style={styles.separatorLine} />
+                <Text style={styles.separatorText}>atau</Text>
+                <View style={styles.separatorLine} />
+              </View>
               <Button
                 title="Login dengan WhatsApp"
                 variant="secondary"
-                onPress={() => router.push('/login-otp')}
+                onPress={() => router.replace('/login-otp')}
                 style={{
-                  marginTop: 8,
-                  backgroundColor: '#25D366',
+                  ...loginButtonStyle,
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  backgroundColor: '#25D366',
+                  borderWidth: 0,
+                  marginTop: 0, // hilangkan margin top agar tidak ada jarak ekstra
                 }}
                 textStyle={{ color: '#fff', fontWeight: 'bold' }}
-                leftIcon={
-                  <Ionicons name="logo-whatsapp" size={22} color="#fff" />
-                }
                 accessibilityLabel="Login dengan WhatsApp"
-                accessibilityHint="Login menggunakan OTP yang dikirim ke WhatsApp"
+                accessibilityHint="Login menggunakan OTP WhatsApp"
                 accessibilityRole="button"
+                leftIcon={<Ionicons name="logo-whatsapp" size={20} color="#fff" style={{ marginRight: 8 }} />}
               />
             </View>
           </ScrollView>
@@ -172,4 +212,20 @@ const styles = StyleSheet.create({
   errorText: { fontSize: typography.fontSizeSm, marginLeft: 4, flex: 1, fontFamily: typography.fontFamily },
   loginButton: { height: 52, borderRadius: 4, justifyContent: 'center', alignItems: 'center', marginTop: spacing.lg, ...shadow },
   loginButtonAndroid: { height: 54, marginTop: spacing.xl, elevation: 4, margin: 0 },
+  separatorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: spacing.md, // ubah dari spacing.lg ke spacing.md agar jarak lebih konsisten
+  },
+  separatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E0E0E0',
+  },
+  separatorText: {
+    marginHorizontal: 12,
+    color: '#888',
+    fontSize: typography.fontSizeMd,
+    fontFamily: typography.fontFamily,
+  },
 });

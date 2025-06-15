@@ -9,7 +9,7 @@ import { typography } from '@/styles/typography';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Image, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableWithoutFeedback, View } from 'react-native';
+import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableWithoutFeedback, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginOtpScreen() {
@@ -79,13 +79,13 @@ export default function LoginOtpScreen() {
             contentContainerStyle={[styles.scrollContainer, keyboardVisible && { paddingBottom: 120 }]}
             showsVerticalScrollIndicator={false}
           >
-            {/* Logo dan judul - disembunyikan saat keyboard muncul */}
+            {/* Logo dan judul - disembunyikan saat keyboard muncul
             {!keyboardVisible && (
               <View style={styles.logoContainer}>
                 <Image source={require('@/assets/images/icon.png')} style={styles.logo} resizeMode="contain" accessible accessibilityLabel="Logo aplikasi Audit Mobile" />
                 <Text style={[styles.logoText, { color: colors.primary }]}>SAM</Text>
               </View>
-            )}
+            )} */}
             <View style={styles.formContainer}>
               <Text style={[styles.title, { color: colors.text }]}>Login dengan WhatsApp</Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Masukkan nomor HP untuk menerima OTP via WhatsApp</Text>
@@ -151,12 +151,20 @@ export default function LoginOtpScreen() {
                   accessibilityState={{ disabled: loading, busy: loading }}
                 />
               )}
+              {/* Separator ala login */}
+              {!showOtp && (
+                <View style={styles.separatorContainer}>
+                  <View style={styles.separatorLine} />
+                  <Text style={styles.separatorText}>atau</Text>
+                  <View style={styles.separatorLine} />
+                </View>
+              )}
               {!showOtp && (
                 <Button
                   title="Login manual"
                   variant="outline"
-                  onPress={() => router.push('/login')}
-                  style={{ marginTop: 8, borderColor: colors.primary, backgroundColor: 'transparent', minHeight: 52 }}
+                  onPress={() => router.replace('/login')}
+                  style={{ marginTop: 0, borderColor: colors.primary, backgroundColor: 'transparent', minHeight: 52 }}
                   textStyle={{ color: colors.primary, fontWeight: '600' }}
                   accessibilityLabel="Login manual"
                   accessibilityHint="Login menggunakan username dan password"
@@ -186,4 +194,20 @@ const styles = StyleSheet.create({
   errorText: { fontSize: typography.fontSizeSm, marginLeft: 4, flex: 1, fontFamily: typography.fontFamily },
   otpButton: { height: 52, borderRadius: 4, justifyContent: 'center', alignItems: 'center', marginTop: spacing.lg, ...shadow },
   otpButtonAndroid: { height: 54, marginTop: spacing.xl, elevation: 4, margin: 0 },
+  separatorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: spacing.lg,
+  },
+  separatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E0E0E0',
+  },
+  separatorText: {
+    marginHorizontal: 12,
+    color: '#888',
+    fontSize: typography.fontSizeMd,
+    fontFamily: typography.fontFamily,
+  },
 });
