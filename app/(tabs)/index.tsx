@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { useVisits } from '@/hooks/useVisits';
+import { useVisit } from '@/hooks/useVisit';
 import { shadow } from '@/styles/shadow';
 import { spacing } from '@/styles/spacing';
 import { typography } from '@/styles/typography';
@@ -20,13 +20,13 @@ export default function HomeScreen() {
   const user = useUserData?.() ?? null;
   const displayName = user?.nama_lengkap || user?.name || user?.username || '-';
 
-  const { getVisits } = useVisits();
+  const { fetchVisits } = useVisit();
   const [todayVisits, setTodayVisits] = useState<any[]>([]);
   const [loadingVisits, setLoadingVisits] = useState(false);
 
   useEffect(() => {
     setLoadingVisits(true);
-    getVisits()
+    fetchVisits()
       .then(res => {
         // Perbaikan: tanggal_visit adalah timestamp (number), bukan string ISO
         const today = new Date();
@@ -47,7 +47,7 @@ export default function HomeScreen() {
   // Tambahkan fungsi refresh
   const handleRefresh = async () => {
     setLoadingVisits(true);
-    getVisits()
+    fetchVisits()
       .then(res => {
         const today = new Date();
         const isSameDay = (ts: number) => {

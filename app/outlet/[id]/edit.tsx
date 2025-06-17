@@ -14,10 +14,12 @@ export default function OutletEditPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { outlet, loading, error, fetchOutlet, updateOutlet } = useOutlet('');
   const [form, setForm] = useState({
-    kodeOutlet: '',
-    nama_pemilik_outlet: '',
-    nomer_tlp_outlet: '',
-    latlong: '',
+    code: '',
+    name: '',
+    district: '',
+    status: '',
+    location: '',
+    radius: 0,
   });
 
   useEffect(() => {
@@ -34,27 +36,30 @@ export default function OutletEditPage() {
   useEffect(() => {
     if (outlet) {
       setForm({
-        kodeOutlet: outlet.kodeOutlet || '',
-        nama_pemilik_outlet: outlet.namaPemilikOutlet || outlet.nama_pemilik_outlet || '',
-        nomer_tlp_outlet: outlet.nomerTlpOutlet || outlet.nomer_tlp_outlet || '',
-        latlong: outlet.latlong || '',
+        code: outlet.code || '',
+        name: outlet.name || '',
+        district: outlet.district || '',
+        status: outlet.status || '',
+        location: outlet.location || '',
+        radius: outlet.radius || 0,
       });
     }
   }, [outlet]);
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = (field: string, value: string | number) => {
     setForm(f => ({ ...f, [field]: value }));
   };
 
   const handleUpdate = async () => {
     if (!outlet) return;
-    // Pastikan field yang dikirim ke backend sesuai snake_case
+    // Payload sesuai dengan struktur API baru
     const payload = {
-      ...form,
-      kode_outlet: form.kodeOutlet,
-      nama_pemilik_outlet: form.nama_pemilik_outlet,
-      nomer_tlp_outlet: form.nomer_tlp_outlet,
-      latlong: form.latlong,
+      code: form.code,
+      name: form.name,
+      district: form.district,
+      status: form.status,
+      location: form.location,
+      radius: form.radius,
     };
     const result = await updateOutlet(outlet.id, payload);
     if (result.success) {
@@ -95,33 +100,49 @@ export default function OutletEditPage() {
           <Text style={[styles.inputLabel, { color: colors.text }]}>Kode Outlet</Text>
           <TextInput
             style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]}
-            value={form.kodeOutlet}
+            value={form.code}
             editable={false}
           />
         </View>
         <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Nama Pemilik</Text>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>Nama</Text>
           <TextInput
             style={[styles.input, { color: colors.text, borderColor: colors.border }]}
-            value={form.nama_pemilik_outlet}
-            onChangeText={v => handleChange('nama_pemilik_outlet', v)}
+            value={form.name}
+            onChangeText={v => handleChange('name', v)}
           />
         </View>
         <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Nomor Telepon</Text>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>District</Text>
           <TextInput
             style={[styles.input, { color: colors.text, borderColor: colors.border }]}
-            value={form.nomer_tlp_outlet}
-            onChangeText={v => handleChange('nomer_tlp_outlet', v)}
-            keyboardType="phone-pad"
+            value={form.district}
+            onChangeText={v => handleChange('district', v)}
           />
         </View>
         <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>LatLong</Text>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>Status</Text>
           <TextInput
             style={[styles.input, { color: colors.text, borderColor: colors.border }]}
-            value={form.latlong}
-            onChangeText={v => handleChange('latlong', v)}
+            value={form.status}
+            onChangeText={v => handleChange('status', v)}
+          />
+        </View>
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>Location</Text>
+          <TextInput
+            style={[styles.input, { color: colors.text, borderColor: colors.border }]}
+            value={form.location}
+            onChangeText={v => handleChange('location', v)}
+          />
+        </View>
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>Radius</Text>
+          <TextInput
+            style={[styles.input, { color: colors.text, borderColor: colors.border }]}
+            value={String(form.radius)}
+            onChangeText={v => handleChange('radius', Number(v) || 0)}
+            keyboardType="numeric"
           />
         </View>
         <Button

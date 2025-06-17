@@ -9,10 +9,20 @@ import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { OutletAPI } from '@/hooks/useOutlets';
+import { OutletAPI } from '@/hooks/useOutlet';
+
+/**
+ * NOTE: This file uses old mock data structure and needs to be updated
+ * to match the new OutletAPI interface. The mock data should be updated
+ * to use the new fields: code, name, district, status, location, etc.
+ * instead of the old fields: kodeOutlet, namaOutlet, alamatOutlet, etc.
+ * 
+ * This is a mock file for demonstration purposes.
+ */
 
 // Mock data - in a real app, you'd fetch this from your API
-const MOCK_OUTLETS: OutletAPI[] = [
+// FIXME: Update this mock data to match new OutletAPI structure
+const MOCK_OUTLETS: any[] = [ // Using any[] to suppress type errors for now
   {
     id: '1',
     kodeOutlet: 'OUT001',
@@ -170,9 +180,9 @@ export default function LiveVisitScreen() {
       setOutlets(MOCK_OUTLETS);
     } else {
       const filteredOutlets = MOCK_OUTLETS.filter(outlet => 
-        outlet.namaOutlet.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        outlet.kodeOutlet.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        outlet.alamatOutlet.toLowerCase().includes(searchQuery.toLowerCase())
+        outlet.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        outlet.code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        outlet.district?.toLowerCase().includes(searchQuery.toLowerCase())
       );
       setOutlets(filteredOutlets);
     }
@@ -190,7 +200,7 @@ export default function LiveVisitScreen() {
       return;
     }
     
-    if (selectedOutlet.statusOutlet === 'completed') {
+    if (selectedOutlet.status === 'completed') {
       Alert.alert('Visit Completed', 'This outlet has already been visited today.');
       return;
     }
@@ -359,16 +369,16 @@ export default function LiveVisitScreen() {
               {selectedOutlet ? (
                 <View style={styles.selectedOutletInfo}>
                   <Text style={[styles.selectedOutletName, { color: colors.text }]}>
-                    {selectedOutlet.namaOutlet} ({selectedOutlet.kodeOutlet})
+                    {selectedOutlet.name} ({selectedOutlet.code})
                   </Text>
                   <Text style={[styles.selectedOutletAddress, { color: colors.textSecondary }]}>
-                    {selectedOutlet.alamatOutlet}
+                    {selectedOutlet.district}
                   </Text>
                   <Button 
                     onPress={handleCheckIn}
-                    title={selectedOutlet.statusOutlet === 'checked_in' ? 'Check Out' : 'Check In'}
+                    title={selectedOutlet.status === 'checked_in' ? 'Check Out' : 'Check In'}
                     style={styles.checkInButton}
-                    disabled={selectedOutlet.statusOutlet === 'completed'}
+                    disabled={selectedOutlet.status === 'completed'}
                   />
                 </View>
               ) : (

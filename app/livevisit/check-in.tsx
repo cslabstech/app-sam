@@ -12,7 +12,7 @@ import ViewShot, { captureRef } from 'react-native-view-shot';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useOutlet } from '@/hooks/useOutlet'; // Changed from useOutlets to useOutlet
-import { useUserVisit } from '@/hooks/useUserVisit';
+import { useVisit } from '@/hooks/useVisit';
 
 // Tambahkan ulang tipe ini karena sudah tidak ada di OutletAPI
 interface LocationCoords {
@@ -47,7 +47,7 @@ export default function CheckInScreen() {
   const { outlets, loading: loadingOutlets } = useOutlet('');
   const selectedOutlet = outlets.find(o => o.id === selectedOutletId) || null;
 
-  const { checkInVisit } = useUserVisit();
+  const { checkInVisit } = useVisit();
 
   const [isLoading, setIsLoading] = useState(false);
   const [storePhoto, setStorePhoto] = useState<PhotoMeta | null>(null);
@@ -125,7 +125,7 @@ export default function CheckInScreen() {
 
   // Update distance & locationValidated setiap kali currentLocation atau outlet berubah
   useEffect(() => {
-    const outletCoords = selectedOutlet ? parseLatLong(selectedOutlet.latlong) : null;
+    const outletCoords = selectedOutlet ? parseLatLong(selectedOutlet.location) : null;
 
     if (selectedOutlet && currentLocation && outletCoords) {
       const calculatedDistance = calculateDistance(
@@ -144,7 +144,7 @@ export default function CheckInScreen() {
   // Set map region ke latlong outlet jika sudah pilih outlet
   useEffect(() => {
     if (selectedOutlet) {
-      const coords = parseLatLong(selectedOutlet.latlong);
+      const coords = parseLatLong(selectedOutlet.location);
       if (coords) {
         setMapRegion({
           latitude: coords.latitude,
@@ -345,7 +345,7 @@ export default function CheckInScreen() {
         const waktu = now.toLocaleString('id-ID', { hour12: false });
         const latitude = currentLocation?.latitude ?? null;
         const longitude = currentLocation?.longitude ?? null;
-        const outletName = selectedOutlet?.namaOutlet ?? '-';
+        const outletName = selectedOutlet?.name ?? '-';
         setStorePhoto({
           uri: manipulated.uri,
           waktu,
@@ -401,7 +401,7 @@ export default function CheckInScreen() {
       // Siapkan data watermark
       const now = new Date();
       const waktu = now.toLocaleString('id-ID', { hour12: false });
-      const outletName = selectedOutlet?.namaOutlet ?? '-';
+      const outletName = selectedOutlet?.name ?? '-';
       const lokasi = `${currentLocation.latitude?.toFixed(6)},${currentLocation.longitude?.toFixed(6)}`;
       setWatermarkData({ waktu, outlet: outletName, lokasi });
       // Tunggu render ViewShot, lalu capture
@@ -490,7 +490,7 @@ export default function CheckInScreen() {
               disabled={currentStep === 2}
             >
               <Text style={{ color: colors.text, fontSize: 16 }}>
-                {selectedOutlet ? `${selectedOutlet.namaOutlet} (${selectedOutlet.kodeOutlet})` : 'Pilih outlet...'}
+                {selectedOutlet ? `${selectedOutlet.name} (${selectedOutlet.code})` : 'Pilih outlet...'}
               </Text>
               <Ionicons name={showOutletDropdown ? 'chevron-up' : 'chevron-down'} size={20} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -511,7 +511,7 @@ export default function CheckInScreen() {
                               setShowOutletDropdown(false);
                             }}
                           >
-                            <Text style={{ color: colors.text }}>{outlet.namaOutlet} ({outlet.kodeOutlet})</Text>
+                            <Text style={{ color: colors.text }}>{outlet.name} ({outlet.code})</Text>
                           </TouchableOpacity>
                         ))}
                       </Animated.ScrollView>
@@ -535,14 +535,14 @@ export default function CheckInScreen() {
             showsMyLocationButton={false} // Nonaktifkan tombol GPS current location
           >
             {/* Outlet location marker */}
-            {selectedOutlet && parseLatLong(selectedOutlet.latlong) && (
+            {selectedOutlet && parseLatLong(selectedOutlet.location) && (
               <Marker
-                coordinate={parseLatLong(selectedOutlet.latlong) as { latitude: number; longitude: number }}
-                title={selectedOutlet.namaOutlet}
+                coordinate={parseLatLong(selectedOutlet.location) as { latitude: number; longitude: number }}
+                title={selectedOutlet.name}
                 description={
-                  (selectedOutlet.alamatOutlet ?? '') + '\n' +
-                  'Pemilik: ' + (selectedOutlet.namaPemilikOutlet ?? '-') + '\n' +
-                  'Kontak: ' + (selectedOutlet.nomerTlpOutlet ?? '-')
+                  (selectedOutlet.district ?? '') + '\n' +
+                  'Region: ' + (selectedOutlet.region?.name ?? '-') + '\n' +
+                  'Cluster: ' + (selectedOutlet.cluster?.name ?? '-')
                 }
               >
                 {/* Google Maps style marker */}
@@ -756,10 +756,10 @@ export default function CheckInScreen() {
                 paddingBottom: 16,
               }}>
                 <Text style={{ color: '#FF8800', fontSize: 16, fontWeight: 'bold' }}>
-                  {selectedOutlet?.kodeOutlet ?? '-'} • {selectedOutlet?.namaOutlet ?? '-'}
+                  {selectedOutlet?.code ?? '-'} • {selectedOutlet?.name ?? '-'}
                 </Text>
                 <Text style={{ color: '#fff', fontSize: 13, marginTop: 3 }}>
-                  {selectedOutlet?.alamatOutlet ?? '-'}
+                  {selectedOutlet?.district ?? '-'}
                 </Text>
                 <View style={{ flexDirection: 'row', marginTop: 5, justifyContent: 'space-between' }}>
                   <Text style={{ color: '#fff', fontSize: 12, opacity: 0.9 }}>

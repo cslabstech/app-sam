@@ -11,12 +11,12 @@ import { Button } from '@/components/ui/Button';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { useVisits } from '@/hooks/useVisits';
+import { useVisit } from '@/hooks/useVisit';
 
 export default function CheckOutScreen() {
   const { id } = useLocalSearchParams();
   const visitId = typeof id === 'string' ? id : '';
-  const { getVisits, submitVisit } = useVisits();
+  const { checkOutVisit } = useVisit();
   const [visit, setVisit] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -47,15 +47,25 @@ export default function CheckOutScreen() {
   const [watermarkData, setWatermarkData] = useState<{ location: string; waktu: string; hari: string } | null>(null);
   const viewShotRef = React.useRef<any>(null);
 
+  // Ambil detail visit dari endpoint /visit/{id}
   useEffect(() => {
-    if (visitId) {
+    async function fetchVisitDetail() {
+      if (!visitId) return;
       setLoading(true);
-      getVisits().then(res => {
-        // Find visit by id
-        const found = (res.data || []).find((v: any) => String(v.id) === String(visitId));
-        setVisit(found || null);
-      }).finally(() => setLoading(false));
+      try {
+        const res = await fetch(`${process.env.EXPO_PUBLIC_BASE_URL}/visit/${visitId}`, {
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': '', // TODO: inject token if needed
+          },
+        });
+        const json = await res.json();
+        setVisit(json.data || null);
+      } finally {
+        setLoading(false);
+      }
     }
+    fetchVisitDetail();
   }, [visitId]);
 
   // Take a picture of the store
@@ -155,7 +165,7 @@ export default function CheckOutScreen() {
         type: 'image/jpeg',
       } as any);
       // Kirim ke endpoint /visit
-      const res = await submitVisit(formData);
+      const res = await checkOutVisit(formData);
       if (res?.meta?.code === 200) {
         Alert.alert('Check Out Success', 'Data berhasil disimpan.');
         router.back();

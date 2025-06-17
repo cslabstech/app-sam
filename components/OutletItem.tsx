@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import React, { memo } from 'react';
+import React from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { Card } from '@/components/ui/Card';
@@ -20,7 +20,8 @@ const OutletItem: React.FC<OutletItemProps> = ({ outlet }) => {
   const colors = Colors[colorScheme ?? 'light'];
   
   const getStatusColor = (status: string) => {
-    switch (status) {
+    const normalizedStatus = status.toLowerCase();
+    switch (normalizedStatus) {
       case 'maintain':
         return colors.success;
       case 'unproductive':
@@ -34,7 +35,7 @@ const OutletItem: React.FC<OutletItemProps> = ({ outlet }) => {
   
   return (
     <TouchableOpacity
-      onPress={() => router.push({ pathname: '/outlet/[kode]/view', params: { kode: outlet.id } })}
+      onPress={() => router.push({ pathname: '/outlet/[id]/view', params: { id: outlet.id } })}
       style={{ 
         marginBottom: 12, 
         marginHorizontal: 2,
@@ -78,28 +79,28 @@ const OutletItem: React.FC<OutletItemProps> = ({ outlet }) => {
                 numberOfLines={2} 
                 ellipsizeMode="tail"
               >
-                {outlet.namaOutlet || '-'}
+                {outlet.name || '-'}
               </Text>
               <View 
                 style={[styles.outletBadge, {
-                  backgroundColor: getStatusColor(outlet.statusOutlet) + '15',
+                  backgroundColor: getStatusColor(outlet.status) + '15',
                   borderWidth: 1,
-                  borderColor: getStatusColor(outlet.statusOutlet) + '40',
+                  borderColor: getStatusColor(outlet.status) + '40',
                   marginLeft: 8,
                   borderRadius: 8,
                 }]}
               >
                 <Text style={[styles.outletBadgeText, { 
-                  color: getStatusColor(outlet.statusOutlet), 
+                  color: getStatusColor(outlet.status), 
                   fontWeight: '600',
                   letterSpacing: -0.2,
                 }]}> 
-                  {outlet.statusOutlet ? outlet.statusOutlet.charAt(0).toUpperCase() + outlet.statusOutlet.slice(1) : '-'}
+                  {outlet.status ? outlet.status.charAt(0).toUpperCase() + outlet.status.slice(1) : '-'}
                 </Text>
               </View>
             </View>
             
-            {/* Outlet Code and Phone Number */}
+            {/* Outlet Code */}
             <View style={[styles.outletMetaInfo, { marginBottom: 10 }]}>
               <View style={styles.outletCodeContainer}>
                 <IconSymbol name="qrcode" size={14} color={colors.primary} style={{ marginRight: 4 }} />
@@ -109,26 +110,12 @@ const OutletItem: React.FC<OutletItemProps> = ({ outlet }) => {
                   marginRight: 12,
                   fontSize: 14,
                 }]} numberOfLines={1} ellipsizeMode="tail">
-                  {outlet.kodeOutlet || '-'}
+                  {outlet.code || '-'}
                 </Text>
               </View>
-              
-              {outlet.nomerTlpOutlet ? (
-                <View style={styles.outletPhoneContainer}>
-                  <IconSymbol name="phone.fill" size={12} color={colors.textSecondary} />
-                  <Text style={{ 
-                    color: colors.textSecondary, 
-                    fontSize: 13, 
-                    marginLeft: 4,
-                    fontWeight: '500'
-                  }}>
-                    {outlet.nomerTlpOutlet}
-                  </Text>
-                </View>
-              ) : null}
             </View>
 
-            {/* Address with region/cluster info */}
+            {/* Location Info */}
             <View style={styles.outletDetailSection}>
               <View style={styles.outletAddressContainer}>
                 <IconSymbol name="mappin.and.ellipse" size={14} color={colors.textSecondary} style={{ marginTop: 2 }} />
@@ -139,26 +126,13 @@ const OutletItem: React.FC<OutletItemProps> = ({ outlet }) => {
                   fontWeight: '500',
                   lineHeight: 18,
                 }]} numberOfLines={2} ellipsizeMode="tail">
-                  {outlet.alamatOutlet || '-'}
+                  {outlet.district || '-'}
                 </Text>
               </View>
 
-              {/* Location Info */}
+              {/* Location Details */}
               <View style={styles.locationInfoContainer}>
-                {outlet.distric && (
-                  <View style={styles.locationDetail}>
-                    <IconSymbol name="location.circle.fill" size={14} color={colors.textSecondary} />
-                    <Text style={[styles.locationText, { 
-                      color: colors.textSecondary, 
-                      fontSize: 13, 
-                      fontWeight: '500'
-                    }]}>
-                      {outlet.distric}
-                    </Text>
-                  </View>
-                )}
-
-                {outlet.region && (
+                {outlet.region?.name && (
                   <View style={styles.locationDetail}>
                     <IconSymbol name="map.fill" size={12} color={colors.textSecondary} />
                     <Text style={[styles.locationText, { 
@@ -166,7 +140,20 @@ const OutletItem: React.FC<OutletItemProps> = ({ outlet }) => {
                       fontSize: 13, 
                       fontWeight: '500'
                     }]}>
-                      {outlet.region}
+                      {outlet.region.name}
+                    </Text>
+                  </View>
+                )}
+
+                {outlet.cluster?.name && (
+                  <View style={styles.locationDetail}>
+                    <IconSymbol name="location.circle.fill" size={14} color={colors.textSecondary} />
+                    <Text style={[styles.locationText, { 
+                      color: colors.textSecondary, 
+                      fontSize: 13, 
+                      fontWeight: '500'
+                    }]}>
+                      {outlet.cluster.name}
                     </Text>
                   </View>
                 )}
@@ -221,10 +208,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
-  outletPhoneContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   outletType: {
     fontSize: 14,
   },
@@ -260,4 +243,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default memo(OutletItem);
+export default OutletItem;

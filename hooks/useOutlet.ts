@@ -1,27 +1,34 @@
 import { useAuth } from '@/context/auth-context';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface OutletAPI {
   id: string;
-  kodeOutlet: string;
-  namaOutlet: string;
-  alamatOutlet: string;
-  namaPemilikOutlet: string;
-  nomerTlpOutlet: string;
-  potoShopSign: string;
-  potoDepan: string;
-  potoKiri: string;
-  potoKanan: string;
-  potoKtp: string;
-  distric: string;
-  video: string;
-  limit: number;
-  region: string;
-  cluster: string;
-  divisi: string;
+  code: string;
+  name: string;
+  district: string;
+  status: string;
   radius: number;
-  latlong: string;
-  statusOutlet: string;
+  location: string;
+  badan_usaha_id: number;
+  division_id: number;
+  region_id: number;
+  cluster_id: number;
+  badan_usaha: {
+    id: number;
+    name: string;
+  };
+  division: {
+    id: number;
+    name: string;
+  };
+  region: {
+    id: number;
+    name: string;
+  };
+  cluster: {
+    id: number;
+    name: string;
+  };
 }
 
 const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
@@ -32,30 +39,43 @@ export function useOutlet(searchQuery: string) {
   const [outlet, setOutlet] = useState<OutletAPI | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [meta, setMeta] = useState<any>(null);
+
+  const pageRef = useRef(1);
+  const perPageRef = useRef(20);
+  const sortColumnRef = useRef('name');
+  const sortDirectionRef = useRef('asc');
 
   // Transform backend data to our outlet format
   const transformOutletData = useCallback((data: any[]): OutletAPI[] => {
     return data.map((item: any) => ({
       id: String(item.id),
-      kodeOutlet: item.kode_outlet,
-      namaOutlet: item.nama_outlet,
-      alamatOutlet: item.alamat_outlet,
-      namaPemilikOutlet: item.nama_pemilik_outlet,
-      nomerTlpOutlet: item.nomer_tlp_outlet,
-      potoShopSign: item.poto_shop_sign,
-      potoDepan: item.poto_depan,
-      potoKiri: item.poto_kiri,
-      potoKanan: item.poto_kanan,
-      potoKtp: item.poto_ktp,
-      distric: item.distric,
-      video: item.video,
-      limit: item.limit,
-      region: item.region && typeof item.region === 'object' ? item.region.name : '',
-      cluster: item.cluster && typeof item.cluster === 'object' ? item.cluster.name : '',
-      divisi: item.divisi && typeof item.divisi === 'object' ? item.divisi.name : '',
+      code: item.code,
+      name: item.name,
+      district: item.district,
+      status: item.status,
       radius: item.radius,
-      latlong: item.latlong,
-      statusOutlet: (item.status_outlet || '').toLowerCase(),
+      location: item.location,
+      badan_usaha_id: item.badan_usaha_id,
+      division_id: item.division_id,
+      region_id: item.region_id,
+      cluster_id: item.cluster_id,
+      badan_usaha: {
+        id: item.badan_usaha?.id || 0,
+        name: item.badan_usaha?.name || '',
+      },
+      division: {
+        id: item.division?.id || 0,
+        name: item.division?.name || '',
+      },
+      region: {
+        id: item.region?.id || 0,
+        name: item.region?.name || '',
+      },
+      cluster: {
+        id: item.cluster?.id || 0,
+        name: item.cluster?.name || '',
+      },
     }));
   }, []);
 
@@ -101,25 +121,32 @@ export function useOutlet(searchQuery: string) {
         const dataObj = Array.isArray(json.data) ? json.data[0] : json.data;
         const mappedOutlet: OutletAPI = {
           id: String(dataObj.id ?? ''),
-          kodeOutlet: dataObj.kode_outlet ?? '',
-          namaOutlet: dataObj.nama_outlet ?? '',
-          alamatOutlet: dataObj.alamat_outlet ?? '',
-          namaPemilikOutlet: dataObj.nama_pemilik_outlet ?? '',
-          nomerTlpOutlet: dataObj.nomer_tlp_outlet ?? '',
-          potoShopSign: dataObj.poto_shop_sign ?? '',
-          potoDepan: dataObj.poto_depan ?? '',
-          potoKiri: dataObj.poto_kiri ?? '',
-          potoKanan: dataObj.poto_kanan ?? '',
-          potoKtp: dataObj.poto_ktp ?? '',
-          distric: dataObj.distric ?? '',
-          video: dataObj.video ?? '',
-          limit: dataObj.limit ?? 0,
-          region: dataObj.region && typeof dataObj.region === 'object' ? dataObj.region.name : '',
-          cluster: dataObj.cluster && typeof dataObj.cluster === 'object' ? dataObj.cluster.name : '',
-          divisi: dataObj.divisi && typeof dataObj.divisi === 'object' ? dataObj.divisi.name : '',
+          code: dataObj.code ?? '',
+          name: dataObj.name ?? '',
+          district: dataObj.district ?? '',
+          status: dataObj.status ?? '',
           radius: dataObj.radius ?? 0,
-          latlong: dataObj.latlong ?? '',
-          statusOutlet: (dataObj.status_outlet || '').toLowerCase(),
+          location: dataObj.location ?? '',
+          badan_usaha_id: dataObj.badan_usaha_id ?? 0,
+          division_id: dataObj.division_id ?? 0,
+          region_id: dataObj.region_id ?? 0,
+          cluster_id: dataObj.cluster_id ?? 0,
+          badan_usaha: {
+            id: dataObj.badan_usaha?.id || 0,
+            name: dataObj.badan_usaha?.name || '',
+          },
+          division: {
+            id: dataObj.division?.id || 0,
+            name: dataObj.division?.name || '',
+          },
+          region: {
+            id: dataObj.region?.id || 0,
+            name: dataObj.region?.name || '',
+          },
+          cluster: {
+            id: dataObj.cluster?.id || 0,
+            name: dataObj.cluster?.name || '',
+          },
         };
         setOutlet(mappedOutlet);
       } else {
@@ -193,6 +220,54 @@ export function useOutlet(searchQuery: string) {
     }
   }, [token, fetchOutlets]);
 
+  // Fetch outlets with advanced params
+  const fetchOutletsAdvanced = useCallback(async (params?: {
+    page?: number;
+    per_page?: number;
+    sort_column?: string;
+    sort_direction?: string;
+    search?: string;
+    filters?: Record<string, any>;
+  }) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const query = new URLSearchParams();
+      if (params?.page) query.append('page', String(params.page));
+      if (params?.per_page) query.append('per_page', String(params.per_page));
+      if (params?.sort_column) query.append('sort_column', params.sort_column);
+      if (params?.sort_direction) query.append('sort_direction', params.sort_direction);
+      if (params?.search) query.append('search', params.search);
+      if (params?.filters) {
+        Object.entries(params.filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== '') {
+            query.append(`filters[${key}]`, String(value));
+          }
+        });
+      }
+      const res = await fetch(`${BASE_URL}/outlet?${query.toString()}`, {
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+      });
+      const json = await res.json();
+      if (json.meta && json.meta.code === 200 && Array.isArray(json.data)) {
+        setMeta(json.meta);
+        setOutlets(transformOutletData(json.data));
+      } else {
+        setOutlets([]);
+        setMeta(null);
+        setError('No data or error in response');
+      }
+    } catch (e) {
+      setOutlets([]);
+      setMeta(null);
+      setError('Failed to fetch outlets');
+    }
+    setLoading(false);
+  }, [token, transformOutletData]);
+
   // Filter outlets based on search query locally
   const filteredOutlets = useMemo(() => {
     if (!searchQuery || searchQuery.trim() === '') {
@@ -200,8 +275,9 @@ export function useOutlet(searchQuery: string) {
     }
     const query = searchQuery.toLowerCase().trim();
     return outlets.filter(outlet =>
-      outlet.namaOutlet.toLowerCase().includes(query) ||
-      outlet.kodeOutlet.toLowerCase().includes(query)
+      outlet.name.toLowerCase().includes(query) ||
+      outlet.code.toLowerCase().includes(query) ||
+      outlet.district.toLowerCase().includes(query)
     );
   }, [outlets, searchQuery]);
 
@@ -214,7 +290,9 @@ export function useOutlet(searchQuery: string) {
     outlet,
     loading,
     error,
+    meta,
     fetchOutlets,
+    fetchOutletsAdvanced,
     fetchOutlet,
     createOutlet,
     updateOutlet,

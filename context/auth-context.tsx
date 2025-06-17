@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import { useAuthLogic, User } from '../hooks/useAuthLogic';
+import { useAuth as useAuthHook, User } from '../hooks/useAuth';
 
 interface AuthContextProps {
   user: User | null;
@@ -26,7 +26,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loginWithToken,
     requestOtp,
     verifyOtp,
-  } = useAuthLogic();
+  } = useAuthHook();
 
   return (
     <AuthContext.Provider value={{ user, token, loading, login, logout, refreshUser, loginWithToken, requestOtp, verifyOtp }}>

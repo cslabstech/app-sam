@@ -5,7 +5,7 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useOutlet } from '@/hooks/useOutlet';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { VideoView, useVideoPlayer } from 'expo-video';
+import { useVideoPlayer } from 'expo-video';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,14 +23,12 @@ export default function OutletViewPage() {
   // --- MEDIA TAB STATE ---
   type MediaImage = { label: string; uri: string };
   const imageList: MediaImage[] = [
-    outlet?.potoShopSign ? { label: 'Shop Sign', uri: `${BASE_URL_STORAGE}/${outlet.potoShopSign}` } : null,
-    outlet?.potoDepan ? { label: 'Depan', uri: `${BASE_URL_STORAGE}/${outlet.potoDepan}` } : null,
-    outlet?.potoKiri ? { label: 'Kiri', uri: `${BASE_URL_STORAGE}/${outlet.potoKiri}` } : null,
-    outlet?.potoKanan ? { label: 'Kanan', uri: `${BASE_URL_STORAGE}/${outlet.potoKanan}` } : null,
-  ].filter((v): v is MediaImage => !!v);
+    // Note: Media fields are not available in the new API structure
+    // These can be removed or replaced with alternative media handling
+  ];
   const [videoLoading, setVideoLoading] = useState(true);
 
-  const videoPlayer = useVideoPlayer({ uri: outlet?.video ? `${BASE_URL_STORAGE}/${outlet.video}` : '' });
+  const videoPlayer = useVideoPlayer({ uri: '' }); // Video not available in new API
 
   useEffect(() => {
     if (id) fetchOutlet(id as string);
@@ -89,7 +87,7 @@ export default function OutletViewPage() {
             <IconSymbol name="chevron.left" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.title, { color: colors.text }]}> 
-            {outlet?.namaOutlet || 'Outlet Detail'}
+            {outlet?.name || 'Outlet Detail'}
           </Text>
         </View>
         <TouchableOpacity
@@ -145,37 +143,33 @@ export default function OutletViewPage() {
             <Card style={styles.card}>
               <View style={styles.cardRow}>
                 <Text style={[styles.label, { color: colors.textSecondary }]}>Kode Outlet</Text>
-                <Text style={[styles.value, { color: colors.text }]}>{outlet!.kodeOutlet || '-'}</Text>
+                <Text style={[styles.value, { color: colors.text }]}>{outlet!.code || '-'}</Text>
               </View>
               <View style={styles.cardRow}>
                 <Text style={[styles.label, { color: colors.textSecondary }]}>Nama Outlet</Text>
-                <Text style={[styles.value, { color: colors.text }]}>{outlet!.namaOutlet || '-'}</Text>
+                <Text style={[styles.value, { color: colors.text }]}>{outlet!.name || '-'}</Text>
               </View>
               <View style={styles.cardRow}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Nama Pemilik</Text>
-                <Text style={[styles.value, { color: colors.text }]}>{outlet!.namaPemilikOutlet || '-'}</Text>
-              </View>
-              <View style={styles.cardRow}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Nomor Telepon</Text>
-                <Text style={[styles.value, { color: colors.text }]}>{outlet!.nomerTlpOutlet || '-'}</Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>District</Text>
+                <Text style={[styles.value, { color: colors.text }]}>{outlet!.district || '-'}</Text>
               </View>
               <View style={styles.cardRow}>
                 <Text style={[styles.label, { color: colors.textSecondary }]}>Status</Text>
                 <View style={[
                   styles.statusBadge, 
-                  { backgroundColor: getStatusColor(outlet!.statusOutlet || '') + '15' }
+                  { backgroundColor: getStatusColor(outlet!.status || '') + '15' }
                 ]}>
                   <Text style={[
                     styles.statusText, 
-                    { color: getStatusColor(outlet!.statusOutlet || '') }
+                    { color: getStatusColor(outlet!.status || '') }
                   ]}>
-                    {outlet!.statusOutlet ? outlet!.statusOutlet.charAt(0).toUpperCase() + outlet!.statusOutlet.slice(1) : '-'}
+                    {outlet!.status ? outlet!.status.charAt(0).toUpperCase() + outlet!.status.slice(1) : '-'}
                   </Text>
                 </View>
               </View>
               <View style={styles.cardRow}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Limit</Text>
-                <Text style={[styles.value, { color: colors.text }]}>{outlet!.limit?.toString() || '-'}</Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Radius</Text>
+                <Text style={[styles.value, { color: colors.text }]}>{outlet!.radius?.toString() || '-'}</Text>
               </View>
             </Card>
           </View>
@@ -184,16 +178,20 @@ export default function OutletViewPage() {
           <View style={styles.tabContent}>
             <Card style={styles.card}>
               <View style={styles.cardRow}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Alamat</Text>
-                <Text style={[styles.value, { color: colors.text, textAlign: 'right', flex: 1, maxWidth: '70%' }]}>{outlet!.alamatOutlet || '-'}</Text>
-              </View>
-              <View style={styles.cardRow}>
                 <Text style={[styles.label, { color: colors.textSecondary }]}>District</Text>
-                <Text style={[styles.value, { color: colors.text }]}>{outlet!.distric || '-'}</Text>
+                <Text style={[styles.value, { color: colors.text, textAlign: 'right', flex: 1, maxWidth: '70%' }]}>{outlet!.district || '-'}</Text>
               </View>
               <View style={styles.cardRow}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>LatLong</Text>
-                <Text style={[styles.value, { color: colors.text }]}>{outlet!.latlong || '-'}</Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Region</Text>
+                <Text style={[styles.value, { color: colors.text }]}>{outlet!.region?.name || '-'}</Text>
+              </View>
+              <View style={styles.cardRow}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Cluster</Text>
+                <Text style={[styles.value, { color: colors.text }]}>{outlet!.cluster?.name || '-'}</Text>
+              </View>
+              <View style={styles.cardRow}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Location</Text>
+                <Text style={[styles.value, { color: colors.text }]}>{outlet!.location || '-'}</Text>
               </View>
               <View style={styles.cardRow}>
                 <Text style={[styles.label, { color: colors.textSecondary }]}>Radius</Text>
@@ -224,26 +222,15 @@ export default function OutletViewPage() {
             )}
             <Text style={{ fontWeight: 'bold', fontSize: 16, color: colors.text, marginTop: 20, marginBottom: 12 }}>Video Outlet</Text>
             <View style={styles.mediaVideoContainer}>
-              {outlet!.video ? (
-                <View style={{ position: 'relative' }}>
-                  <VideoView
-                    player={videoPlayer}
-                    style={styles.mediaVideo}
-                    nativeControls
-                    contentFit="contain"
-                  />
-                </View>
-              ) : (
-                <View style={styles.mediaEmptyState}>
-                  <IconSymbol name="video" size={48} color={colors.textSecondary} />
-                  <Text style={{ color: colors.textSecondary, marginTop: 8 }}>Tidak ada video outlet.</Text>
-                </View>
-              )}
+              <View style={styles.mediaEmptyState}>
+                <IconSymbol name="video" size={48} color={colors.textSecondary} />
+                <Text style={{ color: colors.textSecondary, marginTop: 8 }}>Video tidak tersedia di API baru.</Text>
+              </View>
             </View>
-            {imageList.length === 0 && !outlet!.video && (
+            {imageList.length === 0 && (
               <View style={styles.mediaEmptyState}>
                 <IconSymbol name="photo" size={48} color={colors.textSecondary} />
-                <Text style={{ color: colors.textSecondary, marginTop: 8 }}>Tidak ada media tersedia untuk outlet ini.</Text>
+                <Text style={{ color: colors.textSecondary, marginTop: 8 }}>Media tidak tersedia di API baru.</Text>
               </View>
             )}
           </View>
