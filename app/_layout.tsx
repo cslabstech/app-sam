@@ -96,6 +96,8 @@ export default function RootLayout() {
       <NotifIdProvider>
         <NotifIdInitializer>
           <AuthProvider>
+            {/* NetworkBanner dipindah ke paling atas agar selalu terlihat */}
+            <NetworkBanner />
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="+not-found" />
@@ -104,7 +106,6 @@ export default function RootLayout() {
           </AuthProvider>
         </NotifIdInitializer>
       </NotifIdProvider>
-      <NetworkBanner />
     </NetworkProvider>
   );
 }

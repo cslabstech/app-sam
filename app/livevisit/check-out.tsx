@@ -16,7 +16,7 @@ import { useVisit } from '@/hooks/useVisit';
 export default function CheckOutScreen() {
   const { id } = useLocalSearchParams();
   const visitId = typeof id === 'string' ? id : '';
-  const { checkOutVisit } = useVisit();
+  const { checkOutVisit, fetchVisit } = useVisit();
   const [visit, setVisit] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -47,20 +47,18 @@ export default function CheckOutScreen() {
   const [watermarkData, setWatermarkData] = useState<{ location: string; waktu: string; hari: string } | null>(null);
   const viewShotRef = React.useRef<any>(null);
 
-  // Ambil detail visit dari endpoint /visit/{id}
+  // Ambil detail visit dari endpoint /visit/{id} pakai hook fetchVisit
   useEffect(() => {
     async function fetchVisitDetail() {
       if (!visitId) return;
       setLoading(true);
       try {
-        const res = await fetch(`${process.env.EXPO_PUBLIC_BASE_URL}/visit/${visitId}`, {
-          headers: {
-            'Accept': 'application/json',
-            'Authorization': '', // TODO: inject token if needed
-          },
-        });
-        const json = await res.json();
-        setVisit(json.data || null);
+        const res = await fetchVisit(visitId);
+        if (res.success) {
+          setVisit(res.data || null);
+        } else {
+          setVisit(null);
+        }
       } finally {
         setLoading(false);
       }
@@ -130,7 +128,9 @@ export default function CheckOutScreen() {
       Alert.alert('Image Required', 'Please take a picture of the store front.');
       return;
     }
-    if (!outlet || (!outlet.kode_outlet && !outlet.kodeOutlet)) {
+    if (!outlet || !outlet.code) {
+      // Tambahkan log untuk debug outlet
+      console.log('[CHECKOUT] Outlet invalid:', outlet);
       Alert.alert('Outlet Error', 'Data outlet tidak valid. Silakan ulangi dari halaman utama.');
       return;
     }
@@ -153,19 +153,27 @@ export default function CheckOutScreen() {
         Alert.alert('Transaksi Wajib', 'Mohon pilih status transaksi.');
         return;
       }
-      const formData = new FormData();
-      formData.append('kode_outlet', outlet.kode_outlet || outlet.kodeOutlet);
-      formData.append('tipe_visit', visit.tipe_visit || 'EXTRACALL');
-      formData.append('laporan_visit', notes); // required
-      formData.append('transaksi', transaksi); // required
-      formData.append('latlong_out', latlong_out); // required
-      formData.append('picture_visit', {
+      // Debug log sebelum submit
+      console.log('FormData debug:', {
+        checkout_location: latlong_out,
+        checkout_photo: storeImage,
+        transaction: transaksi,
+        report: notes,
+      });
+      // Debug log file object
+      const fileObj = {
         uri: storeImage,
         name: `checkout-${Date.now()}.jpg`,
         type: 'image/jpeg',
-      } as any);
-      // Kirim ke endpoint /visit
-      const res = await checkOutVisit(formData);
+      };
+      console.log('File object:', fileObj);
+      const formData = new FormData();
+      formData.append('checkout_location', latlong_out);
+      formData.append('checkout_photo', fileObj as any);
+      formData.append('transaction', transaksi);
+      formData.append('report', notes);
+      // Pastikan header TIDAK mengatur Content-Type
+      const res = await checkOutVisit(visitId, formData);
       if (res?.meta?.code === 200) {
         Alert.alert('Check Out Success', 'Data berhasil disimpan.');
         router.back();
@@ -227,6 +235,7 @@ export default function CheckOutScreen() {
           <View style={{ width: 22, height: 22 }} />
         </View>
         {/* Outlet Info */}
+        {/* Pastikan field outlet sesuai API: code, name, location, district, etc */}
         <View style={{
           backgroundColor: '#fff',
           borderRadius: 12,
@@ -238,10 +247,10 @@ export default function CheckOutScreen() {
           elevation: 2,
         }}>
           <Text style={{ color: '#7B8FA1', fontSize: 14, marginBottom: 4 }}>Informasi Outlet</Text>
-          <Text style={{ color: '#222B45', fontSize: 16, fontWeight: 'bold', marginBottom: 2 }}>{outlet.namaOutlet} ({outlet.kodeOutlet})</Text>
+          <Text style={{ color: '#222B45', fontSize: 16, fontWeight: 'bold', marginBottom: 2 }}>{outlet.name} ({outlet.code})</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
             <IconSymbol name="mappin.and.ellipse" size={18} color="#222B45" style={{ marginRight: 8 }} />
-            <Text style={{ color: '#222B45', fontSize: 15 }}>{outlet.alamatOutlet}</Text>
+            <Text style={{ color: '#222B45', fontSize: 15 }}>{outlet.district}</Text>
           </View>
         </View>
       </View>

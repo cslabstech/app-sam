@@ -68,6 +68,7 @@ export function useVisit() {
   const fetchVisits = useCallback(async (params: VisitListParams = {}) => {
     setLoading(true);
     setError(null);
+    log('[VISIT] fetchVisits params', params);
     try {
       const query = new URLSearchParams();
       if (params.per_page) query.append('per_page', String(params.per_page));
@@ -87,26 +88,32 @@ export function useVisit() {
       if (params.sort_direction) query.append('sort_direction', params.sort_direction);
       else query.append('sort_direction', 'desc');
 
+      log('[VISIT] fetchVisits query', query.toString());
       const res = await fetch(`${BASE_URL}/visit?${query.toString()}`, {
         headers: {
           'Accept': 'application/json',
           'Authorization': token ? `Bearer ${token}` : '',
         },
       });
+      log('[VISIT] fetchVisits response status', res.status);
       const json: VisitListResponse = await res.json();
+      log('[VISIT] fetchVisits response body', json);
       if (json.meta && json.meta.code === 200) {
         setVisits(json.data);
         setMeta(json.meta);
         return { success: true, data: json.data, meta: json.meta };
       } else {
         setError(json.meta?.message || 'Failed to fetch visits');
+        log('[VISIT] fetchVisits error', json.meta?.message || 'Failed to fetch visits');
         return { success: false, error: json.meta?.message };
       }
     } catch (e) {
       setError('Failed to fetch visits');
+      log('[VISIT] fetchVisits exception', e);
       return { success: false, error: 'Failed to fetch visits' };
     } finally {
       setLoading(false);
+      log('[VISIT] fetchVisits loading false');
     }
   }, [token]);
 
@@ -114,6 +121,7 @@ export function useVisit() {
   const fetchVisit = useCallback(async (visitId: string) => {
     setLoading(true);
     setError(null);
+    log('[VISIT] fetchVisit visitId', visitId);
     try {
       const res = await fetch(`${BASE_URL}/visit/${visitId}`, {
         headers: {
@@ -121,18 +129,23 @@ export function useVisit() {
           'Authorization': token ? `Bearer ${token}` : '',
         },
       });
+      log('[VISIT] fetchVisit response status', res.status);
       const json = await res.json();
+      log('[VISIT] fetchVisit response body', json);
       if (json.meta && json.meta.code === 200) {
         return { success: true, data: json.data, meta: json.meta };
       } else {
         setError(json.meta?.message || 'Failed to fetch visit detail');
+        log('[VISIT] fetchVisit error', json.meta?.message || 'Failed to fetch visit detail');
         return { success: false, error: json.meta?.message };
       }
     } catch (e) {
       setError('Failed to fetch visit detail');
+      log('[VISIT] fetchVisit exception', e);
       return { success: false, error: 'Failed to fetch visit detail' };
     } finally {
       setLoading(false);
+      log('[VISIT] fetchVisit loading false');
     }
   }, [token]);
 
@@ -147,6 +160,7 @@ export function useVisit() {
       },
       body: formData,
     });
+    log('[USER VISIT] Check-in response status', res.status);
     const json = await res.json();
     log('[USER VISIT] Check-in response', json);
     return json;
@@ -156,17 +170,39 @@ export function useVisit() {
   const checkOutVisit = async (visitId: string, formData: FormData) => {
     log('[USER VISIT] Check-out', { visitId, formData });
     const res = await fetch(`${BASE_URL}/visit/${visitId}`, {
-      method: 'PUT',
+      method: 'POST',
       headers: {
         'Accept': 'application/json',
         'Authorization': token ? `Bearer ${token}` : '',
       },
       body: formData,
     });
+    log('[USER VISIT] Check-out response status', res.status);
     const json = await res.json();
     log('[USER VISIT] Check-out response', json);
     return json;
   };
 
-  return { visits, meta, loading, error, fetchVisits, fetchVisit, checkInVisit, checkOutVisit };
+  // Cek status visit/check-in/check-out outlet
+  const checkVisitStatus = async (outletId: string) => {
+    log('[VISIT] checkVisitStatus outletId', outletId);
+    try {
+      // Kirim outlet_id sebagai query param (GET)
+      const res = await fetch(`${BASE_URL}/visit/check?outlet_id=${encodeURIComponent(outletId)}`, {
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+      });
+      log('[VISIT] checkVisitStatus response status', res.status);
+      const json = await res.json();
+      log('[VISIT] checkVisitStatus response body', json);
+      return json;
+    } catch (e) {
+      log('[VISIT] checkVisitStatus exception', e);
+      return { success: false, error: 'Failed to check visit status' };
+    }
+  };
+
+  return { visits, meta, loading, error, fetchVisits, fetchVisit, checkInVisit, checkOutVisit, checkVisitStatus };
 }

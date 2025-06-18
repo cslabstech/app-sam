@@ -27,9 +27,19 @@ export function useAuth() {
             setLoading(true);
             const storedToken = await AsyncStorage.getItem('token');
             const storedUser = await AsyncStorage.getItem('user');
+            const storedPermissions = await AsyncStorage.getItem('permissions');
             if (storedToken && storedUser) {
                 setToken(storedToken);
-                setUser(JSON.parse(storedUser));
+                const parsedUser = JSON.parse(storedUser);
+                setUser(parsedUser);
+                // Ambil permissions dari AsyncStorage jika ada, fallback ke user.permissions
+                if (storedPermissions) {
+                    setPermissions(JSON.parse(storedPermissions));
+                } else if (parsedUser && Array.isArray(parsedUser.permissions)) {
+                    setPermissions(parsedUser.permissions);
+                } else {
+                    setPermissions([]);
+                }
             }
             setLoading(false);
         };
@@ -76,6 +86,8 @@ export function useAuth() {
             });
             await loginWithToken(data.data.access_token, data.data.user, data.data.permissions);
             setPermissions(data.data.permissions || []);
+            // Simpan permissions ke AsyncStorage
+            await AsyncStorage.setItem('permissions', JSON.stringify(data.data.permissions || []));
             log('[LOGIN] Login success, token set');
         } catch (err) {
             log('[LOGIN] Error:', err);
@@ -117,6 +129,8 @@ export function useAuth() {
             setUser(data.data);
             setPermissions(data.data.permissions || []);
             await AsyncStorage.setItem('user', JSON.stringify(data.data));
+            // Simpan permissions ke AsyncStorage
+            await AsyncStorage.setItem('permissions', JSON.stringify(data.data.permissions || []));
             log('[REFRESH_USER] User data refreshed:', data.data);
         } catch (err) {
             log('[REFRESH_USER] Failed:', err);
@@ -131,7 +145,10 @@ export function useAuth() {
         await AsyncStorage.setItem('user', JSON.stringify(user));
         setToken(token);
         setUser(user);
-        if (permissionsFromLogin) setPermissions(permissionsFromLogin);
+        if (permissionsFromLogin) {
+            setPermissions(permissionsFromLogin);
+            await AsyncStorage.setItem('permissions', JSON.stringify(permissionsFromLogin));
+        }
         log('[LOGIN_WITH_TOKEN] Token and user set from OTP login');
     };
 

@@ -48,6 +48,8 @@ export default function CheckInScreen() {
   const selectedOutlet = outlets.find(o => o.id === selectedOutletId) || null;
 
   const { checkInVisit } = useVisit();
+  // Panggil hook di level atas komponen
+  const { checkVisitStatus } = useVisit();
 
   const [isLoading, setIsLoading] = useState(false);
   const [storePhoto, setStorePhoto] = useState<PhotoMeta | null>(null);
@@ -583,7 +585,28 @@ export default function CheckInScreen() {
                 paddingVertical: 16,
                 alignItems: 'center',
               }}
-              onPress={() => changeStep(2)}
+              onPress={async () => {
+                if (!selectedOutlet) {
+                  Alert.alert('Pilih Outlet', 'Silakan pilih outlet terlebih dahulu.');
+                  return;
+                }
+                // Validasi status kunjungan sebelum lanjut
+                try {
+                  const result = await checkVisitStatus(selectedOutlet.id);
+                  if (result?.meta?.code === 400 && result?.meta?.message?.includes('berjalan')) {
+                    Alert.alert('Visit Aktif', result?.meta?.message || 'Masih ada visit yang berjalan, silakan check-out terlebih dahulu.');
+                    return;
+                  } else if (result?.meta?.code === 400 && result?.meta?.message?.includes('sudah pernah visit')) {
+                    Alert.alert('Sudah Pernah Visit', result?.meta?.message || 'Anda sudah pernah visit ke outlet ini hari ini.');
+                    return;
+                  }
+                  // Jika lolos validasi, lanjutkan ke step berikutnya
+                  changeStep(2);
+                } catch (err) {
+                  console.log('[CHECK-IN] checkVisitStatus error', err);
+                  Alert.alert('Cek Status Gagal', 'Gagal memeriksa status kunjungan. Silakan coba lagi.');
+                }
+              }}
               disabled={!locationValidated}
             >
               <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>Lanjutkan</Text>
