@@ -40,3 +40,4 @@ app-example
 .env
 .github/
 .github/copilot-instructions.md
+.vscode/

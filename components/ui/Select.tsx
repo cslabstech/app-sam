@@ -1,4 +1,7 @@
 import { Colors } from '@/constants/Colors';
+import { shadow } from '@/constants/Shadows';
+import { spacing } from '@/constants/Spacing';
+import { typography } from '@/constants/Typography';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
@@ -20,6 +23,10 @@ interface SelectProps {
   searchable?: boolean;
 }
 
+/**
+ * Select Component - Dropdown dengan search dan animasi
+ * Mengikuti best practice: menggunakan constants untuk colors, spacing, typography
+ */
 export const Select: React.FC<SelectProps> = ({
   label,
   value,
@@ -77,13 +84,16 @@ export const Select: React.FC<SelectProps> = ({
   };
 
   return (
-    <View style={{ marginBottom: error ? 20 : 0 }}>
+    <View style={{ marginBottom: error ? spacing.lg : 0 }}>
       {label ? <Text style={[styles.label, { color: colors.text }]}>{label}</Text> : null}
       <TouchableOpacity
         style={[
           styles.selectBox, 
-          { borderColor: isFocused ? colors.primary : colors.border },
-          disabled && { backgroundColor: '#f0f0f0' },
+          { 
+            borderColor: isFocused ? colors.primary : colors.border,
+            backgroundColor: colors.white
+          },
+          disabled && { backgroundColor: colors.border + '50' },
           modalVisible && { borderColor: colors.primary },
           error && { borderColor: colors.danger }
         ]}
@@ -101,14 +111,13 @@ export const Select: React.FC<SelectProps> = ({
         <Text 
           style={[
             styles.selectText, 
-            !value && { color: '#aaa' },
-            { color: value ? colors.text : '#999' }
+            { color: value ? colors.text : colors.textSecondary }
           ]}
           numberOfLines={1}
         >
           {selectedLabel || placeholder}
         </Text>
-        <Ionicons name="chevron-down" size={18} color={colors.textSecondary} style={{ marginLeft: 8, transform: [{ rotate: modalVisible ? '180deg' : '0deg' }] }} />
+        <Ionicons name="chevron-down" size={18} color={colors.textSecondary} style={{ marginLeft: spacing.sm, transform: [{ rotate: modalVisible ? '180deg' : '0deg' }] }} />
       </TouchableOpacity>
       
       {error && <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>}
@@ -141,7 +150,10 @@ export const Select: React.FC<SelectProps> = ({
         >
           <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
             {searchable && (
-              <View style={[styles.searchContainer, { borderColor: colors.border }]}>
+              <View style={[styles.searchContainer, { 
+                borderColor: colors.border,
+                backgroundColor: colors.background 
+              }]}>
                 <Ionicons name="search" size={20} color={colors.textSecondary} />
                 <TextInput
                   style={[styles.searchInput, { color: colors.text }]}
@@ -206,33 +218,30 @@ export const Select: React.FC<SelectProps> = ({
 const styles = StyleSheet.create({
   label: {
     fontWeight: '600',
-    marginBottom: 6,
-    fontSize: 15,
+    fontFamily: typography.fontFamily,
+    marginBottom: spacing.xs,
+    fontSize: typography.fontSize.md,
   },
   selectBox: {
     borderWidth: 1,
-    borderRadius: 10,
-    padding: 14,
-    fontSize: 16,
+    borderRadius: spacing.sm + 2,
+    padding: spacing.sm + 2,
+    fontSize: typography.fontSize.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#fff',
-    borderColor: '#ddd',
-    shadowColor: '#000',
-    shadowOpacity: 0.03,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 1,
+    ...shadow,
   },
   selectText: {
-    fontSize: 16,
+    fontSize: typography.fontSize.md,
+    fontFamily: typography.fontFamily,
     flex: 1,
   },
   errorText: {
-    fontSize: 13,
-    marginTop: 6,
-    marginLeft: 2,
+    fontSize: typography.fontSize.sm,
+    fontFamily: typography.fontFamily,
+    marginTop: spacing.xs,
+    marginLeft: spacing.xs,
   },
   modalOverlay: {
     flex: 1,
@@ -240,14 +249,13 @@ const styles = StyleSheet.create({
   },
   modalContentContainer: {
     position: 'absolute',
-    left: 16,
-    right: 16,
+    left: spacing.lg,
+    right: spacing.lg,
     top: '30%',
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 8,
+    borderRadius: spacing.md,
+    padding: spacing.sm,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -264,40 +272,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: 8,
-    borderColor: '#eee',
-    margin: 8,
-    paddingHorizontal: 10,
-    backgroundColor: '#fafafa',
+    borderRadius: spacing.sm,
+    margin: spacing.sm,
+    paddingHorizontal: spacing.sm + 2,
   },
   searchInput: {
     flex: 1,
     height: 42,
-    fontSize: 15,
-    marginLeft: 8,
+    fontSize: typography.fontSize.md,
+    fontFamily: typography.fontFamily,
+    marginLeft: spacing.sm,
     paddingVertical: 0,
   },
   noResults: {
-    padding: 20,
+    padding: spacing.lg + 4,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
   },
   noResultsText: {
-    marginLeft: 8,
-    fontSize: 15,
+    marginLeft: spacing.sm,
+    fontSize: typography.fontSize.md,
+    fontFamily: typography.fontFamily,
   },
   optionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    marginHorizontal: 4,
-    marginVertical: 2,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.sm + 2,
+    borderRadius: spacing.sm,
+    marginHorizontal: spacing.xs,
+    marginVertical: spacing.px,
   },
   optionText: {
-    fontSize: 16,
+    fontSize: typography.fontSize.md,
+    fontFamily: typography.fontFamily,
     flex: 1,
   },
 });

@@ -1,11 +1,11 @@
 import { Button } from '@/components/ui/Button';
 import { Input as FormInput } from '@/components/ui/Input';
 import { Colors } from '@/constants/Colors';
+import { shadow } from '@/constants/Shadows';
+import { spacing } from '@/constants/Spacing';
+import { typography } from '@/constants/Typography';
 import { useAuth } from '@/context/auth-context';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { shadow } from '@/styles/shadow';
-import { spacing } from '@/styles/spacing';
-import { typography } from '@/styles/typography';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';

@@ -1,83 +1,117 @@
 import React from 'react';
 import {
   ActivityIndicator,
+  Platform,
+  Pressable,
   StyleSheet,
   Text,
   TextStyle,
-  TouchableOpacity,
-  TouchableOpacityProps,
+  Vibration,
   ViewStyle,
 } from 'react-native';
 
 import { Colors } from '@/constants/Colors';
+import { shadow } from '@/constants/Shadows';
+import { borderRadius, componentSpacing, spacing } from '@/constants/Spacing';
+import { typography } from '@/constants/Typography';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { shadow } from '@/styles/shadow';
-import { spacing } from '@/styles/spacing';
-import { typography } from '@/styles/typography';
 
-type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'outline';
-type ButtonSize = 'small' | 'medium' | 'large';
+type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'danger' | 'success' | 'outline' | 'ghost' | 'link';
+type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
-interface ButtonProps extends TouchableOpacityProps {
+interface ButtonProps {
   title: string;
   variant?: ButtonVariant;
   size?: ButtonSize;
   loading?: boolean;
+  disabled?: boolean;
+  onPress?: () => void;
   style?: ViewStyle;
   textStyle?: TextStyle;
   leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
+  fullWidth?: boolean;
+  hapticFeedback?: boolean;
+  testID?: string;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
 }
 
 export function Button({
   title,
   variant = 'primary',
-  size = 'medium',
+  size = 'md',
   loading = false,
+  disabled = false,
   onPress,
-  disabled,
   style,
   textStyle,
   leftIcon,
-  ...props
+  rightIcon,
+  fullWidth = false,
+  hapticFeedback = true,
+  testID,
+  accessibilityLabel,
+  accessibilityHint,
 }: ButtonProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
-  const getBackgroundColor = () => {
+  const getBackgroundColor = (pressed: boolean) => {
     if (disabled) {
-      return colors.border + '80';
+      return colors.border;
     }
 
-    switch (variant) {
-      case 'primary':
-        return colors.primary;
-      case 'secondary':
-        return colors.card;
-      case 'danger':
-        return colors.danger;
-      case 'outline':
-        return 'transparent';
-      default:
-        return colors.primary;
+    const baseColor = (() => {
+      switch (variant) {
+        case 'primary':
+          return colors.primary;
+        case 'secondary':
+          return colors.secondary;
+        case 'tertiary':
+          return colors.surface;
+        case 'danger':
+          return colors.danger;
+        case 'success':
+          return colors.success;
+        case 'outline':
+        case 'ghost':
+        case 'link':
+          return 'transparent';
+        default:
+          return colors.primary;
+      }
+    })();
+
+    if (pressed && baseColor !== 'transparent') {
+      // Darken the color when pressed
+      return baseColor + 'CC'; // Add some transparency for pressed state
     }
+
+    return baseColor;
   };
 
   const getTextColor = () => {
     if (disabled) {
-      return colors.textSecondary;
+      return colors.textDisabled;
     }
 
     switch (variant) {
       case 'primary':
-        return colors.white;
-      case 'secondary':
-        return colors.text;
       case 'danger':
-        return colors.white;
+      case 'success':
+        return colors.textInverse;
+      case 'secondary':
+        return colors.textInverse;
+      case 'tertiary':
+        return colors.text;
       case 'outline':
+      case 'ghost':
+        return colors.primary;
+      case 'link':
         return colors.primary;
       default:
-        return colors.white;
+        return colors.textInverse;
     }
   };
 
@@ -87,93 +121,202 @@ export function Button({
     }
 
     switch (variant) {
-      case 'primary':
-        return colors.primary;
-      case 'secondary':
-        return colors.border;
-      case 'danger':
-        return colors.danger;
       case 'outline':
         return colors.primary;
+      case 'tertiary':
+        return colors.border;
       default:
-        return colors.primary;
+        return 'transparent';
     }
   };
 
-  const getButtonHeight = () => {
-    switch (size) {
-      case 'small':
-        return 36;
-      case 'large':
-        return 56;
+  const getBorderWidth = () => {
+    switch (variant) {
+      case 'outline':
+      case 'tertiary':
+        return 1;
       default:
-        return 48;
+        return 0;
+    }
+  };
+
+  const getShadow = () => {
+    if (disabled || variant === 'ghost' || variant === 'link') {
+      return {};
+    }
+    
+    switch (variant) {
+      case 'primary':
+      case 'secondary':
+      case 'danger':
+      case 'success':
+        return shadow.button;
+      default:
+        return {};
+    }
+  };
+
+  const getButtonDimensions = () => {
+    switch (size) {
+      case 'xs':
+        return {
+          height: 28,
+          paddingHorizontal: spacing.sm,
+          borderRadius: borderRadius.sm,
+        };
+      case 'sm':
+        return {
+          height: 36,
+          paddingHorizontal: spacing.md,
+          borderRadius: borderRadius.sm,
+        };
+      case 'md':
+        return {
+          height: 44,
+          paddingHorizontal: spacing.lg,
+          borderRadius: borderRadius.md,
+        };
+      case 'lg':
+        return {
+          height: 52,
+          paddingHorizontal: spacing.xl,
+          borderRadius: borderRadius.md,
+        };
+      case 'xl':
+        return {
+          height: 60,
+          paddingHorizontal: spacing['2xl'],
+          borderRadius: borderRadius.lg,
+        };
+      default:
+        return {
+          height: 44,
+          paddingHorizontal: spacing.lg,
+          borderRadius: borderRadius.md,
+        };
     }
   };
 
   const getFontSize = () => {
     switch (size) {
-      case 'small':
-        return 14;
-      case 'large':
-        return 18;
+      case 'xs':
+        return typography.fontSize.xs;
+      case 'sm':
+        return typography.fontSize.sm;
+      case 'md':
+        return typography.fontSize.base;
+      case 'lg':
+        return typography.fontSize.md;
+      case 'xl':
+        return typography.fontSize.lg;
       default:
-        return 16;
+        return typography.fontSize.base;
     }
   };
 
+  const getFontWeight = (): TextStyle['fontWeight'] => {
+    switch (variant) {
+      case 'primary':
+      case 'secondary':
+      case 'danger':
+      case 'success':
+        return '600' as const;
+      case 'link':
+        return '500' as const;
+      default:
+        return '500' as const;
+    }
+  };
+
+  const handlePress = () => {
+    if (disabled || loading) return;
+
+    // Haptic feedback
+    if (hapticFeedback && Platform.OS === 'ios') {
+      Vibration.vibrate(1);
+    }
+
+    onPress?.();
+  };
+
+  const dimensions = getButtonDimensions();
+
   return (
-    <TouchableOpacity
-      style={[
+    <Pressable
+      style={({ pressed }) => [
         styles.button,
         {
-          backgroundColor: getBackgroundColor(),
+          backgroundColor: getBackgroundColor(pressed),
           borderColor: getBorderColor(),
-          borderWidth: 1,
-          height: getButtonHeight(),
+          borderWidth: getBorderWidth(),
+          height: dimensions.height,
+          paddingHorizontal: dimensions.paddingHorizontal,
+          borderRadius: dimensions.borderRadius,
+          width: fullWidth ? '100%' : undefined,
+          opacity: disabled ? 0.6 : pressed ? 0.9 : 1,
         },
+        getShadow(),
         style,
       ]}
-      onPress={onPress}
+      onPress={handlePress}
       disabled={disabled || loading}
-      activeOpacity={0.8}
-      {...props}
+      testID={testID}
+      accessibilityLabel={accessibilityLabel || title}
+      accessibilityHint={accessibilityHint}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
     >
       {loading ? (
-        <ActivityIndicator color={getTextColor()} size="small" />
+        <ActivityIndicator 
+          color={getTextColor()} 
+          size={size === 'xs' || size === 'sm' ? 'small' : 'small'} 
+        />
       ) : (
         <>
-          {leftIcon ? <>{leftIcon}</> : null}
+          {leftIcon && (
+            <>{leftIcon}</>
+          )}
           <Text
             style={[
               styles.buttonText,
               {
                 color: getTextColor(),
                 fontSize: getFontSize(),
-                marginLeft: leftIcon ? 8 : 0,
+                fontWeight: getFontWeight(),
+                marginLeft: leftIcon ? componentSpacing.button.gap : 0,
+                marginRight: rightIcon ? componentSpacing.button.gap : 0,
               },
+              variant === 'link' && styles.linkText,
               textStyle,
             ]}
+            numberOfLines={1}
           >
             {title}
           </Text>
+          {rightIcon && (
+            <>{rightIcon}</>
+          )}
         </>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
-    borderRadius: 6,
-    paddingHorizontal: spacing.lg,
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    flexDirection: 'row',
-    ...shadow,
+    position: 'relative',
+    overflow: 'hidden',
   },
   buttonText: {
-    fontWeight: '700', // Use numeric value for RN compatibility
     fontFamily: typography.fontFamily,
+    textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+  linkText: {
+    textDecorationLine: 'underline',
   },
 });

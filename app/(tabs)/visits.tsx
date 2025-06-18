@@ -9,10 +9,10 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
+import { spacing } from '@/constants/Spacing';
+import { typography } from '@/constants/Typography';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useVisit } from '@/hooks/useVisit';
-import { spacing } from '@/styles/spacing';
-import { typography } from '@/styles/typography';
 
 type FilterType = 'All' | 'Today' | 'Planned' | 'Completed' | 'Cancelled';
 type SortColumn = 'visit_date' | 'outlet.name' | 'type';

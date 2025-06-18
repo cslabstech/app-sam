@@ -10,10 +10,10 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
+import { spacing } from '@/constants/Spacing';
+import { typography } from '@/constants/Typography';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useOutlet } from '@/hooks/useOutlet';
-import { spacing } from '@/styles/spacing';
-import { typography } from '@/styles/typography';
 
 export default function OutletsScreen() {
   const colorScheme = useColorScheme();

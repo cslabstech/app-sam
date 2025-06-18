@@ -6,12 +6,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
+import { shadow } from '@/constants/Shadows';
+import { spacing } from '@/constants/Spacing';
+import { typography } from '@/constants/Typography';
 import { useAuth } from '@/context/auth-context';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { usePermission } from '@/hooks/usePermission';
-import { shadow } from '@/styles/shadow';
-import { spacing } from '@/styles/spacing';
-import { typography } from '@/styles/typography';
 import { useUserData } from './_layout';
 
 // Only allow icon names that are mapped in IconSymbol.tsx

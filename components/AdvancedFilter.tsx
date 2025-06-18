@@ -3,8 +3,8 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
+import { spacing } from '@/constants/Spacing';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { spacing } from '@/styles/spacing';
 
 interface AdvancedFilterProps {
   showAdvancedFilter: boolean;
