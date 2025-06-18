@@ -5,15 +5,16 @@ interface AuthContextProps {
   user: User | null;
   token: string | null;
   loading: boolean;
+  permissions: string[]; // wajib ada
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
-  loginWithToken: (token: string, user: any) => Promise<void>;
+  loginWithToken: (token: string, user: any, permissions?: string[]) => Promise<void>;
   requestOtp: (phone: string) => Promise<any>;
   verifyOtp: (phone: string, otp: string) => Promise<any>;
 }
 
-const AuthContext = createContext<AuthContextProps | undefined>(undefined);
+export const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const {
@@ -26,10 +27,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loginWithToken,
     requestOtp,
     verifyOtp,
+    permissions,
   } = useAuthHook();
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, refreshUser, loginWithToken, requestOtp, verifyOtp }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, refreshUser, loginWithToken, requestOtp, verifyOtp, permissions }}>
       {children}
     </AuthContext.Provider>
   );

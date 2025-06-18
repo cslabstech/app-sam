@@ -8,6 +8,7 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/context/auth-context';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { usePermission } from '@/hooks/usePermission';
 import { shadow } from '@/styles/shadow';
 import { spacing } from '@/styles/spacing';
 import { typography } from '@/styles/typography';
@@ -102,6 +103,8 @@ export default function ProfileScreen() {
     }
   };
 
+  const canCreateUser = usePermission('create_user');
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View
@@ -141,18 +144,20 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* Tambah User Button */}
-        <TouchableOpacity
-          style={[
-            styles.addUserButton,
-            { backgroundColor: colors.primary, marginBottom: spacing.lg },
-          ]}
-          onPress={() => router.push('/add-user')}
-          activeOpacity={0.85}
-        >
-          <IconSymbol name={ICONS.person as any} size={20} color={'#fff'} />
-          <Text style={{ color: '#fff', fontWeight: 'bold', marginLeft: 8, fontSize: 16 }}>Tambah User</Text>
-        </TouchableOpacity>
+        {/* Tambah User Button hanya jika punya permission */}
+        {canCreateUser && (
+          <TouchableOpacity
+            style={[
+              styles.addUserButton,
+              { backgroundColor: colors.primary, marginBottom: spacing.lg },
+            ]}
+            onPress={() => router.push('/add-user')}
+            activeOpacity={0.85}
+          >
+            <IconSymbol name={ICONS.person as any} size={20} color={'#fff'} />
+            <Text style={{ color: '#fff', fontWeight: 'bold', marginLeft: 8, fontSize: 16 }}>Tambah User</Text>
+          </TouchableOpacity>
+        )}
         <Card style={{ marginBottom: 0, borderRadius: 16, padding: 0 }}>
           <MenuItem icon="person" title="Personal Information" />
           <View style={[styles.divider, { backgroundColor: colors.border }]} />

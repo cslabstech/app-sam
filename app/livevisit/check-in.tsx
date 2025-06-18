@@ -412,9 +412,9 @@ export default function CheckInScreen() {
             // Submit check-in
             const formData = new FormData();
             formData.append('outlet_id', selectedOutletId); // Correct key for backend validation
-            formData.append('latlong_in', `${currentLocation.latitude},${currentLocation.longitude}`);
-            formData.append('tipe_visit', 'EXTRACALL');
-            formData.append('picture_visit', {
+            formData.append('checkin_location', `${currentLocation.latitude},${currentLocation.longitude}`);
+            formData.append('type', 'EXTRACALL');
+            formData.append('checkin_photo', {
               uri,
               name: `checkin-${Date.now()}.jpg`,
               type: 'image/jpeg',
@@ -425,7 +425,7 @@ export default function CheckInScreen() {
               setStorePhoto(null);
               setRawPhoto(null);
               setWatermarkData(null);
-              router.replace({ pathname: '/livevisit', params: { outletId: selectedOutletId } });
+              router.replace({ pathname: '/(tabs)', params: { outletId: selectedOutletId } });
             } else {
               Alert.alert('Check In Gagal', res?.meta?.message || 'Gagal check in');
             }

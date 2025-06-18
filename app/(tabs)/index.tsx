@@ -18,7 +18,7 @@ export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const user = useUserData?.() ?? null;
-  const displayName = user?.nama_lengkap || user?.name || user?.username || '-';
+  const displayName = user?.name || user?.username || '-';
 
   const { fetchVisits } = useVisit();
   const [todayVisits, setTodayVisits] = useState<any[]>([]);
@@ -26,20 +26,15 @@ export default function HomeScreen() {
 
   useEffect(() => {
     setLoadingVisits(true);
-    fetchVisits()
+    // Ambil tanggal hari ini dalam format yyyy-mm-dd
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+    fetchVisits({ 'filters[date]': todayStr })
       .then(res => {
-        // Perbaikan: tanggal_visit adalah timestamp (number), bukan string ISO
-        const today = new Date();
-        const isSameDay = (ts: number) => {
-          const d = new Date(ts);
-          return (
-            d.getFullYear() === today.getFullYear() &&
-            d.getMonth() === today.getMonth() &&
-            d.getDate() === today.getDate()
-          );
-        };
-        const visits = (res.data || []).filter((v: any) => v.tanggal_visit && isSameDay(v.tanggal_visit));
-        setTodayVisits(visits);
+        setTodayVisits(res.data || []);
       })
       .finally(() => setLoadingVisits(false));
   }, []);
@@ -47,19 +42,14 @@ export default function HomeScreen() {
   // Tambahkan fungsi refresh
   const handleRefresh = async () => {
     setLoadingVisits(true);
-    fetchVisits()
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+    fetchVisits({ 'filters[date]': todayStr })
       .then(res => {
-        const today = new Date();
-        const isSameDay = (ts: number) => {
-          const d = new Date(ts);
-          return (
-            d.getFullYear() === today.getFullYear() &&
-            d.getMonth() === today.getMonth() &&
-            d.getDate() === today.getDate()
-          );
-        };
-        const visits = (res.data || []).filter((v: any) => v.tanggal_visit && isSameDay(v.tanggal_visit));
-        setTodayVisits(visits);
+        setTodayVisits(res.data || []);
       })
       .finally(() => setLoadingVisits(false));
   };
@@ -134,31 +124,27 @@ export default function HomeScreen() {
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                   <IconSymbol size={18} name="building.2.fill" color={colors.primary} style={{ marginRight: 8 }} />
-                  <Text style={[styles.visitName, { color: colors.text, fontSize: 17 }]}>{visit.outlet?.kode_outlet}</Text>
-                  <Text style={{ color: colors.textSecondary, fontSize: 15, marginLeft: 8, fontWeight: '500' }}>• {visit.outlet?.nama_outlet}</Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                  <IconSymbol size={14} name="mappin.and.ellipse" color={colors.primary} style={{ marginRight: 6 }} />
-                  <Text style={[styles.visitAddress, { color: colors.textSecondary, flex: 1 }]} numberOfLines={1} ellipsizeMode="tail">{visit.outlet?.alamat_outlet}</Text>
+                  <Text style={[styles.visitName, { color: colors.text, fontSize: 17 }]}>{visit.outlet?.code}</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 15, marginLeft: 8, fontWeight: '500' }}>• {visit.outlet?.name}</Text>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                   <IconSymbol size={14} name="clock.fill" color={colors.primary} style={{ marginRight: 6 }} />
                   <Text style={[styles.visitTimeText, { color: colors.primary, fontWeight: '600' }]}> 
-                    {visit.check_in_time ? `IN: ${new Date(visit.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'IN: -'}
+                    {visit.checkin_time ? `IN: ${new Date(visit.checkin_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'IN: -'}
                   </Text>
                   <Text style={[styles.visitTimeText, { color: colors.primary, marginLeft: 12, fontWeight: '600' }]}> 
-                    {visit.check_out_time ? `OUT: ${new Date(visit.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'OUT: -'}
+                    {visit.checkout_time ? `OUT: ${new Date(visit.checkout_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'OUT: -'}
                   </Text>
                 </View>
               </View>
               <View style={{ marginLeft: 12 }}>
-                {(!visit.check_in_time && !visit.check_out_time) ? (
+                {(!visit.checkin_time && !visit.checkout_time) ? (
                   <Button
                     title="Start Visit"
                     size="small"
                     onPress={() => router.push({ pathname: '/livevisit/check-in', params: { id: visit.id } })}
                   />
-                ) : (visit.check_in_time && !visit.check_out_time) ? (
+                ) : (visit.checkin_time && !visit.checkout_time) ? (
                   <Button
                     title="Check Out"
                     size="small"

@@ -19,7 +19,8 @@ const OutletItem: React.FC<OutletItemProps> = ({ outlet }) => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status?: string) => {
+    if (!status || typeof status !== 'string') return colors.textSecondary;
     const normalizedStatus = status.toLowerCase();
     switch (normalizedStatus) {
       case 'maintain':

@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useOutlet } from '@/hooks/useOutlet';
+import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -20,7 +21,10 @@ export default function OutletEditPage() {
     status: '',
     location: '',
     radius: 0,
+    owner_name: '',
+    owner_phone: '',
   });
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     if (id) fetchOutlet(id as string);
@@ -42,9 +46,27 @@ export default function OutletEditPage() {
         status: outlet.status || '',
         location: outlet.location || '',
         radius: outlet.radius || 0,
+        owner_name: outlet.owner_name || '',
+        owner_phone: outlet.owner_phone || '',
       });
     }
   }, [outlet]);
+
+  // Ambil lokasi user saat mount (sekali saja)
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Izin lokasi ditolak', 'Aplikasi tidak bisa mengambil lokasi.');
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      if (loc && loc.coords) {
+        const latlong = `${loc.coords.latitude},${loc.coords.longitude}`;
+        setForm(f => ({ ...f, location: latlong }));
+      }
+    })();
+  }, []);
 
   const handleChange = (field: string, value: string | number) => {
     setForm(f => ({ ...f, [field]: value }));
@@ -52,6 +74,12 @@ export default function OutletEditPage() {
 
   const handleUpdate = async () => {
     if (!outlet) return;
+    // Validasi required
+    const errors: { [key: string]: string } = {};
+    if (!form.owner_name) errors.owner_name = 'Nama pemilik wajib diisi';
+    if (!form.owner_phone) errors.owner_phone = 'Nomor HP pemilik wajib diisi';
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) return;
     // Payload sesuai dengan struktur API baru
     const payload = {
       code: form.code,
@@ -60,6 +88,8 @@ export default function OutletEditPage() {
       status: form.status,
       location: form.location,
       radius: form.radius,
+      owner_name: form.owner_name,
+      owner_phone: form.owner_phone,
     };
     const result = await updateOutlet(outlet.id, payload);
     if (result.success) {
@@ -67,6 +97,20 @@ export default function OutletEditPage() {
       router.back();
     } else {
       Alert.alert('Error', result.error || 'Failed to update outlet');
+    }
+  };
+
+  // Handler untuk ambil lokasi manual
+  const handleGetLocation = async () => {
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Izin lokasi ditolak', 'Aplikasi tidak bisa mengambil lokasi.');
+      return;
+    }
+    const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+    if (loc && loc.coords) {
+      const latlong = `${loc.coords.latitude},${loc.coords.longitude}`;
+      setForm(f => ({ ...f, location: latlong }));
     }
   };
 
@@ -131,10 +175,12 @@ export default function OutletEditPage() {
         <View style={styles.inputGroup}>
           <Text style={[styles.inputLabel, { color: colors.text }]}>Location</Text>
           <TextInput
-            style={[styles.input, { color: colors.text, borderColor: colors.border }]}
+            style={[styles.input, { color: colors.text, borderColor: colors.border }]} 
             value={form.location}
             onChangeText={v => handleChange('location', v)}
+            placeholder="latitude,longitude"
           />
+          <Button title="Ambil Lokasi Sekarang" onPress={handleGetLocation} style={{ marginTop: 8 }} />
         </View>
         <View style={styles.inputGroup}>
           <Text style={[styles.inputLabel, { color: colors.text }]}>Radius</Text>
@@ -144,6 +190,31 @@ export default function OutletEditPage() {
             onChangeText={v => handleChange('radius', Number(v) || 0)}
             keyboardType="numeric"
           />
+        </View>
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>Nama Pemilik</Text>
+          <TextInput
+            style={[styles.input, { color: colors.text, borderColor: colors.border }]}
+            value={form.owner_name}
+            onChangeText={v => handleChange('owner_name', v)}
+            placeholder="Nama Pemilik"
+          />
+          {!!formErrors.owner_name && (
+            <Text style={{ color: colors.danger, marginTop: 4 }}>{formErrors.owner_name}</Text>
+          )}
+        </View>
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>Nomor HP Pemilik</Text>
+          <TextInput
+            style={[styles.input, { color: colors.text, borderColor: colors.border }]}
+            value={form.owner_phone}
+            onChangeText={v => handleChange('owner_phone', v)}
+            placeholder="08xxxxxxxxxx"
+            keyboardType="phone-pad"
+          />
+          {!!formErrors.owner_phone && (
+            <Text style={{ color: colors.danger, marginTop: 4 }}>{formErrors.owner_phone}</Text>
+          )}
         </View>
         <Button
           title={loading ? 'Updating...' : 'Update Outlet'}

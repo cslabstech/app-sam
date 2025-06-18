@@ -549,7 +549,7 @@ export default function VisitsScreen() {
         refreshing={refreshing}
         renderItem={({ item }) => (
           <TouchableOpacity
-            onPress={() => router.push({ pathname: '/livevisit', params: { id: item.id } })}
+            onPress={() => router.push({ pathname: '/livevisit/view', params: { id: item.id } })}
             activeOpacity={0.7}
           >
             <Card>

@@ -10,6 +10,7 @@ export interface User {
     username: string;
     name: string;
     role: string;
+    permissions?: string[]; // tambahkan agar bisa diakses context
     [key: string]: any;
 }
 
@@ -17,6 +18,7 @@ export interface User {
 export function useAuth() {
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(null);
+    const [permissions, setPermissions] = useState<string[]>([]); // simpan permissions
     const [loading, setLoading] = useState(true);
     const { notifId, notifIdLoading } = useNotifId();
 
@@ -72,7 +74,8 @@ export function useAuth() {
                 body: { version: '1.0.3', username, password, notif_id },
                 logLabel: 'LOGIN'
             });
-            await loginWithToken(data.data.access_token, data.data.user);
+            await loginWithToken(data.data.access_token, data.data.user, data.data.permissions);
+            setPermissions(data.data.permissions || []);
             log('[LOGIN] Login success, token set');
         } catch (err) {
             log('[LOGIN] Error:', err);
@@ -112,6 +115,7 @@ export function useAuth() {
                 logLabel: 'REFRESH_USER'
             });
             setUser(data.data);
+            setPermissions(data.data.permissions || []);
             await AsyncStorage.setItem('user', JSON.stringify(data.data));
             log('[REFRESH_USER] User data refreshed:', data.data);
         } catch (err) {
@@ -122,11 +126,12 @@ export function useAuth() {
         }
     };
 
-    const loginWithToken = async (token: string, user: any) => {
+    const loginWithToken = async (token: string, user: any, permissionsFromLogin?: string[]) => {
         await AsyncStorage.setItem('token', token);
         await AsyncStorage.setItem('user', JSON.stringify(user));
         setToken(token);
         setUser(user);
+        if (permissionsFromLogin) setPermissions(permissionsFromLogin);
         log('[LOGIN_WITH_TOKEN] Token and user set from OTP login');
     };
 
@@ -161,6 +166,7 @@ export function useAuth() {
         loginWithToken,
         setUser,
         setToken,
+        permissions,
         requestOtp,
         verifyOtp,
     };
