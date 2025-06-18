@@ -1,3 +1,4 @@
+import { AdvancedFilter } from '@/components/AdvancedFilter';
 import OutletItem from '@/components/OutletItem';
 import { router } from 'expo-router';
 import { debounce } from 'lodash';
@@ -27,6 +28,7 @@ export default function OutletsScreen() {
   const [sortColumn, setSortColumn] = useState<'name'|'code'|'district'|'status'>('name');
   const [sortDirection, setSortDirection] = useState<'asc'|'desc'>('asc');
   const [filters, setFilters] = useState<Record<string, any>>({});
+  const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
   
   // Get outlets data from the hook
   const { outlets, loading, meta, fetchOutletsAdvanced } = useOutlet(searchQuery);
@@ -401,41 +403,47 @@ export default function OutletsScreen() {
           ) : null}
         </View>
         
-        {/* PerPage & Sorting */}
-        <View style={styles.controlsRow}>
-          <View style={styles.controlGroup}>
-            <Text style={styles.controlLabel}>Show</Text>
-            <View style={styles.controlsWrapper}>
-              {[10, 20, 50, 100].map(n => 
-                renderChip(n, perPage, n, () => { setPerPage(n); setPage(1); }, `perpage-${n}`)
-              )}
+        {/* Advanced Filter */}
+        <AdvancedFilter 
+          showAdvancedFilter={showAdvancedFilter}
+          onToggle={() => setShowAdvancedFilter(!showAdvancedFilter)}
+        >
+          {/* PerPage & Sorting */}
+          <View style={styles.controlsRow}>
+            <View style={styles.controlGroup}>
+              <Text style={styles.controlLabel}>Show</Text>
+              <View style={styles.controlsWrapper}>
+                {[10, 20, 50, 100].map(n => 
+                  renderChip(n, perPage, n, () => { setPerPage(n); setPage(1); }, `perpage-${n}`)
+                )}
+              </View>
+            </View>
+            
+            <View style={styles.controlGroup}>
+              <Text style={styles.controlLabel}>Sort by</Text>
+              <View style={styles.controlsWrapper}>
+                {[
+                  { id: 'name', label: 'Name' },
+                  { id: 'code', label: 'Code' },
+                  { id: 'district', label: 'District' },
+                  { id: 'status', label: 'Status' },
+                ].map(item => 
+                  renderChip(item.id, sortColumn, item.label, () => setSortColumn(item.id as any), `sortcol-${item.id}`)
+                )}
+                <TouchableOpacity
+                  style={styles.sortButton}
+                  onPress={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+                >
+                  <IconSymbol 
+                    name={sortDirection === 'asc' ? 'arrow.up' : 'arrow.down'} 
+                    size={18} 
+                    color={colors.primary} 
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-          
-          <View style={styles.controlGroup}>
-            <Text style={styles.controlLabel}>Sort by</Text>
-            <View style={styles.controlsWrapper}>
-              {[
-                { id: 'name', label: 'Name' },
-                { id: 'code', label: 'Code' },
-                { id: 'district', label: 'District' },
-                { id: 'status', label: 'Status' },
-              ].map(item => 
-                renderChip(item.id, sortColumn, item.label, () => setSortColumn(item.id as any), `sortcol-${item.id}`)
-              )}
-              <TouchableOpacity
-                style={styles.sortButton}
-                onPress={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
-              >
-                <IconSymbol 
-                  name={sortDirection === 'asc' ? 'arrow.up' : 'arrow.down'} 
-                  size={18} 
-                  color={colors.primary} 
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+        </AdvancedFilter>
 
         {/* Status & Info */}
         <View style={styles.statusRow}>

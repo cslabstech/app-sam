@@ -4,6 +4,7 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AdvancedFilter } from '@/components/AdvancedFilter';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
@@ -30,6 +31,7 @@ export default function VisitsScreen() {
   const [sortDirection, setSortDirection] = useState<'asc'|'desc'>('desc');
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('All');
   const [dateFilter, setDateFilter] = useState<string | null>(null);
+  const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
   
   // Get visits data from the hook
   const { visits, loading, meta, fetchVisits } = useVisit();
@@ -399,7 +401,7 @@ export default function VisitsScreen() {
           title="+ Plan Visit"
           size="medium"
           variant="primary"
-          onPress={() => router.push('/livevisit')}
+          onPress={() => router.push('/livevisit/check-in')}
           style={styles.actionButton}
         />
       </View>
@@ -457,7 +459,7 @@ export default function VisitsScreen() {
           title="+ Plan Visit"
           size="small"
           variant="primary"
-          onPress={() => router.push('/livevisit')}
+          onPress={() => router.push('/livevisit/check-in')}
         />
       </View>
 
@@ -480,50 +482,56 @@ export default function VisitsScreen() {
           ) : null}
         </View>
         
-        {/* Filter tabs */}
-        <View style={styles.controlGroup}>
-          <Text style={styles.controlLabel}>Filter</Text>
-          <View style={styles.filterContainer}>
-            {filterTabs.map((item) => (
-              renderChip(item, selectedFilter, item, () => setSelectedFilter(item), `filter-${item}`)
-            ))}
-          </View>
-        </View>
-        
-        {/* PerPage & Sorting */}
-        <View style={styles.controlsRow}>
+        {/* Advanced Filter */}
+        <AdvancedFilter 
+          showAdvancedFilter={showAdvancedFilter}
+          onToggle={() => setShowAdvancedFilter(!showAdvancedFilter)}
+        >
+          {/* Filter tabs */}
           <View style={styles.controlGroup}>
-            <Text style={styles.controlLabel}>Show</Text>
-            <View style={styles.controlsWrapper}>
-              {[10, 20, 50].map(n => 
-                renderChip(String(n), String(perPage), String(n), () => { setPerPage(n); setPage(1); }, `perpage-${n}`)
-              )}
+            <Text style={styles.controlLabel}>Filter</Text>
+            <View style={styles.filterContainer}>
+              {filterTabs.map((item) => (
+                renderChip(item, selectedFilter, item, () => setSelectedFilter(item), `filter-${item}`)
+              ))}
             </View>
           </View>
           
-          <View style={styles.controlGroup}>
-            <Text style={styles.controlLabel}>Sort by</Text>
-            <View style={styles.controlsWrapper}>
-              {[
-                { id: 'visit_date', label: 'Date' },
-                { id: 'outlet.name', label: 'Outlet' },
-                { id: 'type', label: 'Type' },
-              ].map(item => 
-                renderChip(item.id, sortColumn, item.label, () => setSortColumn(item.id as any), `sortcol-${item.id}`)
-              )}
-              <TouchableOpacity
-                style={styles.sortButton}
-                onPress={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
-              >
-                <IconSymbol 
-                  name={sortDirection === 'asc' ? 'arrow.up' : 'arrow.down'} 
-                  size={18} 
-                  color={colors.primary} 
-                />
-              </TouchableOpacity>
+          {/* PerPage & Sorting */}
+          <View style={styles.controlsRow}>
+            <View style={styles.controlGroup}>
+              <Text style={styles.controlLabel}>Show</Text>
+              <View style={styles.controlsWrapper}>
+                {[10, 20, 50].map(n => 
+                  renderChip(String(n), String(perPage), String(n), () => { setPerPage(n); setPage(1); }, `perpage-${n}`)
+                )}
+              </View>
+            </View>
+            
+            <View style={styles.controlGroup}>
+              <Text style={styles.controlLabel}>Sort by</Text>
+              <View style={styles.controlsWrapper}>
+                {[
+                  { id: 'visit_date', label: 'Date' },
+                  { id: 'outlet.name', label: 'Outlet' },
+                  { id: 'type', label: 'Type' },
+                ].map(item => 
+                  renderChip(item.id, sortColumn, item.label, () => setSortColumn(item.id as any), `sortcol-${item.id}`)
+                )}
+                <TouchableOpacity
+                  style={styles.sortButton}
+                  onPress={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+                >
+                  <IconSymbol 
+                    name={sortDirection === 'asc' ? 'arrow.up' : 'arrow.down'} 
+                    size={18} 
+                    color={colors.primary} 
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
+        </AdvancedFilter>
 
         {/* Status & Info */}
         <View style={styles.statusRow}>
