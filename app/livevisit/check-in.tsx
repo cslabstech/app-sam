@@ -36,7 +36,16 @@ function parseLatLong(latlong: string): { latitude: number; longitude: number } 
   return { latitude: lat, longitude: lng };
 }
 
-// Ganti outlet state dan ambil data dari useOutlets
+/**
+ * Check-in Screen Component
+ * 
+ * Fitur utama:
+ * - Validasi lokasi berdasarkan radius outlet (jika radius = 0, skip validasi)
+ * - Two-step process: validasi lokasi → selfie check-in
+ * - Menggunakan GPS dan kamera untuk verifikasi
+ * 
+ * @author SAM App Team
+ */
 export default function CheckInScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -137,7 +146,15 @@ export default function CheckInScreen() {
         outletCoords.longitude
       );
       setDistance(calculatedDistance);
-      setLocationValidated(calculatedDistance <= MAX_DISTANCE);
+      
+      // Jika radius outlet 0, skip validasi jarak (langsung valid)
+      if (selectedOutlet.radius === 0) {
+        setLocationValidated(true);
+      } else {
+        // Gunakan radius dari outlet, fallback ke MAX_DISTANCE jika radius tidak ada
+        const maxAllowedDistance = selectedOutlet.radius || MAX_DISTANCE;
+        setLocationValidated(calculatedDistance <= maxAllowedDistance);
+      }
     } else {
       setLocationValidated(false);
     }
@@ -578,9 +595,75 @@ export default function CheckInScreen() {
             )}
           </MapView>
           <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: 16, backgroundColor: 'transparent' }}>
+            {/* Status validasi lokasi */}
+            {selectedOutlet && currentLocation && (
+              <View style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                borderRadius: 8,
+                padding: 12,
+                marginBottom: 12,
+                shadowColor: '#000',
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 2,
+              }}>
+                {selectedOutlet.radius === 0 ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+                    <Text style={{ marginLeft: 8, color: '#22C55E', fontWeight: '500' }}>
+                      Validasi lokasi dilewati (radius tidak dibatasi)
+                    </Text>
+                  </View>
+                ) : (
+                  <View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                      <Ionicons 
+                        name={locationValidated ? "checkmark-circle" : "close-circle"} 
+                        size={20} 
+                        color={locationValidated ? "#22C55E" : "#EF4444"} 
+                      />
+                      <Text style={{ 
+                        marginLeft: 8, 
+                        color: locationValidated ? "#22C55E" : "#EF4444", 
+                        fontWeight: '500' 
+                      }}>
+                        {locationValidated ? 'Lokasi valid' : 'Lokasi terlalu jauh'}
+                      </Text>
+                    </View>
+                    {distance !== null && (
+                      <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 8 }}>
+                        Jarak: {Math.round(distance)}m (Max: {selectedOutlet.radius}m)
+                      </Text>
+                    )}
+                    {/* Tombol update outlet jika lokasi terlalu jauh */}
+                    {!locationValidated && (
+                      <TouchableOpacity
+                        style={{
+                          backgroundColor: '#FF8800',
+                          borderRadius: 6,
+                          paddingVertical: 8,
+                          paddingHorizontal: 12,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          alignSelf: 'flex-start',
+                        }}
+                        onPress={() => {
+                          router.push(`/outlet/${selectedOutlet.id}/edit` as any);
+                        }}
+                      >
+                        <Ionicons name="create-outline" size={16} color="#fff" />
+                        <Text style={{ color: '#fff', fontSize: 12, fontWeight: '500', marginLeft: 4 }}>
+                          Update Lokasi Outlet
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+              </View>
+            )}
             <TouchableOpacity
               style={{
-                backgroundColor: locationValidated ? '#FF8800' : '#ccc',
+                backgroundColor: selectedOutlet ? '#FF8800' : '#ccc',
                 borderRadius: 8,
                 paddingVertical: 16,
                 alignItems: 'center',
@@ -590,6 +673,28 @@ export default function CheckInScreen() {
                   Alert.alert('Pilih Outlet', 'Silakan pilih outlet terlebih dahulu.');
                   return;
                 }
+                
+                // Cek jika lokasi tidak valid dan outlet memiliki radius > 0
+                if (!locationValidated && selectedOutlet.radius > 0) {
+                  Alert.alert(
+                    'Lokasi Terlalu Jauh',
+                    `Anda berada ${Math.round(distance || 0)}m dari outlet, sedangkan maksimal jarak adalah ${selectedOutlet.radius}m. Apakah Anda ingin memperbarui lokasi outlet?`,
+                    [
+                      {
+                        text: 'Batal',
+                        style: 'cancel',
+                      },
+                      {
+                        text: 'Update Lokasi',
+                        onPress: () => {
+                          router.push(`/outlet/${selectedOutlet.id}/edit` as any);
+                        },
+                      },
+                    ]
+                  );
+                  return;
+                }
+
                 // Validasi status kunjungan sebelum lanjut
                 try {
                   const result = await checkVisitStatus(selectedOutlet.id);
@@ -607,7 +712,7 @@ export default function CheckInScreen() {
                   Alert.alert('Cek Status Gagal', 'Gagal memeriksa status kunjungan. Silakan coba lagi.');
                 }
               }}
-              disabled={!locationValidated}
+              disabled={!selectedOutlet}
             >
               <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>Lanjutkan</Text>
             </TouchableOpacity>

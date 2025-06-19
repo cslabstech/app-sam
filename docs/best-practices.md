@@ -273,4 +273,75 @@ Sebelum commit code, pastikan:
 
 ---
 
-**Catatan:** Best practices ini terus berkembang seiring dengan kebutuhan project. Update dokumentasi ini jika ada perubahan atau penambahan pattern baru. 
+## 📍 Fitur Check-in & Validasi Lokasi
+
+### Validasi Radius Outlet
+Sistem check-in memiliki fitur validasi lokasi yang fleksibel:
+
+- **Radius > 0**: User harus berada dalam radius yang ditentukan (dalam meter)
+- **Radius = 0**: Validasi lokasi dilewati (tidak ada batasan jarak)
+- **Radius tidak ada**: Fallback ke MAX_DISTANCE (100m)
+
+#### Implementasi di `app/livevisit/check-in.tsx`:
+```typescript
+// Jika radius outlet 0, skip validasi jarak (langsung valid)
+if (selectedOutlet.radius === 0) {
+  setLocationValidated(true);
+} else {
+  // Gunakan radius dari outlet, fallback ke MAX_DISTANCE
+  const maxAllowedDistance = selectedOutlet.radius || MAX_DISTANCE;
+  setLocationValidated(calculatedDistance <= maxAllowedDistance);
+}
+```
+
+#### UI Feedback:
+- Menampilkan status validasi lokasi dengan icon dan warna
+- Jika radius = 0: "Validasi lokasi dilewati (radius tidak dibatasi)"
+- Jika radius > 0: "Lokasi valid/terlalu jauh" dengan info jarak
+- **Jika lokasi terlalu jauh**: Tombol "Update Lokasi Outlet" untuk navigasi ke edit outlet
+- **Alert konfirmasi**: Ketika user mencoba lanjutkan tapi lokasi tidak valid, muncul alert dengan opsi update outlet
+
+---
+
+### Form Edit Outlet dengan Media Pickers & Hidden Location
+Halaman edit outlet (`app/outlet/[id]/edit.tsx`) telah diupdate dengan fitur media picker:
+
+#### Field yang Tersedia:
+- **Code outlet**: Read-only, tidak bisa diubah
+- **Location**: Hidden dari user, diambil otomatis dari GPS terkini di background
+- **Owner name**: Required - Nama pemilik outlet
+- **Owner phone**: Required - Nomor HP pemilik outlet
+- **Photo shop sign**: Image picker untuk foto papan nama toko
+- **Video**: Video picker untuk video outlet
+
+#### Fitur Media Pickers:
+- ✅ **Image picker**: Native gallery picker untuk foto shop sign
+- ✅ **Video picker**: Native gallery picker untuk video outlet
+- ✅ **Preview media**: Menampilkan preview foto dan info video yang dipilih
+- ✅ **Remove option**: Tombol untuk menghapus media yang sudah dipilih
+- ✅ **Permission handling**: Request permission untuk akses gallery
+
+#### Fitur Auto Location (Hidden):
+- ✅ **Background GPS**: Mengambil lokasi GPS terkini di background
+- ✅ **User tidak tahu**: Field location tidak ditampilkan ke user
+- ✅ **Auto-populate**: Location field terisi otomatis untuk payload API
+
+#### UI/UX Features:
+- ✅ **Picker buttons**: Tombol dengan style yang konsisten
+- ✅ **Image preview**: Menampilkan preview gambar yang dipilih
+- ✅ **Video info**: Menampilkan info nama file video
+- ✅ **Remove buttons**: Easy removal untuk media yang tidak diinginkan
+
+#### Payload API:
+```typescript
+const payload = {
+  code: form.code,
+  location: form.location,        // dari GPS background (hidden)
+  owner_name: form.owner_name,    // required input
+  owner_phone: form.owner_phone,  // required input
+  photo_shop_sign: form.photo_shop_sign, // dari image picker
+  video: form.video,              // dari video picker
+};
+```
+
+---

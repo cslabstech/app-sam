@@ -196,13 +196,43 @@ export function useOutlet(searchQuery: string) {
     setError(null);
     try {
       const res = await fetch(`${BASE_URL}/outlet/${encodeURIComponent(id)}`, {
-        method: 'PUT',
+        method: 'POST',
         headers: {
           'Accept': 'application/json',
           'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
+      });
+      const json = await res.json();
+      if (json.meta && json.meta.code === 200) {
+        await fetchOutlets(); // refresh list
+        return { success: true };
+      } else {
+        setError(json.meta?.message || 'Failed to update outlet');
+        return { success: false, error: json.meta?.message };
+      }
+    } catch (e) {
+      setError('Failed to update outlet');
+      return { success: false, error: 'Failed to update outlet' };
+    } finally {
+      setLoading(false);
+    }
+  }, [token, fetchOutlets]);
+
+  // Update outlet with FormData (for file upload)
+  const updateOutletWithFile = useCallback(async (id: string, formData: FormData) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${BASE_URL}/outlet/${encodeURIComponent(id)}`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+          // Jangan set Content-Type, biarkan browser set multipart boundary
+        },
+        body: formData,
       });
       const json = await res.json();
       if (json.meta && json.meta.code === 200) {
@@ -296,5 +326,6 @@ export function useOutlet(searchQuery: string) {
     fetchOutlet,
     createOutlet,
     updateOutlet,
+    updateOutletWithFile, // <-- expose new method
   };
 }
