@@ -2,7 +2,7 @@ import { Colors } from '@/constants/Colors';
 import { shadow } from '@/constants/Shadows';
 import { spacing } from '@/constants/Spacing';
 import { typography } from '@/constants/Typography';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, FlatList, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';

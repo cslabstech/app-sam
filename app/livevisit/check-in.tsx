@@ -9,10 +9,14 @@ import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ViewShot, { captureRef } from 'react-native-view-shot';
 
+import { LocationStatus } from '@/components/LocationStatus';
+import { OutletDropdown } from '@/components/OutletDropdown';
+import { Button } from '@/components/ui/Button'; // Import Button component
+import { WatermarkOverlay } from '@/components/WatermarkOverlay';
 import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { useOutlet } from '@/hooks/useOutlet'; // Changed from useOutlets to useOutlet
-import { useVisit } from '@/hooks/useVisit';
+import { useOutlet } from '@/hooks/data/useOutlet'; // Changed from useOutlets to useOutlet
+import { useVisit } from '@/hooks/data/useVisit';
+import { useColorScheme } from '@/hooks/utils/useColorScheme';
 
 // Tambahkan ulang tipe ini karena sudah tidak ada di OutletAPI
 interface LocationCoords {
@@ -138,6 +142,23 @@ export default function CheckInScreen() {
   useEffect(() => {
     const outletCoords = selectedOutlet ? parseLatLong(selectedOutlet.location) : null;
 
+    // Jika location outlet null/invalid, blokir semua validasi dan UI radius
+    if (selectedOutlet && (!selectedOutlet.location || !outletCoords)) {
+      setLocationBlocked(true);
+      setLocationValidated(false);
+      Alert.alert(
+        'Data Outlet Belum Lengkap',
+        'Silakan update data outlet terlebih dahulu sebelum check-in.',
+        [
+          { text: 'Update Outlet', onPress: () => router.push(`/outlet/${selectedOutlet.id}/edit`) },
+          { text: 'Batal', style: 'cancel' },
+        ]
+      );
+      return;
+    } else {
+      setLocationBlocked(false);
+    }
+
     if (selectedOutlet && currentLocation && outletCoords) {
       const calculatedDistance = calculateDistance(
         currentLocation.latitude,
@@ -146,7 +167,6 @@ export default function CheckInScreen() {
         outletCoords.longitude
       );
       setDistance(calculatedDistance);
-      
       // Jika radius outlet 0, skip validasi jarak (langsung valid)
       if (selectedOutlet.radius === 0) {
         setLocationValidated(true);
@@ -462,6 +482,7 @@ export default function CheckInScreen() {
   };
 
   const [showOutletDropdown, setShowOutletDropdown] = useState(false);
+  const [locationBlocked, setLocationBlocked] = useState(false); // Tambah state blokir validasi jika outlet location null
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
@@ -502,202 +523,78 @@ export default function CheckInScreen() {
           shadowRadius: 8,
           elevation: 2,
         }}>
-          <View style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 8, marginBottom: 8, opacity: currentStep === 2 ? 1 : 1 }}>
-            <TouchableOpacity
-              style={{ flexDirection: 'row', alignItems: 'center', padding: 12, justifyContent: 'space-between' }}
-              onPress={() => { if (currentStep !== 2) setShowOutletDropdown(v => !v); }}
-              disabled={currentStep === 2}
-            >
-              <Text style={{ color: colors.text, fontSize: 16 }}>
-                {selectedOutlet ? `${selectedOutlet.name} (${selectedOutlet.code})` : 'Pilih outlet...'}
-              </Text>
-              <Ionicons name={showOutletDropdown ? 'chevron-up' : 'chevron-down'} size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-            {showOutletDropdown && currentStep !== 2 && (
-              <View style={{ maxHeight: 320, backgroundColor: '#fff', borderTopWidth: 1, borderColor: colors.border }}>
-                {loadingOutlets ? (
-                  <Text style={{ padding: 16, color: colors.textSecondary }}>Memuat outlet...</Text>
-                ) : (
-                  <>
-                    <View style={{ maxHeight: 300 }}>
-                      <Animated.ScrollView persistentScrollbar>
-                        {outlets.map(outlet => (
-                          <TouchableOpacity
-                            key={outlet.id}
-                            style={{ padding: 12, borderBottomWidth: 1, borderColor: colors.border }}
-                            onPress={() => {
-                              setSelectedOutletId(outlet.id);
-                              setShowOutletDropdown(false);
-                            }}
-                          >
-                            <Text style={{ color: colors.text }}>{outlet.name} ({outlet.code})</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </Animated.ScrollView>
-                    </View>
-                  </>
-                )}
-              </View>
-            )}
-          </View>
+          <OutletDropdown
+            outlets={outlets}
+            selectedOutletId={selectedOutletId}
+            onSelect={setSelectedOutletId}
+            disabled={currentStep === 2}
+            loading={loadingOutlets}
+            showDropdown={showOutletDropdown}
+            setShowDropdown={setShowOutletDropdown}
+          />
         </View>
       </View>
 
       {/* Step 1: Map View */}
-      {currentStep === 1 && (
+      {currentStep === 1 && !locationBlocked && (
         <View style={{ flex: 1 }}>
           <MapView
             style={{ flex: 1 }}
             region={mapRegion}
             provider={PROVIDER_GOOGLE}
             showsUserLocation
-            showsMyLocationButton={false} // Nonaktifkan tombol GPS current location
+            showsMyLocationButton={false}
           >
-            {/* Outlet location marker */}
-            {selectedOutlet && parseLatLong(selectedOutlet.location) && (
+            {selectedOutlet && selectedOutlet.location && (
               <Marker
-                coordinate={parseLatLong(selectedOutlet.location) as { latitude: number; longitude: number }}
+                coordinate={{
+                  latitude: Number(selectedOutlet.location.split(',')[0]),
+                  longitude: Number(selectedOutlet.location.split(',')[1]),
+                }}
                 title={selectedOutlet.name}
-                description={
-                  (selectedOutlet.district ?? '') + '\n' +
-                  'Region: ' + (selectedOutlet.region?.name ?? '-') + '\n' +
-                  'Cluster: ' + (selectedOutlet.cluster?.name ?? '-')
-                }
+                description={selectedOutlet.district ?? ''}
               >
-                {/* Google Maps style marker */}
                 <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                  <View style={{
-                    backgroundColor: '#fff',
-                    borderRadius: 24,
-                    padding: 6,
-                    borderWidth: 2,
-                    borderColor: '#C62828',
-                    shadowColor: '#000',
-                    shadowOpacity: 0.15,
-                    shadowRadius: 4,
-                    elevation: 4,
-                  }}>
+                  <View style={{ backgroundColor: '#fff', borderRadius: 24, padding: 6, borderWidth: 2, borderColor: '#C62828', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 4, elevation: 4 }}>
                     <Ionicons name="business" size={28} color="#C62828" />
                   </View>
-                  <View style={{
-                    width: 0,
-                    height: 0,
-                    borderLeftWidth: 10,
-                    borderRightWidth: 10,
-                    borderTopWidth: 18,
-                    borderLeftColor: 'transparent',
-                    borderRightColor: 'transparent',
-                    borderTopColor: '#C62828',
-                    marginTop: -2,
-                  }} />
+                  <View style={{ width: 0, height: 0, borderLeftWidth: 10, borderRightWidth: 10, borderTopWidth: 18, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: '#C62828', marginTop: -2 }} />
                 </View>
               </Marker>
             )}
           </MapView>
           <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: 16, backgroundColor: 'transparent' }}>
-            {/* Status validasi lokasi */}
+            {/* Status Validasi Lokasi */}
             {selectedOutlet && currentLocation && (
-              <View style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                borderRadius: 8,
-                padding: 12,
-                marginBottom: 12,
-                shadowColor: '#000',
-                shadowOpacity: 0.1,
-                shadowRadius: 4,
-                elevation: 2,
-              }}>
-                {selectedOutlet.radius === 0 ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
-                    <Text style={{ marginLeft: 8, color: '#22C55E', fontWeight: '500' }}>
-                      Validasi lokasi dilewati (radius tidak dibatasi)
-                    </Text>
-                  </View>
-                ) : (
-                  <View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                      <Ionicons 
-                        name={locationValidated ? "checkmark-circle" : "close-circle"} 
-                        size={20} 
-                        color={locationValidated ? "#22C55E" : "#EF4444"} 
-                      />
-                      <Text style={{ 
-                        marginLeft: 8, 
-                        color: locationValidated ? "#22C55E" : "#EF4444", 
-                        fontWeight: '500' 
-                      }}>
-                        {locationValidated ? 'Lokasi valid' : 'Lokasi terlalu jauh'}
-                      </Text>
-                    </View>
-                    {distance !== null && (
-                      <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 8 }}>
-                        Jarak: {Math.round(distance)}m (Max: {selectedOutlet.radius}m)
-                      </Text>
-                    )}
-                    {/* Tombol update outlet jika lokasi terlalu jauh */}
-                    {!locationValidated && (
-                      <TouchableOpacity
-                        style={{
-                          backgroundColor: '#FF8800',
-                          borderRadius: 6,
-                          paddingVertical: 8,
-                          paddingHorizontal: 12,
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          alignSelf: 'flex-start',
-                        }}
-                        onPress={() => {
-                          router.push(`/outlet/${selectedOutlet.id}/edit` as any);
-                        }}
-                      >
-                        <Ionicons name="create-outline" size={16} color="#fff" />
-                        <Text style={{ color: '#fff', fontSize: 12, fontWeight: '500', marginLeft: 4 }}>
-                          Update Lokasi Outlet
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                )}
-              </View>
+              <LocationStatus
+                locationValidated={locationValidated}
+                distance={distance ?? 0}
+                outletRadius={selectedOutlet.radius ?? 0}
+                onUpdateOutlet={() => router.push(`/outlet/${selectedOutlet.id}/edit` as any)}
+                colors={colors}
+              />
             )}
             <TouchableOpacity
-              style={{
-                backgroundColor: selectedOutlet ? '#FF8800' : '#ccc',
-                borderRadius: 8,
-                paddingVertical: 16,
-                alignItems: 'center',
-              }}
+              style={{ backgroundColor: selectedOutlet ? '#FF8800' : '#ccc', borderRadius: 8, paddingVertical: 16, alignItems: 'center' }}
               onPress={async () => {
                 if (!selectedOutlet) {
                   Alert.alert('Pilih Outlet', 'Silakan pilih outlet terlebih dahulu.');
                   return;
                 }
-                
-                // Cek jika lokasi tidak valid dan outlet memiliki radius > 0
                 if (!locationValidated && selectedOutlet.radius > 0) {
                   Alert.alert(
                     'Lokasi Terlalu Jauh',
                     `Anda berada ${Math.round(distance || 0)}m dari outlet, sedangkan maksimal jarak adalah ${selectedOutlet.radius}m. Apakah Anda ingin memperbarui lokasi outlet?`,
                     [
-                      {
-                        text: 'Batal',
-                        style: 'cancel',
-                      },
-                      {
-                        text: 'Update Lokasi',
-                        onPress: () => {
-                          router.push(`/outlet/${selectedOutlet.id}/edit` as any);
-                        },
-                      },
+                      { text: 'Batal', style: 'cancel' },
+                      { text: 'Update ', onPress: () => router.push(`/outlet/${selectedOutlet.id}/edit` as any) },
                     ]
                   );
                   return;
                 }
-
                 // Validasi status kunjungan sebelum lanjut
                 try {
-                  const result = await checkVisitStatus(selectedOutlet.id);
+                  const result = await useVisit().checkVisitStatus(selectedOutlet.id);
                   if (result?.meta?.code === 400 && result?.meta?.message?.includes('berjalan')) {
                     Alert.alert('Visit Aktif', result?.meta?.message || 'Masih ada visit yang berjalan, silakan check-out terlebih dahulu.');
                     return;
@@ -705,10 +602,8 @@ export default function CheckInScreen() {
                     Alert.alert('Sudah Pernah Visit', result?.meta?.message || 'Anda sudah pernah visit ke outlet ini hari ini.');
                     return;
                   }
-                  // Jika lolos validasi, lanjutkan ke step berikutnya
                   changeStep(2);
-                } catch (err) {
-                  console.log('[CHECK-IN] checkVisitStatus error', err);
+                } catch {
                   Alert.alert('Cek Status Gagal', 'Gagal memeriksa status kunjungan. Silakan coba lagi.');
                 }
               }}
@@ -717,6 +612,15 @@ export default function CheckInScreen() {
               <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>Lanjutkan</Text>
             </TouchableOpacity>
           </View>
+        </View>
+      )}
+      {/* Jika locationBlocked, tampilkan info blokir */}
+      {currentStep === 1 && locationBlocked && (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+          <Text style={{ color: colors.danger, fontSize: 16, textAlign: 'center', marginBottom: 16 }}>
+            Lokasi outlet belum diisi. Silakan update data outlet terlebih dahulu sebelum check-in.
+          </Text>
+          <Button title="Update Outlet" onPress={() => router.push(`/outlet/${selectedOutlet?.id}/edit`)} />
         </View>
       )}
 
@@ -869,35 +773,14 @@ export default function CheckInScreen() {
             )}
           </Animated.View>
           {/* Render ViewShot overlay jika rawPhoto & watermarkData ada */}
-          {rawPhoto && watermarkData && (
+          {rawPhoto && watermarkData && selectedOutlet && (
             <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 0.5 }} style={{ flex: 1, width: '100%', height: '100%' }}>
-              <Image source={{ uri: rawPhoto }} style={{ flex: 1, width: '100%', height: '100%' }} resizeMode="cover" />
-              {/* Watermark overlay: simple but informative */}
-              <View style={{
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'rgba(0,0,0,0.65)',
-                paddingHorizontal: 16,
-                paddingTop: 10,
-                paddingBottom: 16,
-              }}>
-                <Text style={{ color: '#FF8800', fontSize: 16, fontWeight: 'bold' }}>
-                  {selectedOutlet?.code ?? '-'} • {selectedOutlet?.name ?? '-'}
-                </Text>
-                <Text style={{ color: '#fff', fontSize: 13, marginTop: 3 }}>
-                  {selectedOutlet?.district ?? '-'}
-                </Text>
-                <View style={{ flexDirection: 'row', marginTop: 5, justifyContent: 'space-between' }}>
-                  <Text style={{ color: '#fff', fontSize: 12, opacity: 0.9 }}>
-                    {watermarkData.waktu}
-                  </Text>
-                  <Text style={{ color: '#fff', fontSize: 12, opacity: 0.9 }}>
-                    {currentLocation?.latitude?.toFixed(6)}, {currentLocation?.longitude?.toFixed(6)}
-                  </Text>
-                </View>
-              </View>
+              <WatermarkOverlay
+                photoUri={rawPhoto}
+                watermarkData={watermarkData}
+                currentLocation={currentLocation}
+                selectedOutlet={selectedOutlet}
+              />
             </ViewShot>
           )}
         </View>

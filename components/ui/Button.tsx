@@ -1,20 +1,20 @@
 import React from 'react';
 import {
-  ActivityIndicator,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextStyle,
-  Vibration,
-  ViewStyle,
+    ActivityIndicator,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextStyle,
+    Vibration,
+    ViewStyle,
 } from 'react-native';
 
 import { Colors } from '@/constants/Colors';
 import { shadow } from '@/constants/Shadows';
 import { borderRadius, componentSpacing, spacing } from '@/constants/Spacing';
 import { typography } from '@/constants/Typography';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { useColorScheme } from '@/hooks/utils/useColorScheme';
 
 type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'danger' | 'success' | 'outline' | 'ghost' | 'link';
 type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';

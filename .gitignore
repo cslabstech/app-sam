@@ -41,3 +41,7 @@ app-example
 .github/
 .github/copilot-instructions.md
 .vscode/
+
+android/
+ios/
+.vscode

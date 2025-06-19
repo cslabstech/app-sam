@@ -4,7 +4,7 @@ import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native'
 import { Colors } from '@/constants/Colors';
 import { borderRadius, componentSpacing, spacing } from '@/constants/Spacing';
 import { typography } from '@/constants/Typography';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { useColorScheme } from '@/hooks/utils/useColorScheme';
 
 type InputVariant = 'default' | 'filled' | 'outlined';
 type InputSize = 'sm' | 'md' | 'lg';

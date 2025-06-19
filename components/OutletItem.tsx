@@ -5,8 +5,8 @@ import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native
 import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { OutletAPI } from '@/hooks/useOutlet';
+import { OutletAPI } from '@/hooks/data/useOutlet';
+import { useColorScheme } from '@/hooks/utils/useColorScheme';
 
 interface OutletItemProps {
   outlet: OutletAPI;

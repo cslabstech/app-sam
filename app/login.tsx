@@ -6,21 +6,21 @@ import { shadowPresets } from '@/constants/Shadows';
 import { borderRadius, componentSpacing, spacing } from '@/constants/Spacing';
 import { typography } from '@/constants/Typography';
 import { useAuth } from '@/context/auth-context';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextStyle,
-  TouchableWithoutFeedback,
-  View,
-  ViewStyle
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextStyle,
+    TouchableWithoutFeedback,
+    View,
+    ViewStyle
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 

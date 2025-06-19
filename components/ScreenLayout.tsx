@@ -7,7 +7,7 @@ import { Colors } from '@/constants/Colors';
 import { shadowPresets } from '@/constants/Shadows';
 import { componentSpacing, spacing } from '@/constants/Spacing';
 import { typography } from '@/constants/Typography';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { IconSymbol } from './ui/IconSymbol';
 
 interface ScreenLayoutProps {

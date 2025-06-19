@@ -2,12 +2,19 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { useVisit, Visit } from '@/hooks/useVisit';
+import { useVisit, Visit } from '@/hooks/data/useVisit';
+import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+// Komponen atomic untuk badge status outlet
+const StatusBadge = ({ status, color }: { status: string; color: string }) => (
+  <View style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: color + '15' }}>
+    <Text style={{ fontSize: 13, fontWeight: '600', color }}>{status}</Text>
+  </View>
+);
 
 export default function LiveVisitViewPage() {
   const colorScheme = useColorScheme();
@@ -18,6 +25,7 @@ export default function LiveVisitViewPage() {
   const [visit, setVisit] = useState<Visit | null>(null);
   const [fetching, setFetching] = useState(false);
 
+  // Ambil data visit saat mount
   useEffect(() => {
     if (id) {
       setFetching(true);
@@ -56,6 +64,7 @@ export default function LiveVisitViewPage() {
     );
   }
 
+  // Helper untuk warna status
   const getStatusColor = (status?: string) => {
     if (!status) return colors.textSecondary;
     switch (status.toLowerCase()) {
@@ -70,6 +79,7 @@ export default function LiveVisitViewPage() {
     }
   };
 
+  // UI utama
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
@@ -110,17 +120,7 @@ export default function LiveVisitViewPage() {
           </View>
           <View style={styles.cardRow}>
             <Text style={[styles.label, { color: colors.textSecondary }]}>Status Outlet</Text>
-            <View style={[
-              styles.statusBadge,
-              { backgroundColor: getStatusColor(visit.outlet?.status) + '15' }
-            ]}>
-              <Text style={[
-                styles.statusText,
-                { color: getStatusColor(visit.outlet?.status) }
-              ]}>
-                {visit.outlet?.status ? visit.outlet.status.charAt(0).toUpperCase() + visit.outlet.status.slice(1) : '-'}
-              </Text>
-            </View>
+            <StatusBadge status={visit.outlet?.status ? visit.outlet.status.charAt(0).toUpperCase() + visit.outlet.status.slice(1) : '-'} color={getStatusColor(visit.outlet?.status)} />
           </View>
           <View style={styles.cardRow}>
             <Text style={[styles.label, { color: colors.textSecondary }]}>Lokasi Outlet</Text>
@@ -174,14 +174,5 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'right',
     flex: 1,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  statusText: {
-    fontSize: 13,
-    fontWeight: '600',
   },
 });

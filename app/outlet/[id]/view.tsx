@@ -1,16 +1,24 @@
+import { MediaPreview } from '@/components/MediaPreview';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { useOutlet } from '@/hooks/useOutlet';
+import { useOutlet } from '@/hooks/data/useOutlet';
+import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useVideoPlayer } from 'expo-video';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const BASE_URL_STORAGE = process.env.EXPO_PUBLIC_BASE_URL_STORAGE;
+
+// Komponen atomic untuk badge status outlet
+const StatusBadge = ({ status, color }: { status: string; color: string }) => (
+  <View style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: color + '15' }}>
+    <Text style={{ fontSize: 13, fontWeight: '600', color }}>{status}</Text>
+  </View>
+);
 
 export default function OutletViewPage() {
   const colorScheme = useColorScheme();
@@ -155,17 +163,10 @@ export default function OutletViewPage() {
               </View>
               <View style={styles.cardRow}>
                 <Text style={[styles.label, { color: colors.textSecondary }]}>Status</Text>
-                <View style={[
-                  styles.statusBadge, 
-                  { backgroundColor: getStatusColor(outlet!.status || '') + '15' }
-                ]}>
-                  <Text style={[
-                    styles.statusText, 
-                    { color: getStatusColor(outlet!.status || '') }
-                  ]}>
-                    {outlet!.status ? outlet!.status.charAt(0).toUpperCase() + outlet!.status.slice(1) : '-'}
-                  </Text>
-                </View>
+                <StatusBadge
+                  status={outlet!.status ? outlet!.status.charAt(0).toUpperCase() + outlet!.status.slice(1) : '-'}
+                  color={getStatusColor(outlet!.status || '')}
+                />
               </View>
               <View style={styles.cardRow}>
                 <Text style={[styles.label, { color: colors.textSecondary }]}>Radius</Text>
@@ -207,11 +208,7 @@ export default function OutletViewPage() {
               imageList.map((img) => (
                 <Card key={img.label} style={{ marginBottom: 12, alignItems: 'center', padding: 12 }}>
                   <Text style={styles.mediaLabel}>{img.label}</Text>
-                  <Image
-                    source={{ uri: img.uri }}
-                    style={styles.mediaImage}
-                    resizeMode="cover"
-                  />
+                  <MediaPreview uri={img.uri} type="image" />
                 </Card>
               ))
             ) : (
@@ -302,15 +299,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     textAlign: 'right',
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  statusText: {
-    fontSize: 13,
-    fontWeight: '600',
   },
   mediaGrid: {
     flexDirection: 'row',

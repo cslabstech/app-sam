@@ -1,6 +1,6 @@
+import { useAuth } from '@/context/auth-context';
+import { log } from '@/utils/logger';
 import { useEffect, useState } from 'react';
-import { useAuth } from '../context/auth-context';
-import { log } from '../utils/logger';
 
 const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
 

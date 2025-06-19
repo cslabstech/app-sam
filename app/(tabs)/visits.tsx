@@ -11,8 +11,8 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { spacing } from '@/constants/Spacing';
 import { typography } from '@/constants/Typography';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { useVisit } from '@/hooks/useVisit';
+import { useVisit } from '@/hooks/data/useVisit';
+import { useColorScheme } from '@/hooks/utils/useColorScheme';
 
 type FilterType = 'All' | 'Today' | 'Planned' | 'Completed' | 'Cancelled';
 type SortColumn = 'visit_date' | 'outlet.name' | 'type';

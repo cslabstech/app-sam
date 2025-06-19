@@ -2,7 +2,7 @@ import { Colors } from '@/constants/Colors';
 import { spacing } from '@/constants/Spacing';
 import { typography } from '@/constants/Typography';
 import { useNetwork } from '@/context/network-context';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 

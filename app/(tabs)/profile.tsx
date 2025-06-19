@@ -10,8 +10,8 @@ import { shadow } from '@/constants/Shadows';
 import { spacing } from '@/constants/Spacing';
 import { typography } from '@/constants/Typography';
 import { useAuth } from '@/context/auth-context';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { usePermission } from '@/hooks/usePermission';
+import { useColorScheme } from '@/hooks/utils/useColorScheme';
+import { usePermission } from '@/hooks/utils/usePermission';
 import { useUserData } from './_layout';
 
 // Only allow icon names that are mapped in IconSymbol.tsx

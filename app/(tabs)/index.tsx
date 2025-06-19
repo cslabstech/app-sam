@@ -10,8 +10,8 @@ import { Colors } from '@/constants/Colors';
 import { shadowPresets } from '@/constants/Shadows';
 import { componentSpacing, spacing } from '@/constants/Spacing';
 import { typography } from '@/constants/Typography';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { useHomeData } from '@/hooks/useHomeData';
+import { useHomeData } from '@/hooks/data/useHomeData';
+import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { useUserData } from './_layout';
 
 /**

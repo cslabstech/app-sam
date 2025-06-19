@@ -12,8 +12,8 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { spacing } from '@/constants/Spacing';
 import { typography } from '@/constants/Typography';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { useOutlet } from '@/hooks/useOutlet';
+import { useOutlet } from '@/hooks/data/useOutlet';
+import { useColorScheme } from '@/hooks/utils/useColorScheme';
 
 export default function OutletsScreen() {
   const colorScheme = useColorScheme();

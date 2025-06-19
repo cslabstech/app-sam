@@ -1,5 +1,5 @@
+import { useAuth as useAuthHook, User } from '@/hooks/data/useAuth';
 import React, { createContext, useContext } from 'react';
-import { useAuth as useAuthHook, User } from '../hooks/useAuth';
 
 interface AuthContextProps {
   user: User | null;

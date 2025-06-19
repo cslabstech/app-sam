@@ -5,7 +5,7 @@ import { shadow } from '@/constants/Shadows';
 import { spacing } from '@/constants/Spacing';
 import { typography } from '@/constants/Typography';
 import { useAuth } from '@/context/auth-context';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';

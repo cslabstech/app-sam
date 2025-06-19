@@ -1,7 +1,9 @@
+import { MediaPreview } from '@/components/MediaPreview';
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { useOutlet } from '@/hooks/useOutlet';
+import { useOutlet } from '@/hooks/data/useOutlet';
+import { useColorScheme } from '@/hooks/utils/useColorScheme';
+import { useVideoCompressor } from '@/hooks/utils/useVideoCompressor';
 import { log } from '@/utils/logger';
 import { Camera } from 'expo-camera';
 import * as FileSystem from 'expo-file-system';
@@ -10,7 +12,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function OutletEditPage() {
@@ -25,10 +27,13 @@ export default function OutletEditPage() {
     owner_name: '',
     owner_phone: '',
     photo_shop_sign: '',
+    photo_front: '',
+    photo_left: '',
+    photo_right: '',
     video: '',
   });
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
-  const [loadingLocation, setLoadingLocation] = useState(true);
+  const { compress } = useVideoCompressor();
 
   useEffect(() => {
     if (id) fetchOutlet(id as string);
@@ -46,10 +51,12 @@ export default function OutletEditPage() {
       setForm(f => ({
         ...f,
         code: outlet.code || '',
-        // Tidak mengambil location dari outlet, hanya dari GPS
         owner_name: (outlet as any).owner_name || '',
         owner_phone: (outlet as any).owner_phone || '',
         photo_shop_sign: (outlet as any).photo_shop_sign || '',
+        photo_front: (outlet as any).photo_front || '',
+        photo_left: (outlet as any).photo_left || '',
+        photo_right: (outlet as any).photo_right || '',
         video: (outlet as any).video || '',
       }));
     }
@@ -59,11 +66,9 @@ export default function OutletEditPage() {
   useEffect(() => {
     const getCurrentLocation = async () => {
       try {
-        setLoadingLocation(true);
         let { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
           Alert.alert('Izin lokasi ditolak', 'Aplikasi tidak bisa mengambil lokasi. Silakan ubah manual jika diperlukan.');
-          setLoadingLocation(false);
           return;
         }
         const loc = await Location.getCurrentPositionAsync({ 
@@ -76,11 +81,8 @@ export default function OutletEditPage() {
       } catch (error) {
         console.error('Error getting location:', error);
         Alert.alert('Gagal Mendapatkan Lokasi', 'Tidak dapat mengambil lokasi otomatis. Silakan ubah manual jika diperlukan.');
-      } finally {
-        setLoadingLocation(false);
       }
     };
-
     getCurrentLocation();
   }, []);
 
@@ -88,58 +90,16 @@ export default function OutletEditPage() {
     setForm(f => ({ ...f, [field]: value }));
   };
 
-  const pickImage = async () => {
-    // Request permission
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission denied', 'Need camera roll permissions to select image');
-      return;
-    }
-
-    // Launch image picker
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      setForm(f => ({ ...f, photo_shop_sign: result.assets[0].uri }));
-    }
-  };
-
-  const pickVideo = async () => {
-    // Request permission
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission denied', 'Need camera roll permissions to select video');
-      return;
-    }
-
-    // Launch video picker
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
-      allowsEditing: true,
-      quality: 0.5,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      setForm(f => ({ ...f, video: result.assets[0].uri }));
-    }
-  };
-
-  // Ambil foto dari kamera
-  const takePhoto = async () => {
+  // Ambil foto dari kamera (bisa untuk field berbeda)
+  const takePhoto = async (field: 'photo_shop_sign' | 'photo_front' | 'photo_left' | 'photo_right') => {
     const { status } = await Camera.requestCameraPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Izin kamera ditolak', 'Aplikasi membutuhkan izin kamera.');
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
+      mediaTypes: ['images'],
+      allowsEditing: false,
       quality: 0.7,
     });
     if (!result.canceled && result.assets[0]) {
@@ -168,11 +128,11 @@ export default function OutletEditPage() {
         Alert.alert('Gagal kompres foto', 'Terjadi kesalahan saat kompresi.');
         return;
       }
-      setForm(f => ({ ...f, photo_shop_sign: compressed.uri }));
+      setForm(f => ({ ...f, [field]: compressed.uri }));
     }
   };
 
-  // Ambil video dari kamera
+  // Ambil video dari kamera dan kompres jika bukan di Expo Go
   const takeVideo = async () => {
     const { status } = await Camera.requestCameraPermissionsAsync();
     if (status !== 'granted') {
@@ -180,24 +140,29 @@ export default function OutletEditPage() {
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+      mediaTypes: ['videos'],
       allowsEditing: false,
-      videoMaxDuration: 5, // detik, batasi durasi ke 5 detik
-      quality: 0.1, // kualitas paling rendah
+      videoMaxDuration: 10,
+      quality: 0.5,
     });
     if (!result.canceled && result.assets[0]) {
-      const uri = result.assets[0].uri;
+      let uri = result.assets[0].uri;
       try {
-        const info = await FileSystem.getInfoAsync(uri);
+        // Kompres video jika di native, jika di Expo Go return uri asli
+        const compressedUri = await compress(uri, {
+          compressionMethod: 'manual',
+          preset: 'H264_640x480',
+          quality: 'low',
+        });
+        const info = await FileSystem.getInfoAsync(compressedUri);
         if (!info.exists || !info.size || info.size > 2 * 1024 * 1024) {
-          Alert.alert('Video terlalu besar', 'Ukuran video harus di bawah 2MB. Silakan rekam ulang dengan durasi lebih singkat atau kualitas lebih rendah.');
+          Alert.alert('Video masih terlalu besar', 'Ukuran video hasil kompres harus di bawah 2MB. Silakan rekam ulang.');
           return;
         }
+        setForm(f => ({ ...f, video: compressedUri }));
       } catch (e) {
-        Alert.alert('Gagal cek ukuran video', 'Terjadi kesalahan saat cek file.');
-        return;
+        Alert.alert('Gagal kompres video', 'Terjadi kesalahan saat kompresi.');
       }
-      setForm(f => ({ ...f, video: uri }));
     }
   };
 
@@ -238,6 +203,52 @@ export default function OutletEditPage() {
         }
         formData.append('photo_shop_sign', { uri, name, type } as any);
       }
+      // Tambahan: upload foto depan, kiri, kanan jika ada
+      if (form.photo_front) {
+        let uri = form.photo_front;
+        let name = uri.split('/').pop() || 'photo_front.jpg';
+        let type = 'image/jpeg';
+        if (name.endsWith('.png')) type = 'image/png';
+        try {
+          const manipulated = await ImageManipulator.manipulateAsync(
+            uri,
+            [{ resize: { width: 900 } }],
+            { compress: 0.7, format: name.endsWith('.png') ? ImageManipulator.SaveFormat.PNG : ImageManipulator.SaveFormat.JPEG }
+          );
+          uri = manipulated.uri;
+        } catch (e) {}
+        formData.append('photo_front', { uri, name, type } as any);
+      }
+      if (form.photo_left) {
+        let uri = form.photo_left;
+        let name = uri.split('/').pop() || 'photo_left.jpg';
+        let type = 'image/jpeg';
+        if (name.endsWith('.png')) type = 'image/png';
+        try {
+          const manipulated = await ImageManipulator.manipulateAsync(
+            uri,
+            [{ resize: { width: 900 } }],
+            { compress: 0.7, format: name.endsWith('.png') ? ImageManipulator.SaveFormat.PNG : ImageManipulator.SaveFormat.JPEG }
+          );
+          uri = manipulated.uri;
+        } catch (e) {}
+        formData.append('photo_left', { uri, name, type } as any);
+      }
+      if (form.photo_right) {
+        let uri = form.photo_right;
+        let name = uri.split('/').pop() || 'photo_right.jpg';
+        let type = 'image/jpeg';
+        if (name.endsWith('.png')) type = 'image/png';
+        try {
+          const manipulated = await ImageManipulator.manipulateAsync(
+            uri,
+            [{ resize: { width: 900 } }],
+            { compress: 0.7, format: name.endsWith('.png') ? ImageManipulator.SaveFormat.PNG : ImageManipulator.SaveFormat.JPEG }
+          );
+          uri = manipulated.uri;
+        } catch (e) {}
+        formData.append('photo_right', { uri, name, type } as any);
+      }
       // Cek ukuran video jika ada
       if (form.video) {
         const uri = form.video;
@@ -247,8 +258,8 @@ export default function OutletEditPage() {
         // Cek ukuran file video
         try {
           const info = await FileSystem.getInfoAsync(uri);
-          if (info.exists && typeof info.size === 'number' && info.size > 8 * 1024 * 1024) { // 8MB
-            Alert.alert('Video terlalu besar', 'Ukuran video maksimal 8MB. Silakan pilih video lain.');
+          if (info.exists && typeof info.size === 'number' && info.size > 10 * 1024 * 1024) { // 2MB
+            Alert.alert('Video terlalu besar', 'Ukuran video maksimal 10MB. Silakan pilih video lain.');
             return;
           }
         } catch (e) {}
@@ -275,6 +286,9 @@ export default function OutletEditPage() {
       owner_name: form.owner_name,
       owner_phone: form.owner_phone,
       photo_shop_sign: form.photo_shop_sign,
+      photo_front: form.photo_front,
+      photo_left: form.photo_left,
+      photo_right: form.photo_right,
       video: form.video,
     };
     log('[OUTLET][UPDATE][PAYLOAD]', payload);
@@ -355,26 +369,73 @@ export default function OutletEditPage() {
           <Text style={[styles.inputLabel, { color: colors.text }]}>Photo Shop Sign</Text>
           <TouchableOpacity
             style={[styles.pickerButton, { borderColor: colors.border }]}
-            onPress={takePhoto}
+            onPress={() => takePhoto('photo_shop_sign')}
           >
             <Text style={{ color: colors.text }}>
               {form.photo_shop_sign ? 'Change Photo' : 'Take Photo'}
             </Text>
           </TouchableOpacity>
           {form.photo_shop_sign && (
-            <View style={{ marginTop: 8 }}>
-              <Image 
-                source={{ uri: form.photo_shop_sign }} 
-                style={styles.previewImage}
-                resizeMode="cover"
-              />
-              <TouchableOpacity
-                style={styles.removeButton}
-                onPress={() => setForm(f => ({ ...f, photo_shop_sign: '' }))}
-              >
-                <Text style={{ color: colors.danger, fontSize: 12 }}>Remove Photo</Text>
-              </TouchableOpacity>
-            </View>
+            <MediaPreview
+              uri={form.photo_shop_sign}
+              type="image"
+              onRemove={() => setForm(f => ({ ...f, photo_shop_sign: '' }))}
+            />
+          )}
+        </View>
+        {/* Tambahan field foto depan, kiri, kanan */}
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>Photo Depan</Text>
+          <TouchableOpacity
+            style={[styles.pickerButton, { borderColor: colors.border }]}
+            onPress={() => takePhoto('photo_front')}
+          >
+            <Text style={{ color: colors.text }}>
+              {form.photo_front ? 'Change Photo' : 'Take Photo'}
+            </Text>
+          </TouchableOpacity>
+          {form.photo_front && (
+            <MediaPreview
+              uri={form.photo_front}
+              type="image"
+              onRemove={() => setForm(f => ({ ...f, photo_front: '' }))}
+            />
+          )}
+        </View>
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>Photo Kiri</Text>
+          <TouchableOpacity
+            style={[styles.pickerButton, { borderColor: colors.border }]}
+            onPress={() => takePhoto('photo_left')}
+          >
+            <Text style={{ color: colors.text }}>
+              {form.photo_left ? 'Change Photo' : 'Take Photo'}
+            </Text>
+          </TouchableOpacity>
+          {form.photo_left && (
+            <MediaPreview
+              uri={form.photo_left}
+              type="image"
+              onRemove={() => setForm(f => ({ ...f, photo_left: '' }))}
+            />
+          )}
+        </View>
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>Photo Kanan</Text>
+          <TouchableOpacity
+            style={[styles.pickerButton, { borderColor: colors.border }]}
+            onPress={() => takePhoto('photo_right')}
+          >
+            <Text style={{ color: colors.text }}>
+              {form.photo_right ? 'Change Photo' : 'Take Photo'}
+            </Text>
+          </TouchableOpacity>
+          {form.photo_right && (
+            <MediaPreview
+              uri={form.photo_right}
+              type="image"
+              onRemove={() => setForm(f => ({ ...f, photo_right: '' }))}
+            />
           )}
         </View>
         <View style={styles.inputGroup}>
@@ -388,20 +449,12 @@ export default function OutletEditPage() {
             </Text>
           </TouchableOpacity>
           {form.video && (
-            <View style={{ marginTop: 8 }}>
-              <View style={[styles.previewImage, { backgroundColor: colors.border, justifyContent: 'center', alignItems: 'center' }]}> 
-                <Text style={{ color: colors.text, fontSize: 14 }}>📹 Video Selected</Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 4 }}>
-                  {form.video.split('/').pop()?.substring(0, 30)}...
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.removeButton}
-                onPress={() => setForm(f => ({ ...f, video: '' }))}
-              >
-                <Text style={{ color: colors.danger, fontSize: 12 }}>Remove Video</Text>
-              </TouchableOpacity>
-            </View>
+            <MediaPreview
+              uri={form.video}
+              type="video"
+              label={form.video.split('/').pop()?.substring(0, 30) + '...'}
+              onRemove={() => setForm(f => ({ ...f, video: '' }))}
+            />
           )}
         </View>
         <Button

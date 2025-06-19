@@ -1,7 +1,7 @@
+import { useNotifId } from '@/context/notifid-context';
+import { log } from '@/utils/logger';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
-import { useNotifId } from '../context/notifid-context';
-import { log } from '../utils/logger';
 
 const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
 

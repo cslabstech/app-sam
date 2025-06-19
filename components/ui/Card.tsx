@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, View, ViewProps, ViewStyle } from 'react-native'
 import { Colors } from '@/constants/Colors';
 import { shadow, shadowPresets } from '@/constants/Shadows';
 import { borderRadius, componentSpacing, spacing } from '@/constants/Spacing';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { useColorScheme } from '@/hooks/utils/useColorScheme';
 
 type CardVariant = 'default' | 'elevated' | 'outlined' | 'filled';
 type CardSize = 'sm' | 'md' | 'lg';

@@ -8,8 +8,8 @@ import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Input } from '@/components/ui/Input';
 import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { useRegisterOutletForm } from '@/hooks/useRegisterOutletForm';
+import { useRegisterOutletForm } from '@/hooks/data/useRegisterOutletForm';
+import { useColorScheme } from '@/hooks/utils/useColorScheme';
 
 export default function RegisterOutletScreen() {
   const colorScheme = useColorScheme();
