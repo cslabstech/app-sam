@@ -58,9 +58,8 @@ export default function ProfileScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const userCtx = useUserData?.() ?? null;
+  const user = useUserData();
   const { logout } = useAuth();
-  const user = userCtx || useAuth().user;
 
   const [loading, setLoading] = React.useState(false);
 
@@ -192,7 +191,6 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     borderRadius: 20,
     padding: 0,
-    backgroundColor: '#fff',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,

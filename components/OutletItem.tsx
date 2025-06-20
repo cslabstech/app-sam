@@ -48,7 +48,6 @@ const OutletItem: React.FC<OutletItemProps> = ({ outlet }) => {
       <Card 
         noPadding
         style={{
-          backgroundColor: colors.card, 
           borderRadius: 16,
           overflow: 'hidden',
           borderWidth: 0,

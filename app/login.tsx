@@ -3,11 +3,11 @@ import { Input as FormInput } from '@/components/ui/Input';
 import { Colors } from '@/constants/Colors';
 import { spacing } from '@/constants/Spacing';
 import { typography } from '@/constants/Typography';
-import { useAuth } from '@/context/auth-context';
+import { useLoginForm } from '@/hooks/data/useLoginForm';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -21,62 +21,25 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
-  const { login } = useAuth();
+  const {
+    email,
+    setEmail,
+    password,
+    setPassword,
+    loading,
+    error,
+    touched,
+    formErrors,
+    showPassword,
+    setShowPassword,
+    handleBlur,
+    handleLogin,
+    isFormValid,
+    keyboardVisible,
+  } = useLoginForm();
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [touched, setTouched] = useState({ email: false, password: false });
-  const [formErrors, setFormErrors] = useState({ email: '', password: '' });
-  const [showPassword, setShowPassword] = useState(false);
-
-  useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
-    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
-    return () => {
-      keyboardDidHideListener.remove();
-      keyboardDidShowListener.remove();
-    };
-  }, []);
-
-  const isFormValid = useMemo(() => {
-    return !formErrors.email && !formErrors.password && email.trim() !== '' && password.trim() !== '';
-  }, [email, password, formErrors]);
-
-  const handleBlur = (field: 'email' | 'password') => {
-    setTouched((prev) => ({ ...prev, [field]: true }));
-  };
-
-  const validateForm = () => {
-    const errors = { email: '', password: '' };
-    if (!email) {
-      errors.email = 'Username tidak boleh kosong';
-    }
-    if (!password) {
-      errors.password = 'Kata sandi tidak boleh kosong';
-    }
-    setFormErrors(errors);
-    return !errors.email && !errors.password;
-  };
-
-  const handleLogin = async () => {
-    setError('');
-    setTouched({ email: true, password: true });
-    if (!validateForm()) return;
-    setLoading(true);
-    try {
-      await login(email, password);
-      router.replace('/(tabs)');
-    } catch (e: any) {
-      setError(e?.response?.data?.message || e?.message || 'Periksa email/kata sandi Anda');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>

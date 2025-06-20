@@ -186,6 +186,10 @@ export function useVisit() {
   // Cek status visit/check-in/check-out outlet
   const checkVisitStatus = async (outletId: string) => {
     log('[VISIT] checkVisitStatus outletId', outletId);
+    if (!outletId) {
+      log('[VISIT] checkVisitStatus error: Outlet ID tidak valid');
+      return { success: false, error: 'Outlet ID tidak valid' };
+    }
     try {
       // Kirim outlet_id sebagai query param (GET)
       const res = await fetch(`${BASE_URL}/visit/check?outlet_id=${encodeURIComponent(outletId)}`, {

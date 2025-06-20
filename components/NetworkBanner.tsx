@@ -5,18 +5,21 @@ import { useNetwork } from '@/context/network-context';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const NetworkBanner = () => {
   const { isConnected } = useNetwork();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const insets = useSafeAreaInsets();
 
   if (isConnected) return null;
 
   return (
     <View style={[styles.banner, { 
       backgroundColor: colors.danger, 
-      borderBottomColor: colors.white 
+      borderBottomColor: colors.white,
+      paddingTop: insets.top + 8,
     }]}>
       <Text style={[styles.text, { color: colors.white }]}>
         Tidak dapat terhubung ke server. Periksa koneksi internet Anda.

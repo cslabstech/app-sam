@@ -6,17 +6,16 @@ import { useVisit, Visit } from '@/hooks/data/useVisit';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// Komponen atomic untuk badge status outlet
 const StatusBadge = ({ status, color }: { status: string; color: string }) => (
   <View style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: color + '15' }}>
     <Text style={{ fontSize: 13, fontWeight: '600', color }}>{status}</Text>
   </View>
 );
 
-export default function LiveVisitViewPage() {
+export default function VisitViewPage() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
@@ -25,7 +24,6 @@ export default function LiveVisitViewPage() {
   const [visit, setVisit] = useState<Visit | null>(null);
   const [fetching, setFetching] = useState(false);
 
-  // Ambil data visit saat mount
   useEffect(() => {
     if (id) {
       setFetching(true);
@@ -36,20 +34,21 @@ export default function LiveVisitViewPage() {
     }
   }, [id]);
 
+  if (error) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+        <IconSymbol name="exclamationmark.triangle" size={48} color={colors.danger} />
+        <Text style={{ color: colors.danger, margin: 20, textAlign: 'center' }}>{error}</Text>
+        <Button title="Kembali" variant="primary" onPress={() => router.back()} />
+      </SafeAreaView>
+    );
+  }
+
   if (loading || fetching) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={{ color: colors.text, marginTop: 16 }}>Memuat data visit...</Text>
-      </SafeAreaView>
-    );
-  }
-
-  if (error) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ color: colors.danger, margin: 20, textAlign: 'center' }}>{error}</Text>
-        <Button title="Kembali" variant="primary" onPress={() => router.back()} />
       </SafeAreaView>
     );
   }
@@ -64,7 +63,6 @@ export default function LiveVisitViewPage() {
     );
   }
 
-  // Helper untuk warna status
   const getStatusColor = (status?: string) => {
     if (!status) return colors.textSecondary;
     switch (status.toLowerCase()) {
@@ -79,58 +77,58 @@ export default function LiveVisitViewPage() {
     }
   };
 
-  // UI utama
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center' }]}> 
-        <Button
-          title="Kembali"
-          variant="secondary"
-          onPress={() => router.back()}
-          style={{ marginRight: 12, paddingVertical: 4 }}
-        />
-        <Text style={[styles.title, { color: colors.text, flex: 1 }]}>Detail Visit</Text>
+      <View style={[styles.header, { borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}> 
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <IconSymbol name="chevron.left" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.title, { color: colors.text }]}> {visit?.outlet?.name || 'Detail Visit'} </Text>
+        </View>
+        <View style={{ width: 32 }} />
       </View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
-        <Card style={styles.card}>
-          <View style={styles.cardRow}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Tanggal Kunjungan</Text>
-            <Text style={[styles.value, { color: colors.text }]}>{visit.visit_date}</Text>
-          </View>
-          <View style={styles.cardRow}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Check-in</Text>
-            <Text style={[styles.value, { color: colors.text }]}>{visit.checkin_time || '-'}</Text>
-          </View>
-          <View style={styles.cardRow}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Check-out</Text>
-            <Text style={[styles.value, { color: colors.text }]}>{visit.checkout_time || '-'}</Text>
-          </View>
-          <View style={styles.cardRow}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>User</Text>
-            <Text style={[styles.value, { color: colors.text }]}>{visit.user?.name} ({visit.user?.username})</Text>
-          </View>
-          <View style={styles.cardRow}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Outlet</Text>
-            <Text style={[styles.value, { color: colors.text }]}>{visit.outlet?.name} ({visit.outlet?.code})</Text>
-          </View>
-          <View style={styles.cardRow}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>District</Text>
-            <Text style={[styles.value, { color: colors.text }]}>{visit.outlet?.district}</Text>
-          </View>
-          <View style={styles.cardRow}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Status Outlet</Text>
-            <StatusBadge status={visit.outlet?.status ? visit.outlet.status.charAt(0).toUpperCase() + visit.outlet.status.slice(1) : '-'} color={getStatusColor(visit.outlet?.status)} />
-          </View>
-          <View style={styles.cardRow}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Lokasi Outlet</Text>
-            <Text style={[styles.value, { color: colors.text }]}>{visit.outlet?.location}</Text>
-          </View>
-          <View style={styles.cardRow}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Radius Outlet</Text>
-            <Text style={[styles.value, { color: colors.text }]}>{visit.outlet?.radius}</Text>
-          </View>
-        </Card>
+        <View style={styles.tabContent}>
+          <Card style={styles.card}>
+            <View style={styles.cardRow}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Tanggal Kunjungan</Text>
+              <Text style={[styles.value, { color: colors.text }]}>{visit?.visit_date || '-'}</Text>
+            </View>
+            <View style={styles.cardRow}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Check-in</Text>
+              <Text style={[styles.value, { color: colors.text }]}>{visit?.checkin_time || '-'}</Text>
+            </View>
+            <View style={styles.cardRow}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Check-out</Text>
+              <Text style={[styles.value, { color: colors.text }]}>{visit?.checkout_time || '-'}</Text>
+            </View>
+            <View style={styles.cardRow}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>User</Text>
+              <Text style={[styles.value, { color: colors.text }]}>{visit?.user?.name} ({visit?.user?.username})</Text>
+            </View>
+            <View style={styles.cardRow}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Outlet</Text>
+              <Text style={[styles.value, { color: colors.text }]}>{visit?.outlet?.name} ({visit?.outlet?.code})</Text>
+            </View>
+            <View style={styles.cardRow}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>District</Text>
+              <Text style={[styles.value, { color: colors.text }]}>{visit?.outlet?.district}</Text>
+            </View>
+            <View style={styles.cardRow}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Status Outlet</Text>
+              <StatusBadge status={visit?.outlet?.status ? visit.outlet.status.charAt(0).toUpperCase() + visit.outlet.status.slice(1) : '-'} color={getStatusColor(visit?.outlet?.status)} />
+            </View>
+            <View style={styles.cardRow}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Lokasi Outlet</Text>
+              <Text style={[styles.value, { color: colors.text }]}>{visit?.outlet?.location}</Text>
+            </View>
+            <View style={styles.cardRow}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Radius Outlet</Text>
+              <Text style={[styles.value, { color: colors.text }]}>{visit?.outlet?.radius}</Text>
+            </View>
+          </Card>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -143,14 +141,21 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
   },
+  backButton: {
+    marginRight: 8,
+  },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
+  },
+  tabContent: {
+    paddingTop: 16,
   },
   card: {
     padding: 16,
@@ -173,6 +178,5 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     textAlign: 'right',
-    flex: 1,
   },
 });

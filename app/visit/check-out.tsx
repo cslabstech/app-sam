@@ -3,7 +3,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ViewShot, { captureRef } from 'react-native-view-shot';
 
 import { Button } from '@/components/ui/Button';
@@ -24,11 +24,9 @@ export default function CheckOutScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
-  // Notes & transaksi
   const [notes, setNotes] = useState<string>('');
   const [transaksi, setTransaksi] = useState<'YES' | 'NO' | null>(null);
 
-  // Kamera & foto
   const [cameraRef, setCameraRef] = useState<any>(null);
   const [hasCameraPermission, requestCameraPermission] = useCameraPermissions();
   const [isCameraReady, setIsCameraReady] = useState(false);
@@ -40,10 +38,9 @@ export default function CheckOutScreen() {
   const viewShotRef = useRef<any>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
-  // Lokasi
   const { location: currentLocation, getLocation } = useCurrentLocation();
+  const insets = useSafeAreaInsets();
 
-  // Ambil detail visit
   useEffect(() => {
     async function fetchVisitDetail() {
       if (!visitId) return;
@@ -59,7 +56,6 @@ export default function CheckOutScreen() {
     fetchVisitDetail();
   }, [visitId]);
 
-  // Ambil foto & overlay watermark
   const handleTakePhoto = async () => {
     if (!hasCameraPermission || hasCameraPermission.status !== 'granted') {
       const { status } = await requestCameraPermission();
@@ -100,7 +96,6 @@ export default function CheckOutScreen() {
     }
   };
 
-  // Submit check-out
   const handleCheckOut = async () => {
     if (!storeImage) {
       Alert.alert('Image Required', 'Silakan ambil foto toko.');
@@ -147,79 +142,72 @@ export default function CheckOutScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}> 
+      <View style={[styles.container, { backgroundColor: colors.background }]}> 
         <View style={styles.errorContainer}>
           <Text style={[styles.errorText, { color: colors.text }]}>Loading visit data...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (!visit) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}> 
+      <View style={[styles.container, { backgroundColor: colors.background }]}> 
         <View style={styles.errorContainer}>
           <IconSymbol name="exclamationmark.triangle" size={60} color={colors.danger} />
           <Text style={[styles.errorText, { color: colors.text }]}>Visit not found</Text>
           <Button onPress={() => router.back()} title="Go Back" style={{ marginTop: 20 }} />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   const outlet = visit.outlet;
 
-  // UI utama
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      {/* Header Merah */}
-      <View style={{ backgroundColor: '#FF8800', paddingTop: 32, paddingBottom: 16, paddingHorizontal: 16 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+    <View style={styles.safeArea}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+        <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => router.back()}>
             <IconSymbol name="chevron.left" size={24} color="#fff" />
           </TouchableOpacity>
           <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text style={{ color: '#fff', fontSize: 22, fontWeight: 'bold' }}>Check Out</Text>
+            <Text style={styles.headerTitle}>Check Out</Text>
           </View>
-          <View style={{ width: 22, height: 22 }} />
+          <View style={styles.headerIconPlaceholder} />
         </View>
-        {/* Info Outlet */}
-        <View style={{ backgroundColor: '#fff', borderRadius: 12, marginTop: 18, padding: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 }}>
+        <View style={styles.outletInfoContainer}>
           <Text style={{ color: '#7B8FA1', fontSize: 14, marginBottom: 4 }}>Informasi Outlet</Text>
-          <Text style={{ color: '#222B45', fontSize: 16, fontWeight: 'bold', marginBottom: 2 }}>{outlet.name} ({outlet.code})</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+          <Text style={styles.outletName}>{outlet.name} ({outlet.code})</Text>
+          <View style={styles.outletDistrictRow}>
             <IconSymbol name="mappin.and.ellipse" size={18} color="#222B45" style={{ marginRight: 8 }} />
-            <Text style={{ color: '#222B45', fontSize: 15 }}>{outlet.district}</Text>
+            <Text style={styles.outletDistrictText}>{outlet.district}</Text>
           </View>
         </View>
       </View>
-      {/* Step: Foto Selfie/Store + Notes + Transaksi */}
-      <View style={{ flex: 1, backgroundColor: '#000' }}>
-        {/* Kamera & overlay watermark */}
+      <View style={styles.cameraContainer}>
         {!storeImage && !watermarkData ? (
-          <View style={{ flex: 1, backgroundColor: '#000' }}>
+          <View style={styles.cameraView}>
             {hasCameraPermission?.status === 'granted' ? (
               <CameraView
                 ref={ref => setCameraRef(ref)}
-                style={{ flex: 1, width: '100%', height: '100%' }}
+                style={styles.cameraView}
                 onCameraReady={() => setIsCameraReady(true)}
                 flash={isFlashOn ? 'on' : 'off'}
                 facing="front"
               />
             ) : (
-              <TouchableOpacity onPress={requestCameraPermission} style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#000' }}>
+              <TouchableOpacity onPress={requestCameraPermission} style={styles.cameraPermissionContainer}>
                 <IconSymbol name="camera.fill" size={60} color="#FF8800" />
-                <Text style={{ color: '#fff', fontSize: 16, marginTop: 16 }}>Izinkan akses kamera</Text>
+                <Text style={styles.cameraPermissionText}>Izinkan akses kamera</Text>
               </TouchableOpacity>
             )}
-            {/* Tombol flash kanan atas */}
             {hasCameraPermission?.status === 'granted' && (
-              <TouchableOpacity style={{ position: 'absolute', top: 40, right: 24, backgroundColor: '#fff', borderRadius: 24, padding: 8, shadowColor: '#000', shadowOpacity: 0.10, shadowRadius: 8, elevation: 3, alignItems: 'center', justifyContent: 'center', zIndex: 3 }} onPress={() => setIsFlashOn(f => !f)}>
+              <TouchableOpacity style={styles.cameraFlashButton} onPress={() => setIsFlashOn(f => !f)}>
                 <IconSymbol name={isFlashOn ? 'bolt.fill' : 'bolt.slash'} size={24} color="#FF8800" />
               </TouchableOpacity>
             )}
-            {/* Tombol ambil foto di bawah */}
-            <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: 'transparent', zIndex: 3, alignItems: 'center' }}>
+            <View style={styles.cameraButtonContainer}>
               <Button
                 title={isProcessingPhoto ? 'Memproses...' : 'Ambil Foto'}
                 onPress={async () => {
@@ -228,14 +216,13 @@ export default function CheckOutScreen() {
                   setIsProcessingPhoto(false);
                 }}
                 disabled={!isCameraReady || isProcessingPhoto}
-                style={{ width: '100%' }}
+                style={styles.cameraButton}
               />
             </View>
           </View>
         ) : null}
-        {/* Overlay watermark */}
         {watermarkData && rawPhoto && (
-          <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 0.5 }} style={{ flex: 1, width: '100%', height: '100%' }}>
+          <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 0.5 }} style={styles.cameraImage}>
             <WatermarkOverlay
               photoUri={rawPhoto}
               watermarkData={{
@@ -248,43 +235,40 @@ export default function CheckOutScreen() {
             />
           </ViewShot>
         )}
-        {/* Preview & modal input setelah foto diambil */}
         {storeImage && !watermarkData && (
-          <View style={{ flex: 1, backgroundColor: '#000' }}>
-            <Image source={{ uri: storeImage }} style={{ flex: 1, width: '100%', height: '100%' }} />
-            {/* Tombol close kanan atas */}
-            <TouchableOpacity style={{ position: 'absolute', top: 40, right: 24, backgroundColor: '#fff', borderRadius: 24, padding: 8, shadowColor: '#000', shadowOpacity: 0.10, shadowRadius: 8, elevation: 3, alignItems: 'center', justifyContent: 'center', zIndex: 3 }} onPress={() => { setStoreImage(null); setIsModalVisible(false); }}>
+          <View style={styles.cameraImage}>
+            <Image source={{ uri: storeImage }} style={styles.cameraImage} />
+            <TouchableOpacity style={styles.cameraRemoveButton} onPress={() => { setStoreImage(null); setIsModalVisible(false); }}>
               <IconSymbol name="xmark" size={24} color="#222B45" />
             </TouchableOpacity>
-            {/* Modal input notes & transaksi */}
             <Modal visible={isModalVisible} animationType="slide" transparent onRequestClose={() => setIsModalVisible(false)}>
-              <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
-                <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '90%' }}>
-                  <Text style={{ color: '#222B45', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>Catatan & Transaksi</Text>
-                  <Text style={{ color: '#222B45', fontSize: 16, fontWeight: '600', marginBottom: 8 }}>Catatan (Opsional)</Text>
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                  <Text style={styles.modalTitle}>Catatan & Transaksi</Text>
+                  <Text style={styles.modalLabel}>Catatan (Opsional)</Text>
                   <TextInput
-                    style={{ backgroundColor: '#fff', borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB', padding: 12, minHeight: 80, color: '#222B45', marginBottom: 16 }}
+                    style={styles.modalInput}
                     placeholder="Tambahkan catatan untuk kunjungan ini..."
                     placeholderTextColor="#7B8FA1"
                     multiline
                     value={notes}
                     onChangeText={setNotes}
                   />
-                  <Text style={{ color: '#222B45', fontSize: 16, fontWeight: '600', marginBottom: 8 }}>Transaksi</Text>
-                  <View style={{ flexDirection: 'row', gap: 16, marginBottom: 16 }}>
+                  <Text style={styles.modalLabel}>Transaksi</Text>
+                  <View style={styles.modalTransaksiRow}>
                     <TouchableOpacity
-                      style={{ flexDirection: 'row', alignItems: 'center', padding: 10, borderRadius: 8, backgroundColor: transaksi === 'YES' ? '#FF8800' : '#fff', borderWidth: 1, borderColor: transaksi === 'YES' ? '#FF8800' : '#E5E7EB', marginRight: 8 }}
+                      style={styles.modalTransaksiButton}
                       onPress={() => setTransaksi('YES')}
                     >
                       <IconSymbol name="checkmark.circle.fill" size={20} color={transaksi === 'YES' ? '#fff' : '#FF8800'} />
-                      <Text style={{ color: transaksi === 'YES' ? '#fff' : '#222B45', marginLeft: 8, fontWeight: '600' }}>YES</Text>
+                      <Text style={styles.modalTransaksiText}>YES</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={{ flexDirection: 'row', alignItems: 'center', padding: 10, borderRadius: 8, backgroundColor: transaksi === 'NO' ? '#FF8800' : '#fff', borderWidth: 1, borderColor: transaksi === 'NO' ? '#FF8800' : '#E5E7EB' }}
+                      style={styles.modalTransaksiButton}
                       onPress={() => setTransaksi('NO')}
                     >
                       <IconSymbol name="xmark.circle.fill" size={20} color={transaksi === 'NO' ? '#fff' : '#FF8800'} />
-                      <Text style={{ color: transaksi === 'NO' ? '#fff' : '#222B45', marginLeft: 8, fontWeight: '600' }}>NO</Text>
+                      <Text style={styles.modalTransaksiText}>NO</Text>
                     </TouchableOpacity>
                   </View>
                   <Button title="Check Out" onPress={() => { setIsModalVisible(false); handleCheckOut(); }} disabled={!storeImage || !notes.trim() || !transaksi} />
@@ -300,7 +284,33 @@ export default function CheckOutScreen() {
 }
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: '#fff' },
   container: { flex: 1 },
+  header: { backgroundColor: '#FF8800', paddingTop: 32, paddingBottom: 16, paddingHorizontal: 16 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerTitle: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
+  headerIconPlaceholder: { width: 22, height: 22 },
+  outletInfoContainer: { backgroundColor: '#fff', borderRadius: 12, marginTop: 18, padding: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
+  outletName: { color: '#222B45', fontSize: 16, fontWeight: 'bold', marginBottom: 2 },
+  outletDistrictRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  outletDistrictText: { color: '#222B45', fontSize: 15 },
+  cameraContainer: { flex: 1, backgroundColor: '#000' },
+  cameraView: { flex: 1, width: '100%', height: '100%' },
+  cameraPermissionContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#000' },
+  cameraPermissionText: { color: '#fff', fontSize: 16, marginTop: 16 },
+  cameraFlashButton: { position: 'absolute', top: 40, right: 24, backgroundColor: '#fff', borderRadius: 24, padding: 8, shadowColor: '#000', shadowOpacity: 0.10, shadowRadius: 8, elevation: 3, alignItems: 'center', justifyContent: 'center', zIndex: 3 },
+  cameraImage: { flex: 1, width: '100%', height: '100%' },
+  cameraRemoveButton: { position: 'absolute', top: 40, right: 24, backgroundColor: '#fff', borderRadius: 24, padding: 8, shadowColor: '#000', shadowOpacity: 0.10, shadowRadius: 8, elevation: 3, alignItems: 'center', justifyContent: 'center', zIndex: 3 },
+  cameraButtonContainer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: 'transparent', zIndex: 3, alignItems: 'center' },
+  cameraButton: { width: '100%' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '90%' },
+  modalTitle: { color: '#222B45', fontSize: 18, fontWeight: 'bold', marginBottom: 16 },
+  modalLabel: { color: '#222B45', fontSize: 16, fontWeight: '600', marginBottom: 8 },
+  modalInput: { backgroundColor: '#fff', borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB', padding: 12, minHeight: 80, color: '#222B45', marginBottom: 16 },
+  modalTransaksiRow: { flexDirection: 'row', gap: 16, marginBottom: 16 },
+  modalTransaksiButton: { flexDirection: 'row', alignItems: 'center', padding: 10, borderRadius: 8, marginRight: 8 },
+  modalTransaksiText: { marginLeft: 8, fontWeight: '600' },
   errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   errorText: { fontSize: 18, fontWeight: '600', marginTop: 16 },
 });

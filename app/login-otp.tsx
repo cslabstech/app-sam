@@ -4,68 +4,31 @@ import { Colors } from '@/constants/Colors';
 import { shadow } from '@/constants/Shadows';
 import { spacing } from '@/constants/Spacing';
 import { typography } from '@/constants/Typography';
-import { useAuth } from '@/context/auth-context';
+import { useOtpLoginForm } from '@/hooks/data/useOtpLoginForm';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableWithoutFeedback, View } from 'react-native';
+import React from 'react';
+import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableWithoutFeedback, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginOtpScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [showOtp, setShowOtp] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const auth = useAuth();
-
-  React.useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
-    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
-    return () => {
-      keyboardDidHideListener.remove();
-      keyboardDidShowListener.remove();
-    };
-  }, []);
-
-  const handleRequestOtp = async () => {
-    setLoading(true);
-    setError(null);
-    setSuccess(false);
-    try {
-      await auth.requestOtp(phone);
-      setSuccess(true);
-      setShowOtp(true);
-      Alert.alert('OTP Terkirim', 'Kode OTP sudah dikirim ke WhatsApp Anda.');
-    } catch (err: any) {
-      setError(err.message || 'Gagal mengirim OTP');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async () => {
-    setLoading(true);
-    setError(null);
-    setSuccess(false);
-    try {
-      const data = await auth.verifyOtp(phone, otp);
-      setSuccess(true);
-      await auth.loginWithToken(data.data.access_token, data.data.user);
-      Alert.alert('Login Berhasil', 'Anda berhasil login dengan OTP WhatsApp!');
-      router.replace('/(tabs)');
-    } catch (err: any) {
-      setError(err.message || 'OTP salah atau login gagal');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    phone,
+    setPhone,
+    otp,
+    setOtp,
+    showOtp,
+    loading,
+    error,
+    success,
+    keyboardVisible,
+    handleRequestOtp,
+    handleVerifyOtp,
+  } = useOtpLoginForm();
 
   const otpButtonStyle = Platform.OS === 'android'
     ? Object.assign({}, styles.otpButton, styles.otpButtonAndroid)
