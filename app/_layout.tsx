@@ -2,6 +2,7 @@ import { NetworkBanner } from '@/components/NetworkBanner';
 import { AuthProvider } from '@/context/auth-context';
 import { NetworkProvider } from '@/context/network-context';
 import { NotifIdProvider, useNotifId } from '@/context/notifid-context';
+import '@/global.css';
 import { useOneSignal } from '@/hooks/utils/useOneSignal';
 import { log } from '@/utils/logger';
 import Constants from 'expo-constants';

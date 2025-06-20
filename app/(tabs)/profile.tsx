@@ -1,16 +1,12 @@
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
-import { spacing } from '@/constants/Spacing';
-import { typography } from '@/constants/Typography';
 import { useAuth } from '@/context/auth-context';
 import { useNetwork } from '@/context/network-context';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { usePermission } from '@/hooks/utils/usePermission';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Image, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUserData } from './_layout';
 
@@ -23,35 +19,51 @@ const ICONS = {
 
 function ProfileHeader({ name, role, image, colors }: { name: string; role: string; image: string; colors: any }) {
   return (
-    <View style={styles.profileHeader}>
-      <View style={[styles.profileImageContainer, { borderColor: colors.primary }]}>
-        <Image source={{ uri: image }} style={styles.profileImage} />
+    <View className="flex-row items-center mb-6">
+      <View
+        className="w-16 h-16 rounded-xl border-2 justify-center items-center overflow-hidden bg-white dark:bg-neutral-950"
+        style={{ borderColor: colors.primary }}
+      >
+        <Image source={{ uri: image }} className="w-full h-full rounded-xl" />
       </View>
-      <View style={{ marginLeft: spacing.lg }}>
-        <Text style={[styles.headerName, { color: colors.text }]} numberOfLines={1}>{name}</Text>
-        <Text style={[styles.headerRole, { color: colors.textSecondary }]} numberOfLines={1}>{role}</Text>
+      <View className="ml-4 flex-1">
+        <Text style={{ fontFamily: 'Inter' }} className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-0.5" numberOfLines={1}>
+          {name}
+        </Text>
+        <Text style={{ fontFamily: 'Inter' }} className="text-xs text-slate-500 dark:text-slate-300" numberOfLines={1}>
+          {role}
+        </Text>
       </View>
     </View>
   );
 }
 
-function MenuItem({ icon, title, subtitle, colors, onPress }: { icon: keyof typeof ICONS; title: string; subtitle?: string; colors: any; onPress?: () => void }) {
+function MenuItem({ icon, title, subtitle, colors, onPress, badge }: { icon: keyof typeof ICONS; title: string; subtitle?: string; colors: any; onPress?: () => void; badge?: string }) {
   return (
-    <View style={styles.menuItemRow}>
-      <View style={[styles.menuIconContainer, { backgroundColor: colors.primary + '10', borderColor: colors.primary }]}>
-        <IconSymbol name={ICONS[icon] as any} size={16} color={colors.primary} />
+    <Pressable
+      className="flex-row items-center py-3 px-3 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-sm active:bg-primary-50 dark:active:bg-primary-900"
+      onPress={onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      style={{ minHeight: 48 }}
+    >
+      <View
+        className="w-9 h-9 rounded-lg justify-center items-center mr-3 border"
+        style={{ backgroundColor: colors.primary + '10', borderColor: colors.primary }}
+      >
+        <IconSymbol name={ICONS[icon]} size={20} color={colors.primary} />
       </View>
-      <View style={styles.menuTextContainer}>
-        <Text style={[styles.menuTitle, { color: colors.text }]} onPress={onPress}>{title}</Text>
-        {subtitle && <Text style={[styles.menuSubtitle, { color: colors.textSecondary }]}>{subtitle}</Text>}
+      <View className="flex-1 flex-row items-center">
+        <Text style={{ fontFamily: 'Inter' }} className="text-base font-medium text-neutral-900 dark:text-neutral-100" numberOfLines={1}>
+          {title}
+        </Text>
+        {badge && (
+          <View className="ml-2 px-2 py-0.5 rounded-full bg-primary-100 dark:bg-primary-900">
+            <Text style={{ fontFamily: 'Inter' }} className="text-xs text-primary-700 dark:text-primary-300 font-semibold">{badge}</Text>
+          </View>
+        )}
       </View>
-      <IconSymbol name={ICONS.chevronRight as any} size={20} color={colors.textSecondary} />
-      {onPress && (
-        <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} pointerEvents="box-none">
-          <Text onPress={onPress} style={{ width: '100%', height: '100%', position: 'absolute', opacity: 0 }}> </Text>
-        </View>
-      )}
-    </View>
+      <IconSymbol name={ICONS.chevronRight} size={20} color={colors.textSecondary} />
+    </Pressable>
   );
 }
 
@@ -62,9 +74,7 @@ export default function ProfileScreen() {
   const user = useUserData();
   const { logout } = useAuth();
   const { isConnected } = useNetwork();
-
   const [loading, setLoading] = React.useState(false);
-
   const displayName = user?.nama_lengkap || user?.name || user?.username || '-';
   let displayRole = '-';
   if (user?.role) {
@@ -90,148 +100,49 @@ export default function ProfileScreen() {
   const canCreateUser = usePermission('create_user');
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.pageContainer}>
+    <SafeAreaView className="flex-1 bg-neutral-50 dark:bg-neutral-900" edges={isConnected ? ['top','left','right'] : ['left','right']}>
+      <ScrollView className="flex-1" contentContainerStyle={{ flexGrow: 1, paddingBottom: 64 }} showsVerticalScrollIndicator={false}>
+        <View className="px-4 pt-8 pb-6">
           <ProfileHeader name={displayName} role={displayRole} image={profileImage} colors={colors} />
 
-          <View style={styles.sectionSpacing}>
-            <Card style={styles.menuCard} variant="outlined" size="md">
-              <MenuItem icon="person" title="Personal Information" colors={colors} />
-              <View style={[styles.divider, { backgroundColor: colors.border }]} />
-              <MenuItem icon="lock" title="Password" colors={colors} />
-            </Card>
+          <View className="space-y-2 mb-6">
+            <MenuItem icon="person" title="Personal Information" colors={colors} />
+            <MenuItem icon="lock" title="Password" colors={colors} />
           </View>
 
-          <View style={styles.sectionSpacing}>
-            <Card style={styles.menuCard} variant="outlined" size="md">
-              {canCreateUser && (
-                <>
-                  <MenuItem
-                    icon="person"
-                    title="Tambah User"
-                    colors={colors}
-                    onPress={() => router.push('/add-user')}
-                  />
-                  <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                </>
-              )}
+          <View className="space-y-2 mb-6">
+            {canCreateUser && (
               <MenuItem
-                icon="escape"
-                title="Pengaduan Masalah"
+                icon="person"
+                title="Tambah User"
                 colors={colors}
-                onPress={() => Linking.openURL('https://tally.so/r/nGXRvL')}
+                onPress={() => router.push('/add-user')}
+                badge="Admin"
               />
-            </Card>
+            )}
+            <MenuItem
+              icon="escape"
+              title="Pengaduan Masalah"
+              colors={colors}
+              onPress={() => Linking.openURL('https://tally.so/r/nGXRvL')}
+            />
           </View>
 
-          <View style={styles.sectionSpacing}>
-            <Button
-              title={loading ? 'Log Out...' : 'Log Out'}
-              variant="danger"
+          <View className="mb-6">
+            <Pressable
+              className="h-12 w-full rounded-md items-center justify-center bg-danger-500 dark:bg-danger-600 active:bg-danger-600 mt-6"
               onPress={handleLogout}
-              style={{ minHeight: 52, marginTop: spacing.lg, marginBottom: 0 }}
-              fullWidth
-              loading={loading}
               disabled={loading}
-            />
+              accessibilityLabel="Log Out"
+              accessibilityHint="Keluar dari aplikasi"
+            >
+              <Text style={{ fontFamily: 'Inter' }} className="text-sm font-medium text-white">
+                {loading ? 'Log Out...' : 'Log Out'}
+              </Text>
+            </Pressable>
           </View>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  scrollContainer: {
-    flexGrow: 1,
-    paddingBottom: spacing.lg,
-  },
-  pageContainer: {
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing['2xl'],
-  },
-  profileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-  },
-  profileImageContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    borderWidth: 2,
-    backgroundColor: Colors.light.primary + '10',
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  profileImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 16,
-  },
-  headerName: {
-    fontSize: typography.fontSizeXl,
-    fontWeight: 'bold',
-    fontFamily: typography.fontFamily,
-    marginBottom: 2,
-  },
-  headerRole: {
-    fontSize: typography.fontSizeSm,
-    fontFamily: typography.fontFamily,
-    color: undefined,
-  },
-  sectionSpacing: {
-    marginBottom: spacing.xl,
-  },
-  menuCard: {
-    marginBottom: 0,
-    borderRadius: 20,
-    padding: 0,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  menuItemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-  },
-  menuIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-    borderWidth: 1,
-  },
-  menuTextContainer: {
-    flex: 1,
-  },
-  menuTitle: {
-    fontSize: typography.fontSizeMd,
-    fontWeight: '500',
-    fontFamily: typography.fontFamily,
-    letterSpacing: 0.1,
-  },
-  menuSubtitle: {
-    fontSize: typography.fontSizeSm,
-    marginTop: 2,
-    color: '#7B8FA1',
-    fontFamily: typography.fontFamily,
-  },
-  divider: {
-    height: 1,
-    marginVertical: 0,
-    backgroundColor: '#E5E5E5',
-  },
-});

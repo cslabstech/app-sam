@@ -1,18 +1,14 @@
-import { router } from 'expo-router';
-import React from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, TextStyle, TouchableOpacity, View, ViewStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
-import { shadowPresets } from '@/constants/Shadows';
-import { componentSpacing, spacing } from '@/constants/Spacing';
-import { typography } from '@/constants/Typography';
 import { useNetwork } from '@/context/network-context';
 import { useHomeData } from '@/hooks/data/useHomeData';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
+import { router } from 'expo-router';
+import React from 'react';
+import { Pressable, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUserData } from './_layout';
 
 /**
@@ -24,20 +20,14 @@ export default function HomeScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const user = useUserData?.() ?? null;
   const displayName = user?.name || user?.username || 'User';
-
-  // Menggunakan custom hook untuk data dan logic
   const { todayVisits, loadingVisits, error, refreshData } = useHomeData();
   const { isConnected } = useNetwork();
 
   const formatDate = () => {
     return new Date().toLocaleDateString('id-ID', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
   };
-
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Selamat Pagi';
@@ -46,40 +36,39 @@ export default function HomeScreen() {
     return 'Selamat Malam';
   };
 
+  // Urutkan todayVisits secara ascending berdasarkan nama outlet
+  const sortedVisits = [...todayVisits].sort((a, b) => {
+    if (!a.outlet?.name || !b.outlet?.name) return 0;
+    return a.outlet.name.localeCompare(b.outlet.name);
+  });
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={isConnected ? ['top','left','right'] : ['left','right']}>
+    <SafeAreaView className="flex-1 bg-neutral-50 dark:bg-neutral-900" edges={isConnected ? ['top','left','right'] : ['left','right']}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.divider }]}>
-        <View style={styles.headerContent}>
+      <View className="border-b border-neutral-200 dark:border-neutral-800 px-4 pt-4 pb-4 bg-neutral-50 dark:bg-neutral-900">
+        <View className="flex-row justify-between items-center">
           <View>
-            <Text style={[styles.greeting, { color: colors.textSecondary }]}>
-              {getGreeting()},
-            </Text>
-            <Text style={[styles.userName, { color: colors.text }]}>
-              {displayName}
-            </Text>
-            <Text style={[styles.date, { color: colors.textTertiary }]}>
-              {formatDate()}
-            </Text>
+            <Text style={{ fontFamily: 'Inter' }} className="text-sm text-slate-500 dark:text-slate-300 mb-0.5">{getGreeting()},</Text>
+            <Text style={{ fontFamily: 'Inter' }} className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mb-0.5">{displayName}</Text>
+            <Text style={{ fontFamily: 'Inter' }} className="text-xs text-slate-400 dark:text-slate-500">{formatDate()}</Text>
           </View>
           <TouchableOpacity
-            style={[styles.notificationButton, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
+            className="w-10 h-10 rounded-full border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 justify-center items-center relative"
             onPress={() => { }}
             accessibilityLabel="Notifikasi"
           >
             <IconSymbol size={20} name="bell.fill" color={colors.primary} />
-            {/* Badge for unread notifications */}
-            <View style={[styles.notificationBadge, { backgroundColor: colors.danger }]} />
+            <View className="absolute top-2 right-2 w-2 h-2 rounded-full bg-danger-500" />
           </TouchableOpacity>
         </View>
       </View>
 
-      <ScrollView 
-        style={styles.scrollView} 
-        contentContainerStyle={styles.contentContainer}
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 32 }}
         refreshControl={
-          <RefreshControl 
-            refreshing={loadingVisits} 
+          <RefreshControl
+            refreshing={loadingVisits}
             onRefresh={refreshData}
             colors={[colors.primary]}
             tintColor={colors.primary}
@@ -88,170 +77,153 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Quick Actions */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Aksi Cepat</Text>
-          <View style={styles.quickActions}>
+        <View className="px-4 pt-4">
+          <View className="flex-row justify-between space-x-3 gap-2">
             <TouchableOpacity
-              style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
+              className="flex-1 p-4 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 items-center"
               onPress={() => router.push('/visit/check-in')}
               accessibilityLabel="Mulai Live Visit"
+              activeOpacity={0.85}
             >
-              <View style={[styles.actionIconContainer, { backgroundColor: colors.primaryLight + '20' }]}>
+              <View className="w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-900 items-center justify-center mb-2">
                 <IconSymbol size={24} name="checkmark.seal.fill" color={colors.primary} />
               </View>
-              <Text style={[styles.actionTitle, { color: colors.text }]}>Live Visit</Text>
-              <Text style={[styles.actionSubtitle, { color: colors.textSecondary }]}>Mulai kunjungan</Text>
+              <Text style={{ fontFamily: 'Inter' }} className="text-base font-semibold text-neutral-900 dark:text-neutral-100">Live Visit</Text>
+              <Text style={{ fontFamily: 'Inter' }} className="text-xs text-slate-500 dark:text-slate-400 text-center mt-1">Mulai kunjungan</Text>
             </TouchableOpacity>
-
             <TouchableOpacity
-              style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
+              className="flex-1 p-4 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 items-center"
               onPress={() => router.push('/outlet/create')}
               accessibilityLabel="Rencanakan kunjungan"
+              activeOpacity={0.85}
             >
-              <View style={[styles.actionIconContainer, { backgroundColor: colors.secondary + '20' }]}>
+              <View className="w-12 h-12 rounded-full bg-secondary-100 dark:bg-secondary-900 items-center justify-center mb-2">
                 <IconSymbol size={24} name="calendar.badge.plus" color={colors.secondary} />
               </View>
-              <Text style={[styles.actionTitle, { color: colors.text }]}>Plan Visit</Text>
-              <Text style={[styles.actionSubtitle, { color: colors.textSecondary }]}>Rencanakan kunjungan</Text>
+              <Text style={{ fontFamily: 'Inter' }} className="text-base font-semibold text-neutral-900 dark:text-neutral-100">Plan Visit</Text>
+              <Text style={{ fontFamily: 'Inter' }} className="text-xs text-slate-500 dark:text-slate-400 text-center mt-1">Rencanakan kunjungan</Text>
             </TouchableOpacity>
-
             <TouchableOpacity
-              style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
+              className="flex-1 p-4 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 items-center"
               onPress={() => router.push('/outlet/create')}
               accessibilityLabel="Daftarkan outlet baru"
+              activeOpacity={0.85}
             >
-              <View style={[styles.actionIconContainer, { backgroundColor: colors.success + '20' }]}>
+              <View className="w-12 h-12 rounded-full bg-success-100 dark:bg-success-900 items-center justify-center mb-2">
                 <IconSymbol size={24} name="plus.circle.fill" color={colors.success} />
               </View>
-              <Text style={[styles.actionTitle, { color: colors.text }]}>Register</Text>
-              <Text style={[styles.actionSubtitle, { color: colors.textSecondary }]}>Outlet baru</Text>
+              <Text style={{ fontFamily: 'Inter' }} className="text-base font-semibold text-neutral-900 dark:text-neutral-100">Register</Text>
+              <Text style={{ fontFamily: 'Inter' }} className="text-xs text-slate-500 dark:text-slate-400 text-center mt-1">Outlet baru</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Today's Visits */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Kunjungan Hari Ini</Text>
-            <View style={styles.sectionHeaderActions}>
-              <TouchableOpacity 
-                onPress={refreshData} 
-                style={styles.refreshButton}
-                accessibilityLabel="Refresh data"
-              >
+        <View className="px-4 pt-8">
+          <View className="flex-row justify-between items-center mb-4">
+            <Text style={{ fontFamily: 'Inter' }} className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Kunjungan Hari Ini</Text>
+            <View className="flex-row items-center">
+              <TouchableOpacity onPress={refreshData} className="mr-2 p-2" accessibilityLabel="Refresh data">
                 <IconSymbol name="arrow.clockwise" size={20} color={colors.primary} />
               </TouchableOpacity>
-              <TouchableOpacity 
-                onPress={() => router.push('/visits')}
-                accessibilityLabel="Lihat semua kunjungan"
-              >
-                <Text style={[styles.seeAllText, { color: colors.primary }]}>Lihat Semua</Text>
+              <TouchableOpacity onPress={() => router.push('/visits')} accessibilityLabel="Lihat semua kunjungan">
+                <Text style={{ fontFamily: 'Inter' }} className="text-sm font-medium text-primary-500">Lihat Semua</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           {error ? (
-            <Card variant="outlined" style={{ backgroundColor: colors.danger + '10' }}>
+            <Card className="mb-4 border-2 border-danger-200 bg-danger-50 dark:bg-danger-900">
               <CardContent>
-                <View style={styles.errorContainer}>
+                <View className="flex-row items-center justify-center py-4">
                   <IconSymbol name="exclamationmark.triangle.fill" size={20} color={colors.danger} />
-                  <Text style={[styles.errorText, { color: colors.danger }]}>
-                    Gagal memuat data kunjungan
-                  </Text>
+                  <Text style={{ fontFamily: 'Inter' }} className="text-sm text-danger-600 ml-2">Gagal memuat data kunjungan</Text>
                 </View>
               </CardContent>
             </Card>
           ) : loadingVisits ? (
-            <Card>
+            <Card className="mb-4">
               <CardContent>
-                <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-                  Memuat kunjungan...
-                </Text>
+                <Text style={{ fontFamily: 'Inter' }} className="text-sm text-slate-500 text-center py-4">Memuat kunjungan...</Text>
               </CardContent>
             </Card>
           ) : todayVisits.length > 0 ? (
             todayVisits.map(visit => (
-              <Card 
-                key={visit.id} 
-                variant="elevated"
-                style={styles.visitCard}
+              <Pressable
+                key={visit.id}
+                className="mb-2 rounded-lg border-2 border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 active:bg-primary-50 dark:active:bg-primary-900"
+                onPress={() => {}}
+                android_ripple={{ color: colors.primary + '10' }}
+                style={{ overflow: 'hidden' }}
               >
-                <CardContent>
-                  <View style={styles.visitCardContent}>
-                    <View style={styles.visitInfo}>
-                      <View style={styles.visitHeader}>
-                        <View style={styles.outletInfo}>
-                          <IconSymbol size={18} name="building.2.fill" color={colors.primary} />
-                          <Text style={[styles.outletCode, { color: colors.text }]}>
-                            {visit.outlet?.code}
-                          </Text>
-                        </View>
-                        <Text style={[styles.outletName, { color: colors.textSecondary }]}>
-                          {visit.outlet?.name}
+                <View className="flex-row items-center p-4">
+                  {/* Kiri: Info Outlet */}
+                  <View className="flex-1">
+                    {/* Kode & Nama Outlet Sejajar */}
+                    <View className="flex-row items-center mb-2">
+                      <IconSymbol size={18} name="building.2.fill" color={colors.primary} />
+                      <Text style={{ fontFamily: 'Inter' }} className="text-base font-bold text-neutral-900 dark:text-neutral-100 ml-2">
+                        {visit.outlet?.code}
+                      </Text>
+                      <Text
+                        style={{ fontFamily: 'Inter' }}
+                        className="text-xs text-slate-500 dark:text-slate-400 ml-3 flex-1 truncate"
+                        numberOfLines={1}
+                      >
+                        {visit.outlet?.name}
+                      </Text>
+                    </View>
+                    {/* Status Waktu */}
+                    <View className="flex-row space-x-2 mt-2">
+                      <View className="flex-row items-center px-2 py-0.5 rounded-full bg-success-50 dark:bg-success-900">
+                        <IconSymbol size={14} name="clock.fill" color={colors.success} />
+                        <Text style={{ fontFamily: 'Inter' }} className="text-xs text-success-600 ml-1">
+                          IN: {visit.checkin_time ? new Date(visit.checkin_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
                         </Text>
                       </View>
-                      
-                      <View style={styles.visitTimes}>
-                        <View style={styles.timeItem}>
-                          <IconSymbol size={14} name="clock.fill" color={colors.success} />
-                          <Text style={[styles.timeText, { color: colors.success }]}>
-                            IN: {visit.checkin_time 
-                              ? new Date(visit.checkin_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                              : '-'
-                            }
-                          </Text>
-                        </View>
-                        <View style={styles.timeItem}>
-                          <IconSymbol size={14} name="clock.fill" color={colors.warning} />
-                          <Text style={[styles.timeText, { color: colors.warning }]}>
-                            OUT: {visit.checkout_time 
-                              ? new Date(visit.checkout_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                              : '-'
-                            }
-                          </Text>
-                        </View>
+                      <View className="flex-row items-center px-2 py-0.5 rounded-full bg-warning-50 dark:bg-warning-900">
+                        <IconSymbol size={14} name="clock.fill" color={colors.warning} />
+                        <Text style={{ fontFamily: 'Inter' }} className="text-xs text-warning-600 ml-1">
+                          OUT: {visit.checkout_time ? new Date(visit.checkout_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                        </Text>
                       </View>
                     </View>
-
-                    <View style={styles.visitAction}>
-                      {(!visit.checkin_time && !visit.checkout_time) ? (
-                        <Button
-                          title="Mulai Kunjungan"
-                          size="sm"
-                          variant="primary"
-                          onPress={() => router.push({ pathname: '/visit/check-in', params: { id: visit.id } })}
-                          leftIcon={<IconSymbol name="play.fill" size={16} color={colors.textInverse} />}
-                        />
-                      ) : (visit.checkin_time && !visit.checkout_time) ? (
-                        <Button
-                          title="Check Out"
-                          size="sm"
-                          variant="secondary"
-                          onPress={() => router.push({ pathname: '/visit/check-out', params: { id: visit.id } })}
-                          leftIcon={<IconSymbol name="stop.fill" size={16} color={colors.textInverse} />}
-                        />
-                      ) : (
-                        <View style={[styles.completedBadge, { backgroundColor: colors.successLight + '20' }]}>
-                          <IconSymbol name="checkmark.circle.fill" size={16} color={colors.success} />
-                          <Text style={[styles.completedText, { color: colors.success }]}>Selesai</Text>
-                        </View>
-                      )}
-                    </View>
                   </View>
-                </CardContent>
-              </Card>
+                  {/* Kanan: Aksi/Status */}
+                  <View className="ml-4 min-w-[100px] flex items-end">
+                    {(!visit.checkin_time && !visit.checkout_time) ? (
+                      <Button
+                        title="Mulai"
+                        size="sm"
+                        variant="primary"
+                        onPress={() => router.push({ pathname: '/visit/check-in', params: { id: visit.id } })}
+                        leftIcon={<IconSymbol name="play.fill" size={16} color={colors.textInverse} />}
+                      />
+                    ) : (visit.checkin_time && !visit.checkout_time) ? (
+                      <Button
+                        title="Check Out"
+                        size="sm"
+                        variant="secondary"
+                        onPress={() => router.push({ pathname: '/visit/check-out', params: { id: visit.id } })}
+                        leftIcon={<IconSymbol name="stop.fill" size={16} color={colors.textInverse} />}
+                      />
+                    ) : (
+                      <View className="flex-row items-center px-3 py-1 rounded-full bg-success-100 dark:bg-success-900 shadow">
+                        <IconSymbol name="checkmark.circle.fill" size={16} color={colors.success} />
+                        <Text style={{ fontFamily: 'Inter' }} className="text-xs font-semibold text-success-700 dark:text-success-300 ml-1">Selesai</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              </Pressable>
             ))
           ) : (
-            <Card>
+            <Card className="mb-4">
               <CardContent>
-                <View style={styles.emptyState}>
+                <View className="items-center py-8">
                   <IconSymbol name="calendar" size={48} color={colors.textTertiary} />
-                  <Text style={[styles.emptyStateTitle, { color: colors.text }]}>
-                    Tidak ada kunjungan hari ini
-                  </Text>
-                  <Text style={[styles.emptyStateSubtitle, { color: colors.textSecondary }]}>
-                    Kunjungan yang dijadwalkan akan muncul di sini
-                  </Text>
+                  <Text style={{ fontFamily: 'Inter' }} className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mt-4">Tidak ada kunjungan hari ini</Text>
+                  <Text style={{ fontFamily: 'Inter' }} className="text-xs text-slate-500 dark:text-slate-400 mt-2">Kunjungan yang dijadwalkan akan muncul di sini</Text>
                 </View>
               </CardContent>
             </Card>
@@ -261,216 +233,3 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
 }
-
-// Separate styles into ViewStyle and TextStyle for proper typing
-const viewStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-  } as ViewStyle,
-  header: {
-    borderBottomWidth: 1,
-    ...shadowPresets.navigation,
-  } as ViewStyle,
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: componentSpacing.screen.padding,
-    paddingTop: spacing.sm,
-  } as ViewStyle,
-  notificationButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    position: 'relative',
-  } as ViewStyle,
-  notificationBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  } as ViewStyle,
-  scrollView: {
-    flex: 1,
-  } as ViewStyle,
-  contentContainer: {
-    paddingBottom: spacing['2xl'],
-  } as ViewStyle,
-  section: {
-    marginTop: componentSpacing.section.marginVertical,
-    paddingHorizontal: componentSpacing.screen.padding,
-  } as ViewStyle,
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  } as ViewStyle,
-  sectionHeaderActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  } as ViewStyle,
-  refreshButton: {
-    marginRight: spacing.md,
-    padding: spacing.sm,
-  } as ViewStyle,
-  quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  } as ViewStyle,
-  actionCard: {
-    flex: 1,
-    padding: spacing.lg,
-    borderRadius: componentSpacing.card.borderRadius,
-    borderWidth: 1,
-    alignItems: 'center',
-    ...shadowPresets.surface,
-  } as ViewStyle,
-  actionIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  } as ViewStyle,
-  visitCard: {
-    marginBottom: spacing.md,
-  } as ViewStyle,
-  visitCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.lg,
-  } as ViewStyle,
-  visitInfo: {
-    flex: 1,
-  } as ViewStyle,
-  visitHeader: {
-    marginBottom: spacing.md,
-  } as ViewStyle,
-  outletInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  } as ViewStyle,
-  visitTimes: {
-    flexDirection: 'row',
-    gap: spacing.lg,
-  } as ViewStyle,
-  timeItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  } as ViewStyle,
-  visitAction: {
-    marginLeft: spacing.md,
-  } as ViewStyle,
-  completedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: spacing.lg,
-  } as ViewStyle,
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  } as ViewStyle,
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: spacing['2xl'],
-  } as ViewStyle,
-});
-
-const textStyles = StyleSheet.create({
-  greeting: {
-    fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily,
-    marginBottom: spacing.xs,
-  } as TextStyle,
-  userName: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: 700 as any,
-    fontFamily: typography.fontFamily,
-    marginBottom: spacing.xs,
-  } as TextStyle,
-  date: {
-    fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily,
-  } as TextStyle,
-  sectionTitle: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: 600 as any,
-    fontFamily: typography.fontFamily,
-    marginBottom: spacing.lg,
-  } as TextStyle,
-  seeAllText: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: 500 as any,
-    fontFamily: typography.fontFamily,
-  } as TextStyle,
-  actionTitle: {
-    fontSize: typography.fontSize.base,
-    fontWeight: 600 as any,
-    fontFamily: typography.fontFamily,
-    marginBottom: spacing.xs,
-  } as TextStyle,
-  actionSubtitle: {
-    fontSize: typography.fontSize.xs,
-    fontFamily: typography.fontFamily,
-    textAlign: 'center',
-  } as TextStyle,
-  outletCode: {
-    fontSize: typography.fontSize.md,
-    fontWeight: 600 as any,
-    fontFamily: typography.fontFamily,
-    marginLeft: spacing.sm,
-  } as TextStyle,
-  outletName: {
-    fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily,
-  } as TextStyle,
-  timeText: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: 500 as any,
-    fontFamily: typography.fontFamily,
-    marginLeft: spacing.xs,
-  } as TextStyle,
-  completedText: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: 500 as any,
-    fontFamily: typography.fontFamily,
-    marginLeft: spacing.xs,
-  } as TextStyle,
-  errorText: {
-    fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily,
-    marginLeft: spacing.sm,
-  } as TextStyle,
-  loadingText: {
-    fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily,
-    textAlign: 'center',
-  } as TextStyle,
-  emptyStateTitle: {
-    fontSize: typography.fontSize.md,
-    fontWeight: 600 as any,
-    fontFamily: typography.fontFamily,
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-  } as TextStyle,
-  emptyStateSubtitle: {
-    fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily,
-    textAlign: 'center',
-  } as TextStyle,
-});
-
-// Combine styles
-const styles = { ...viewStyles, ...textStyles };

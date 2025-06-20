@@ -1,24 +1,15 @@
-import { Button } from '@/components/ui/Button';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { Input as FormInput } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
-import { Colors } from '@/constants/Colors';
-import { shadow } from '@/constants/Shadows';
-import { spacing } from '@/constants/Spacing';
-import { typography } from '@/constants/Typography';
 import { useNetwork } from '@/context/network-context';
 import { useAddUser } from '@/hooks/data/useAddUser';
 import { useReferenceDropdowns } from '@/hooks/data/useReferenceDropdowns';
-import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function AddUserScreen() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
   const { isConnected } = useNetwork();
   const [name, setName] = useState('');
@@ -67,186 +58,182 @@ export default function AddUserScreen() {
   };
 
   if (error) return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
-      <Ionicons name="alert-circle" size={24} color={colors.danger} style={{ marginBottom: 8 }} />
-      <Text style={{ color: colors.danger, margin: 20, textAlign: 'center' }}>{error}</Text>
-      <Button title="Kembali" variant="primary" onPress={() => router.back()} />
+    <SafeAreaView className="flex-1 bg-neutral-50 dark:bg-neutral-900 justify-center items-center">
+      <Ionicons name="alert-circle" size={24} color="#ef4444" style={{ marginBottom: 8 }} />
+      <Text style={{ fontFamily: 'Inter' }} className="text-danger-600 mb-4 text-center">{error}</Text>
+      <Pressable
+        className="h-12 rounded-md items-center justify-center mb-8 bg-primary-500 active:bg-primary-600 px-8"
+        onPress={() => router.back()}
+      >
+        <Text style={{ fontFamily: 'Inter' }} className="text-base font-semibold text-white">Kembali</Text>
+      </Pressable>
     </SafeAreaView>
   );
 
   if (loading) return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
-      <ActivityIndicator size="large" color={colors.primary} />
-      <Text style={{ color: colors.text, marginTop: 16 }}>Menyimpan user...</Text>
+    <SafeAreaView className="flex-1 bg-neutral-50 dark:bg-neutral-900 justify-center items-center">
+      <ActivityIndicator size="large" color="#f97316" />
+      <Text style={{ fontFamily: 'Inter' }} className="text-base text-neutral-900 dark:text-neutral-100 mt-4">Menyimpan user...</Text>
     </SafeAreaView>
   );
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={isConnected ? ['top','left','right'] : ['left','right']}>
-      <View style={[{
-        flexDirection: 'row',
-        alignItems: 'center',
-        height: 56,
-        paddingHorizontal: spacing.lg,
-        backgroundColor: colors.background,
-        ...shadow.header,
-        zIndex: 10,
-      }]}
-      >
+    <SafeAreaView className="flex-1 bg-neutral-50 dark:bg-neutral-900" edges={isConnected ? ['top','left','right'] : ['left','right']}>
+      {/* Header */}
+      <View className="flex-row items-center h-14 px-4 bg-neutral-50 dark:bg-neutral-900 shadow-sm z-10">
         <TouchableOpacity
           onPress={() => router.back()}
-          style={{ padding: 0, marginRight: spacing.lg, minWidth: 36, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
+          className="mr-4 min-w-[36px] flex-row items-center justify-center"
           accessibilityLabel="Kembali"
           accessibilityHint="Kembali ke halaman sebelumnya"
           accessibilityRole="button"
         >
-          <IconSymbol name="chevron.left" size={26} color={colors.text} />
+          <IconSymbol name="chevron.left" size={26} color="#222" />
         </TouchableOpacity>
-        <Text style={styles.title}>Tambah User</Text>
+        <Text style={{ fontFamily: 'Inter' }} className="text-xl font-bold text-neutral-900 dark:text-neutral-100">Tambah User</Text>
       </View>
-      <ScrollView
-        contentContainerStyle={[styles.scrollContainer]}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.formContainer}>
-          <Text style={styles.subtitle}>Isi data user baru di bawah ini</Text>
-          <View style={styles.formGroup}>
-            <FormInput
-              label="Nama Lengkap *"
-              placeholder="Masukkan nama lengkap"
-              value={name}
-              onChangeText={setName}
-              style={styles.customInput}
-              accessibilityLabel="Input nama lengkap"
-              accessibilityHint="Masukkan nama lengkap user"
-            />
-          </View>
-          <View style={styles.formGroup}>
-            <FormInput
-              label="Username *"
-              placeholder="Masukkan username"
-              value={username}
-              onChangeText={setUsername}
-              style={styles.customInput}
-              accessibilityLabel="Input username"
-              accessibilityHint="Masukkan username user"
-              autoCapitalize="none"
-            />
-          </View>
-          <View style={styles.formGroup}>
-            <FormInput
-              label="No. HP *"
-              placeholder="Masukkan nomor HP"
-              value={phone}
-              onChangeText={setPhone}
-              style={styles.customInput}
-              accessibilityLabel="Input nomor HP"
-              accessibilityHint="Masukkan nomor HP user"
-              keyboardType="phone-pad"
-            />
-          </View>
-          {/* Role Dropdown */}
-          <View style={styles.formGroup}>
-            <Select
-              label="Role *"
-              value={role}
-              onValueChange={(itemValue) => {
-                setRole(itemValue);
-                setBadanusaha('');
-                setDivisi('');
-                setRegion('');
-                setCluster('');
-                onRoleChange(Number(itemValue));
-              }}
-              options={roles.map((r) => ({ label: r.name, value: String(r.id) }))}
-              placeholder="Pilih Role"
-            />
-          </View>
-          {/* Badan Usaha Dropdown */}
-          {roleScope.required.includes('badan_usaha_id') && (
-            <View style={styles.formGroup}>
-              <Select
-                label="Badan Usaha *"
-                value={badanusaha}
-                onValueChange={(itemValue) => {
-                  setBadanusaha(itemValue);
-                  setDivisi('');
-                  setRegion('');
-                  setCluster('');
-                  fetchDivisions(itemValue);
-                }}
-                options={Object.entries(badanUsaha).map(([id, name]) => ({ label: name, value: id }))}
-                placeholder="Pilih Badan Usaha"
-              />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1" keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <ScrollView className="flex-1" contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
+            <View className="px-4 pt-4 pb-8">
+              <View className="space-y-6 mb-8 w-full gap-5">
+                {/* Input Nama */}
+                <View className="space-y-2 w-full">
+                  <Text style={{ fontFamily: 'Inter' }} className="mb-2 text-sm font-medium text-neutral-700 dark:text-neutral-200">Nama Lengkap</Text>
+                  <TextInput
+                    style={{ flex: 1, fontFamily: 'Inter', fontSize: 16, height: 48, paddingVertical: 12, paddingHorizontal: 16 }}
+                    className="pr-12 border rounded-md bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 border-neutral-300 dark:border-neutral-700 focus:border-primary-500 text-base"
+                    placeholder="Masukkan nama lengkap"
+                    placeholderTextColor="#a3a3a3"
+                    value={name}
+                    onChangeText={setName}
+                    textAlignVertical="center"
+                  />
+                </View>
+                {/* Input Username */}
+                <View className="space-y-2 w-full">
+                  <Text style={{ fontFamily: 'Inter' }} className="mb-2 text-sm font-medium text-neutral-700 dark:text-neutral-200">Username</Text>
+                  <TextInput
+                    style={{ flex: 1, fontFamily: 'Inter', fontSize: 16, height: 48, paddingVertical: 12, paddingHorizontal: 16 }}
+                    className="pr-12 border rounded-md bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 border-neutral-300 dark:border-neutral-700 focus:border-primary-500 text-base"
+                    placeholder="Masukkan username"
+                    placeholderTextColor="#a3a3a3"
+                    value={username}
+                    onChangeText={setUsername}
+                    textAlignVertical="center"
+                    autoCapitalize="none"
+                  />
+                </View>
+                {/* Input No HP */}
+                <View className="space-y-2 w-full">
+                  <Text style={{ fontFamily: 'Inter' }} className="mb-2 text-sm font-medium text-neutral-700 dark:text-neutral-200">No. HP</Text>
+                  <TextInput
+                    style={{ flex: 1, fontFamily: 'Inter', fontSize: 16, height: 48, paddingVertical: 12, paddingHorizontal: 16 }}
+                    className="pr-12 border rounded-md bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 border-neutral-300 dark:border-neutral-700 focus:border-primary-500 text-base"
+                    placeholder="Masukkan nomor HP"
+                    placeholderTextColor="#a3a3a3"
+                    value={phone}
+                    onChangeText={setPhone}
+                    textAlignVertical="center"
+                    keyboardType="phone-pad"
+                  />
+                </View>
+                {/* Role Dropdown */}
+                <View className="space-y-2 w-full">
+                  <Text style={{ fontFamily: 'Inter' }} className="mb-2 text-sm font-medium text-neutral-700 dark:text-neutral-200">Role</Text>
+                  <Select
+                    value={role}
+                    onValueChange={(itemValue) => {
+                      setRole(itemValue);
+                      setBadanusaha('');
+                      setDivisi('');
+                      setRegion('');
+                      setCluster('');
+                      onRoleChange(Number(itemValue));
+                    }}
+                    options={roles.map((r) => ({ label: r.name, value: String(r.id) }))}
+                    placeholder="Pilih Role"
+                  />
+                </View>
+                {/* Badan Usaha Dropdown */}
+                {roleScope.required.includes('badan_usaha_id') && (
+                  <View className="space-y-2 w-full">
+                    <Text style={{ fontFamily: 'Inter' }} className="mb-2 text-sm font-medium text-neutral-700 dark:text-neutral-200">Badan Usaha</Text>
+                    <Select
+                      value={badanusaha}
+                      onValueChange={(itemValue) => {
+                        setBadanusaha(itemValue);
+                        setDivisi('');
+                        setRegion('');
+                        setCluster('');
+                        fetchDivisions(itemValue);
+                      }}
+                      options={Object.entries(badanUsaha).map(([id, name]) => ({ label: name, value: id }))}
+                      placeholder="Pilih Badan Usaha"
+                    />
+                  </View>
+                )}
+                {/* Division Dropdown */}
+                {roleScope.required.includes('division_id') && (
+                  <View className="space-y-2 w-full">
+                    <Text style={{ fontFamily: 'Inter' }} className="mb-2 text-sm font-medium text-neutral-700 dark:text-neutral-200">Divisi</Text>
+                    <Select
+                      value={divisi}
+                      onValueChange={(itemValue) => {
+                        setDivisi(itemValue);
+                        setRegion('');
+                        setCluster('');
+                        fetchRegions(itemValue);
+                      }}
+                      options={Object.entries(divisions).map(([id, name]) => ({ label: name, value: id }))}
+                      placeholder="Pilih Divisi"
+                    />
+                  </View>
+                )}
+                {/* Region Dropdown */}
+                {roleScope.required.includes('region_id') && (
+                  <View className="space-y-2 w-full">
+                    <Text style={{ fontFamily: 'Inter' }} className="mb-2 text-sm font-medium text-neutral-700 dark:text-neutral-200">Region</Text>
+                    <Select
+                      value={region}
+                      onValueChange={(itemValue) => {
+                        setRegion(itemValue);
+                        setCluster('');
+                        fetchClusters(itemValue);
+                      }}
+                      options={Object.entries(regions).map(([id, name]) => ({ label: name, value: id }))}
+                      placeholder="Pilih Region"
+                    />
+                  </View>
+                )}
+                {/* Cluster Dropdown */}
+                {roleScope.required.includes('cluster_id') && (
+                  <View className="space-y-2 w-full">
+                    <Text style={{ fontFamily: 'Inter' }} className="mb-2 text-sm font-medium text-neutral-700 dark:text-neutral-200">Cluster</Text>
+                    <Select
+                      value={cluster}
+                      onValueChange={setCluster}
+                      options={Object.entries(clusters).map(([id, name]) => ({ label: name, value: id }))}
+                      placeholder="Pilih Cluster"
+                    />
+                  </View>
+                )}
+              </View>
+              <Pressable
+                className={`h-12 rounded-md items-center justify-center mb-8 ${loading ? 'bg-neutral-300 dark:bg-neutral-700' : 'bg-primary-500 active:bg-primary-600'}`}
+                onPress={handleSubmit}
+                disabled={loading}
+                accessibilityLabel="Simpan User"
+                accessibilityHint="Menambahkan user baru ke sistem"
+              >
+                <Text style={{ fontFamily: 'Inter' }} className={`text-base font-semibold ${loading ? 'text-neutral-500 dark:text-neutral-400' : 'text-white'}`}>
+                  {loading ? 'Menyimpan...' : 'Simpan User'}
+                </Text>
+              </Pressable>
             </View>
-          )}
-          {/* Division Dropdown */}
-          {roleScope.required.includes('division_id') && (
-            <View style={styles.formGroup}>
-              <Select
-                label="Divisi *"
-                value={divisi}
-                onValueChange={(itemValue) => {
-                  setDivisi(itemValue);
-                  setRegion('');
-                  setCluster('');
-                  fetchRegions(itemValue);
-                }}
-                options={Object.entries(divisions).map(([id, name]) => ({ label: name, value: id }))}
-                placeholder="Pilih Divisi"
-              />
-            </View>
-          )}
-          {/* Region Dropdown */}
-          {roleScope.required.includes('region_id') && (
-            <View style={styles.formGroup}>
-              <Select
-                label="Region *"
-                value={region}
-                onValueChange={(itemValue) => {
-                  setRegion(itemValue);
-                  setCluster('');
-                  fetchClusters(itemValue);
-                }}
-                options={Object.entries(regions).map(([id, name]) => ({ label: name, value: id }))}
-                placeholder="Pilih Region"
-              />
-            </View>
-          )}
-          {/* Cluster Dropdown */}
-          {roleScope.required.includes('cluster_id') && (
-            <View style={styles.formGroup}>
-              <Select
-                label="Cluster *"
-                value={cluster}
-                onValueChange={setCluster}
-                options={Object.entries(clusters).map(([id, name]) => ({ label: name, value: id }))}
-                placeholder="Pilih Cluster"
-              />
-            </View>
-          )}
-          <Button
-            title={loading ? 'Menyimpan...' : 'Simpan User'}
-            onPress={handleSubmit}
-            disabled={loading}
-            style={{ minHeight: 52, marginTop: spacing.lg }}
-            accessibilityLabel="Simpan User"
-            accessibilityHint="Menambahkan user baru ke sistem"
-          />
-        </View>
-      </ScrollView>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
-  scrollContainer: { flexGrow: 1, paddingBottom: spacing.md },
-  formContainer: { paddingHorizontal: spacing.lg, marginTop: spacing['2xl'] },
-  title: { fontSize: typography.fontSize2xl, fontWeight: '700', fontFamily: typography.fontFamily, flex: 1 },
-  subtitle: { fontSize: typography.fontSizeMd, fontFamily: typography.fontFamily, marginBottom: spacing.xl },
-  formGroup: { marginBottom: spacing.lg },
-  customInput: { height: 50, fontSize: typography.fontSizeMd, fontFamily: typography.fontFamily },
-  label: { fontSize: 14, fontWeight: '500', marginBottom: 6 },
-});

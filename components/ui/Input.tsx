@@ -22,6 +22,7 @@ interface InputProps extends Omit<TextInputProps, 'style'> {
   required?: boolean;
   style?: import('react-native').TextStyle;
   containerStyle?: import('react-native').ViewStyle;
+  className?: string;
 }
 
 export function Input({
@@ -37,6 +38,7 @@ export function Input({
   required = false,
   style,
   containerStyle,
+  className,
   onFocus,
   onBlur,
   ...props
@@ -44,6 +46,46 @@ export function Input({
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const [isFocused, setIsFocused] = useState(false);
+
+  const labelColor = error
+    ? 'text-danger-600 dark:text-danger-400'
+    : success
+      ? 'text-success-600 dark:text-success-400'
+      : isFocused
+        ? 'text-primary-600 dark:text-primary-400'
+        : 'text-neutral-700 dark:text-neutral-200';
+
+  if (className) {
+    const handleFocus = (e: any) => {
+      setIsFocused(true);
+      onFocus?.(e);
+    };
+
+    const handleBlur = (e: any) => {
+      setIsFocused(false);
+      onBlur?.(e);
+    };
+
+    return (
+      <View style={containerStyle}>
+        {label && (
+          <Text className={`mb-2 text-sm font-medium font-sans ${labelColor}`}>
+            {label}
+            {required && <Text className="text-danger-600">*</Text>}
+          </Text>
+        )}
+        <TextInput
+          className={className}
+          style={style}
+          placeholderTextColor="#94a3b8"
+          editable={!disabled}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          {...props}
+        />
+      </View>
+    );
+  }
 
   const getBackgroundColor = () => {
     if (disabled) {
@@ -150,14 +192,6 @@ export function Input({
     setIsFocused(false);
     onBlur?.(e);
   };
-
-  const labelColor = error 
-    ? colors.danger 
-    : success 
-      ? colors.success 
-      : isFocused 
-        ? colors.primary 
-        : colors.text;
 
   return (
     <View style={[styles.container, containerStyle]}>
