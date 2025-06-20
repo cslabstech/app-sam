@@ -11,6 +11,7 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { spacing } from '@/constants/Spacing';
 import { typography } from '@/constants/Typography';
+import { useNetwork } from '@/context/network-context';
 import { useVisit } from '@/hooks/data/useVisit';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 
@@ -20,6 +21,7 @@ type SortColumn = 'visit_date' | 'outlet.name' | 'type';
 export default function VisitsScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { isConnected } = useNetwork();
 
   // State management for visits list
   const [inputValue, setInputValue] = useState('');
@@ -451,7 +453,7 @@ export default function VisitsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={isConnected ? ['top','left','right'] : ['left','right']}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Visits</Text>

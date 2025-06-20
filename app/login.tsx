@@ -3,6 +3,7 @@ import { Input as FormInput } from '@/components/ui/Input';
 import { Colors } from '@/constants/Colors';
 import { spacing } from '@/constants/Spacing';
 import { typography } from '@/constants/Typography';
+import { useNetwork } from '@/context/network-context';
 import { useLoginForm } from '@/hooks/data/useLoginForm';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,9 +41,10 @@ export default function LoginScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { isConnected } = useNetwork();
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={isConnected ? ['top','left','right'] : ['left','right']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView

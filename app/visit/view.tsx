@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
+import { useNetwork } from '@/context/network-context';
 import { useVisit, Visit } from '@/hooks/data/useVisit';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -23,6 +24,7 @@ export default function VisitViewPage() {
   const { loading, error, fetchVisit } = useVisit();
   const [visit, setVisit] = useState<Visit | null>(null);
   const [fetching, setFetching] = useState(false);
+  const { isConnected } = useNetwork();
 
   useEffect(() => {
     if (id) {
@@ -36,7 +38,7 @@ export default function VisitViewPage() {
 
   if (error) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
         <IconSymbol name="exclamationmark.triangle" size={48} color={colors.danger} />
         <Text style={{ color: colors.danger, margin: 20, textAlign: 'center' }}>{error}</Text>
         <Button title="Kembali" variant="primary" onPress={() => router.back()} />
@@ -46,7 +48,7 @@ export default function VisitViewPage() {
 
   if (loading || fetching) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={{ color: colors.text, marginTop: 16 }}>Memuat data visit...</Text>
       </SafeAreaView>
@@ -55,7 +57,7 @@ export default function VisitViewPage() {
 
   if (!visit) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
         <IconSymbol name="exclamationmark.triangle" size={48} color={colors.danger} />
         <Text style={{ color: colors.danger, margin: 20, textAlign: 'center' }}>Data visit tidak ditemukan.</Text>
         <Button title="Kembali" variant="primary" onPress={() => router.back()} />
@@ -78,7 +80,7 @@ export default function VisitViewPage() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
       <View style={[styles.header, { borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}> 
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>

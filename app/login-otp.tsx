@@ -4,6 +4,7 @@ import { Colors } from '@/constants/Colors';
 import { shadow } from '@/constants/Shadows';
 import { spacing } from '@/constants/Spacing';
 import { typography } from '@/constants/Typography';
+import { useNetwork } from '@/context/network-context';
 import { useOtpLoginForm } from '@/hooks/data/useOtpLoginForm';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,13 +30,14 @@ export default function LoginOtpScreen() {
     handleRequestOtp,
     handleVerifyOtp,
   } = useOtpLoginForm();
+  const { isConnected } = useNetwork();
 
   const otpButtonStyle = Platform.OS === 'android'
     ? Object.assign({}, styles.otpButton, styles.otpButtonAndroid)
     : styles.otpButton;
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={isConnected ? ['top','left','right'] : ['left','right']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView

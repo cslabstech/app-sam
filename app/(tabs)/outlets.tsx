@@ -12,12 +12,14 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { spacing } from '@/constants/Spacing';
 import { typography } from '@/constants/Typography';
+import { useNetwork } from '@/context/network-context';
 import { useOutlet } from '@/hooks/data/useOutlet';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 
 export default function OutletsScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { isConnected } = useNetwork();
 
   // State management for outlets list
   const [inputValue, setInputValue] = useState('');
@@ -372,7 +374,7 @@ export default function OutletsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={isConnected ? ['top','left','right'] : ['left','right']}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Outlets</Text>

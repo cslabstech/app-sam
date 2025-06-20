@@ -1,6 +1,7 @@
 import { MediaPreview } from '@/components/MediaPreview';
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/Colors';
+import { useNetwork } from '@/context/network-context';
 import { useOutlet } from '@/hooks/data/useOutlet';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { useVideoCompressor } from '@/hooks/utils/useVideoCompressor';
@@ -34,6 +35,7 @@ export default function OutletEditPage() {
   });
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const { compress } = useVideoCompressor();
+  const { isConnected } = useNetwork();
 
   useEffect(() => {
     if (id) fetchOutlet(id as string);
@@ -306,14 +308,14 @@ export default function OutletEditPage() {
   };
 
   if (error) return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
       <Text style={{ color: colors.danger, margin: 20, textAlign: 'center' }}>{error}</Text>
       <Button title="Go Back" variant="primary" onPress={() => router.back()} />
     </SafeAreaView>
   );
 
   if (loading) return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
       <ActivityIndicator size="large" color={colors.primary} />
       <Text style={{ color: colors.text, marginTop: 16 }}>Loading outlet data...</Text>
     </SafeAreaView>
@@ -321,14 +323,14 @@ export default function OutletEditPage() {
 
   // Jangan render "Data outlet tidak ditemukan" jika masih loading
   if (!outlet && !loading) return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
       <Text style={{ color: colors.danger, margin: 20, textAlign: 'center' }}>Data outlet tidak ditemukan.</Text>
       <Button title="Go Back" variant="primary" onPress={() => router.back()} />
     </SafeAreaView>
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
         <Text style={[styles.formTitle, { color: colors.text }]}>Edit Outlet</Text>
         <View style={styles.inputGroup}>

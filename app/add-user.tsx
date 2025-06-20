@@ -1,20 +1,26 @@
 import { Button } from '@/components/ui/Button';
+import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Input as FormInput } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Colors } from '@/constants/Colors';
+import { shadow } from '@/constants/Shadows';
+import { spacing } from '@/constants/Spacing';
+import { typography } from '@/constants/Typography';
+import { useNetwork } from '@/context/network-context';
 import { useAddUser } from '@/hooks/data/useAddUser';
 import { useReferenceDropdowns } from '@/hooks/data/useReferenceDropdowns';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function AddUserScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
+  const { isConnected } = useNetwork();
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [phone, setPhone] = useState('');
@@ -76,166 +82,171 @@ export default function AddUserScreen() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={[styles.formTitle, { color: colors.text }]}>Tambah User Baru</Text>
-        <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Nama Lengkap *</Text>
-          <FormInput
-            placeholder="Masukkan nama lengkap"
-            value={name}
-            onChangeText={setName}
-            style={styles.input}
-            accessibilityLabel="Input nama lengkap"
-            accessibilityHint="Masukkan nama lengkap user"
-          />
-        </View>
-        <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Username *</Text>
-          <FormInput
-            placeholder="Masukkan username"
-            value={username}
-            onChangeText={setUsername}
-            style={styles.input}
-            accessibilityLabel="Input username"
-            accessibilityHint="Masukkan username user"
-            autoCapitalize="none"
-          />
-        </View>
-        <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>No. HP *</Text>
-          <FormInput
-            placeholder="Masukkan nomor HP"
-            value={phone}
-            onChangeText={setPhone}
-            style={styles.input}
-            accessibilityLabel="Input nomor HP"
-            accessibilityHint="Masukkan nomor HP user"
-            keyboardType="phone-pad"
-          />
-        </View>
-        {/* Role Dropdown */}
-        <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Role *</Text>
-          <Select
-            value={role}
-            onValueChange={(itemValue) => {
-              setRole(itemValue);
-              setBadanusaha('');
-              setDivisi('');
-              setRegion('');
-              setCluster('');
-              onRoleChange(Number(itemValue));
-            }}
-            options={roles.map((r) => ({ label: r.name, value: String(r.id) }))}
-            placeholder="Pilih Role"
-          />
-        </View>
-        {/* Badan Usaha Dropdown */}
-        {roleScope.required.includes('badan_usaha_id') && (
-          <View style={styles.inputGroup}>
-            <Text style={[styles.inputLabel, { color: colors.text }]}>Badan Usaha *</Text>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={isConnected ? ['top','left','right'] : ['left','right']}>
+      <View style={[{
+        flexDirection: 'row',
+        alignItems: 'center',
+        height: 56,
+        paddingHorizontal: spacing.lg,
+        backgroundColor: colors.background,
+        ...shadow.header,
+        zIndex: 10,
+      }]}
+      >
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={{ padding: 0, marginRight: spacing.lg, minWidth: 36, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
+          accessibilityLabel="Kembali"
+          accessibilityHint="Kembali ke halaman sebelumnya"
+          accessibilityRole="button"
+        >
+          <IconSymbol name="chevron.left" size={26} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={styles.title}>Tambah User</Text>
+      </View>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContainer]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.formContainer}>
+          <Text style={styles.subtitle}>Isi data user baru di bawah ini</Text>
+          <View style={styles.formGroup}>
+            <FormInput
+              label="Nama Lengkap *"
+              placeholder="Masukkan nama lengkap"
+              value={name}
+              onChangeText={setName}
+              style={styles.customInput}
+              accessibilityLabel="Input nama lengkap"
+              accessibilityHint="Masukkan nama lengkap user"
+            />
+          </View>
+          <View style={styles.formGroup}>
+            <FormInput
+              label="Username *"
+              placeholder="Masukkan username"
+              value={username}
+              onChangeText={setUsername}
+              style={styles.customInput}
+              accessibilityLabel="Input username"
+              accessibilityHint="Masukkan username user"
+              autoCapitalize="none"
+            />
+          </View>
+          <View style={styles.formGroup}>
+            <FormInput
+              label="No. HP *"
+              placeholder="Masukkan nomor HP"
+              value={phone}
+              onChangeText={setPhone}
+              style={styles.customInput}
+              accessibilityLabel="Input nomor HP"
+              accessibilityHint="Masukkan nomor HP user"
+              keyboardType="phone-pad"
+            />
+          </View>
+          {/* Role Dropdown */}
+          <View style={styles.formGroup}>
             <Select
-              value={badanusaha}
+              label="Role *"
+              value={role}
               onValueChange={(itemValue) => {
-                setBadanusaha(itemValue);
+                setRole(itemValue);
+                setBadanusaha('');
                 setDivisi('');
                 setRegion('');
                 setCluster('');
-                fetchDivisions(itemValue);
+                onRoleChange(Number(itemValue));
               }}
-              options={Object.entries(badanUsaha).map(([id, name]) => ({ label: name, value: id }))}
-              placeholder="Pilih Badan Usaha"
+              options={roles.map((r) => ({ label: r.name, value: String(r.id) }))}
+              placeholder="Pilih Role"
             />
           </View>
-        )}
-        {/* Division Dropdown */}
-        {roleScope.required.includes('division_id') && (
-          <View style={styles.inputGroup}>
-            <Text style={[styles.inputLabel, { color: colors.text }]}>Divisi *</Text>
-            <Select
-              value={divisi}
-              onValueChange={(itemValue) => {
-                setDivisi(itemValue);
-                setRegion('');
-                setCluster('');
-                fetchRegions(itemValue);
-              }}
-              options={Object.entries(divisions).map(([id, name]) => ({ label: name, value: id }))}
-              placeholder="Pilih Divisi"
-            />
-          </View>
-        )}
-        {/* Region Dropdown */}
-        {roleScope.required.includes('region_id') && (
-          <View style={styles.inputGroup}>
-            <Text style={[styles.inputLabel, { color: colors.text }]}>Region *</Text>
-            <Select
-              value={region}
-              onValueChange={(itemValue) => {
-                setRegion(itemValue);
-                setCluster('');
-                fetchClusters(itemValue);
-              }}
-              options={Object.entries(regions).map(([id, name]) => ({ label: name, value: id }))}
-              placeholder="Pilih Region"
-            />
-          </View>
-        )}
-        {/* Cluster Dropdown */}
-        {roleScope.required.includes('cluster_id') && (
-          <View style={styles.inputGroup}>
-            <Text style={[styles.inputLabel, { color: colors.text }]}>Cluster *</Text>
-            <Select
-              value={cluster}
-              onValueChange={setCluster}
-              options={Object.entries(clusters).map(([id, name]) => ({ label: name, value: id }))}
-              placeholder="Pilih Cluster"
-            />
-          </View>
-        )}
-        <Button
-          title={loading ? 'Menyimpan...' : 'Simpan User'}
-          onPress={handleSubmit}
-          disabled={loading}
-          style={{ marginTop: 24 }}
-          accessibilityLabel="Simpan User"
-          accessibilityHint="Menambahkan user baru ke sistem"
-          accessibilityRole="button"
-        />
+          {/* Badan Usaha Dropdown */}
+          {roleScope.required.includes('badan_usaha_id') && (
+            <View style={styles.formGroup}>
+              <Select
+                label="Badan Usaha *"
+                value={badanusaha}
+                onValueChange={(itemValue) => {
+                  setBadanusaha(itemValue);
+                  setDivisi('');
+                  setRegion('');
+                  setCluster('');
+                  fetchDivisions(itemValue);
+                }}
+                options={Object.entries(badanUsaha).map(([id, name]) => ({ label: name, value: id }))}
+                placeholder="Pilih Badan Usaha"
+              />
+            </View>
+          )}
+          {/* Division Dropdown */}
+          {roleScope.required.includes('division_id') && (
+            <View style={styles.formGroup}>
+              <Select
+                label="Divisi *"
+                value={divisi}
+                onValueChange={(itemValue) => {
+                  setDivisi(itemValue);
+                  setRegion('');
+                  setCluster('');
+                  fetchRegions(itemValue);
+                }}
+                options={Object.entries(divisions).map(([id, name]) => ({ label: name, value: id }))}
+                placeholder="Pilih Divisi"
+              />
+            </View>
+          )}
+          {/* Region Dropdown */}
+          {roleScope.required.includes('region_id') && (
+            <View style={styles.formGroup}>
+              <Select
+                label="Region *"
+                value={region}
+                onValueChange={(itemValue) => {
+                  setRegion(itemValue);
+                  setCluster('');
+                  fetchClusters(itemValue);
+                }}
+                options={Object.entries(regions).map(([id, name]) => ({ label: name, value: id }))}
+                placeholder="Pilih Region"
+              />
+            </View>
+          )}
+          {/* Cluster Dropdown */}
+          {roleScope.required.includes('cluster_id') && (
+            <View style={styles.formGroup}>
+              <Select
+                label="Cluster *"
+                value={cluster}
+                onValueChange={setCluster}
+                options={Object.entries(clusters).map(([id, name]) => ({ label: name, value: id }))}
+                placeholder="Pilih Cluster"
+              />
+            </View>
+          )}
+          <Button
+            title={loading ? 'Menyimpan...' : 'Simpan User'}
+            onPress={handleSubmit}
+            disabled={loading}
+            style={{ minHeight: 52, marginTop: spacing.lg }}
+            accessibilityLabel="Simpan User"
+            accessibilityHint="Menambahkan user baru ke sistem"
+          />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  formTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    fontWeight: '600',
-    marginBottom: 6,
-    fontSize: 15,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-  },
-  pickerWrapper: {
-    borderWidth: 1,
-    borderRadius: 8,
-    backgroundColor: '#f9f9f9',
-    marginBottom: 0,
-  },
+  safeArea: { flex: 1 },
+  scrollContainer: { flexGrow: 1, paddingBottom: spacing.md },
+  formContainer: { paddingHorizontal: spacing.lg, marginTop: spacing['2xl'] },
+  title: { fontSize: typography.fontSize2xl, fontWeight: '700', fontFamily: typography.fontFamily, flex: 1 },
+  subtitle: { fontSize: typography.fontSizeMd, fontFamily: typography.fontFamily, marginBottom: spacing.xl },
+  formGroup: { marginBottom: spacing.lg },
+  customInput: { height: 50, fontSize: typography.fontSizeMd, fontFamily: typography.fontFamily },
+  label: { fontSize: 14, fontWeight: '500', marginBottom: 6 },
 });

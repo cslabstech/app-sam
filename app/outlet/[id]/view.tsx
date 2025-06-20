@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
+import { useNetwork } from '@/context/network-context';
 import { useOutlet } from '@/hooks/data/useOutlet';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -27,6 +28,7 @@ export default function OutletViewPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { outlet, loading, error, fetchOutlet } = useOutlet('');
   const [activeTab, setActiveTab] = useState('info');
+  const { isConnected } = useNetwork();
 
   // --- MEDIA TAB STATE ---
   type MediaImage = { label: string; uri: string };
@@ -63,7 +65,7 @@ export default function OutletViewPage() {
   };
 
   if (error) return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
       <IconSymbol name="exclamationmark.triangle" size={48} color={colors.danger} />
       <Text style={{ color: colors.danger, margin: 20, textAlign: 'center' }}>{error}</Text>
       <Button title="Go Back" variant="primary" onPress={() => router.back()} />
@@ -71,7 +73,7 @@ export default function OutletViewPage() {
   );
 
   if (loading) return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
       <ActivityIndicator size="large" color={colors.primary} />
       <Text style={{ color: colors.text, marginTop: 16 }}>Loading outlet data...</Text>
     </SafeAreaView>
@@ -79,7 +81,7 @@ export default function OutletViewPage() {
 
   // Jangan render "Data outlet tidak ditemukan" jika masih loading
   if (!outlet && !loading) return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
       <IconSymbol name="exclamationmark.triangle" size={48} color={colors.danger} />
       <Text style={{ color: colors.danger, margin: 20, textAlign: 'center' }}>Data outlet tidak ditemukan.</Text>
       <Button title="Go Back" variant="primary" onPress={() => router.back()} />
@@ -87,7 +89,7 @@ export default function OutletViewPage() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}> 
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>

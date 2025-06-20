@@ -83,20 +83,46 @@ export const Select: React.FC<SelectProps> = ({
     });
   };
 
+  // Konsistensi style dengan Input
+  const getBackgroundColor = () => {
+    if (disabled) return colors.backgroundAlt;
+    return colors.input;
+  };
+  const getBorderColor = () => {
+    if (disabled) return colors.border;
+    if (error) return colors.danger;
+    if (isFocused || modalVisible) return colors.inputFocus;
+    return colors.inputBorder;
+  };
+  const getBorderWidth = () => (isFocused || modalVisible ? 2 : 1);
+  const getHeight = () => 50;
+  const getFontSize = () => typography.fontSizeMd;
+  const getPadding = () => 16;
+  const getBorderRadius = () => 8;
+
   return (
     <View style={{ marginBottom: error ? spacing.lg : 0 }}>
-      {label ? <Text style={[styles.label, { color: colors.text }]}>{label}</Text> : null}
+      {label ? (
+        <Text style={{
+          fontSize: 14,
+          fontWeight: '500',
+          fontFamily: typography.fontFamily,
+          marginBottom: 6,
+          color: colors.text,
+        }}>{label}</Text>
+      ) : null}
       <TouchableOpacity
-        style={[
-          styles.selectBox, 
-          { 
-            borderColor: isFocused ? colors.primary : colors.border,
-            backgroundColor: colors.white
-          },
-          disabled && { backgroundColor: colors.border + '50' },
-          modalVisible && { borderColor: colors.primary },
-          error && { borderColor: colors.danger }
-        ]}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          borderWidth: getBorderWidth(),
+          borderRadius: getBorderRadius(),
+          paddingHorizontal: getPadding(),
+          height: getHeight(),
+          backgroundColor: getBackgroundColor(),
+          borderColor: getBorderColor(),
+          marginBottom: 0,
+        }}
         onPress={() => {
           if (!disabled) {
             setIsFocused(true);
@@ -108,19 +134,20 @@ export const Select: React.FC<SelectProps> = ({
         accessibilityRole="button"
         accessibilityLabel={label}
       >
-        <Text 
-          style={[
-            styles.selectText, 
-            { color: value ? colors.text : colors.textSecondary }
-          ]}
+        <Text
+          style={{
+            fontSize: getFontSize(),
+            fontFamily: typography.fontFamily,
+            color: value ? colors.text : colors.textSecondary,
+            flex: 1,
+          }}
           numberOfLines={1}
         >
           {selectedLabel || placeholder}
         </Text>
-        <Ionicons name="chevron-down" size={18} color={colors.textSecondary} style={{ marginLeft: spacing.sm, transform: [{ rotate: modalVisible ? '180deg' : '0deg' }] }} />
+        <Ionicons name="chevron-down" size={20} color={colors.textSecondary} style={{ marginLeft: spacing.sm, transform: [{ rotate: modalVisible ? '180deg' : '0deg' }] }} />
       </TouchableOpacity>
-      
-      {error && <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>}
+      {error && <Text style={{ fontSize: 12, fontFamily: typography.fontFamily, marginTop: spacing.xs, marginLeft: spacing.xs, color: colors.danger }}>{error}</Text>}
       
       <Modal
         visible={modalVisible}

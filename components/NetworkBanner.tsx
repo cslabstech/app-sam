@@ -18,8 +18,7 @@ export const NetworkBanner = () => {
   return (
     <View style={[styles.banner, { 
       backgroundColor: colors.danger, 
-      borderBottomColor: colors.white,
-      paddingTop: insets.top + 8,
+      paddingTop: insets.top,
     }]}>
       <Text style={[styles.text, { color: colors.white }]}>
         Tidak dapat terhubung ke server. Periksa koneksi internet Anda.
@@ -34,16 +33,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 100,
-    elevation: 10,
-    borderBottomWidth: 2,
   },
   text: {
     fontWeight: '700' as any,
     fontSize: 16,
     fontFamily: typography.fontFamily,
     letterSpacing: 0.5,
-    textShadowColor: 'rgba(0,0,0,0.15)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
   },
 });

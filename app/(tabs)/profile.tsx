@@ -5,6 +5,7 @@ import { Colors } from '@/constants/Colors';
 import { spacing } from '@/constants/Spacing';
 import { typography } from '@/constants/Typography';
 import { useAuth } from '@/context/auth-context';
+import { useNetwork } from '@/context/network-context';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { usePermission } from '@/hooks/utils/usePermission';
 import { useRouter } from 'expo-router';
@@ -37,7 +38,7 @@ function ProfileHeader({ name, role, image, colors }: { name: string; role: stri
 function MenuItem({ icon, title, subtitle, colors, onPress }: { icon: keyof typeof ICONS; title: string; subtitle?: string; colors: any; onPress?: () => void }) {
   return (
     <View style={styles.menuItemRow}>
-      <View style={[styles.menuIconContainer, { backgroundColor: colors.primary + '10', borderColor: colors.primary }]}> 
+      <View style={[styles.menuIconContainer, { backgroundColor: colors.primary + '10', borderColor: colors.primary }]}>
         <IconSymbol name={ICONS[icon] as any} size={16} color={colors.primary} />
       </View>
       <View style={styles.menuTextContainer}>
@@ -60,6 +61,7 @@ export default function ProfileScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const user = useUserData();
   const { logout } = useAuth();
+  const { isConnected } = useNetwork();
 
   const [loading, setLoading] = React.useState(false);
 
@@ -88,7 +90,7 @@ export default function ProfileScreen() {
   const canCreateUser = usePermission('create_user');
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={styles.scrollContainer}

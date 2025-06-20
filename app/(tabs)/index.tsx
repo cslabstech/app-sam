@@ -10,6 +10,7 @@ import { Colors } from '@/constants/Colors';
 import { shadowPresets } from '@/constants/Shadows';
 import { componentSpacing, spacing } from '@/constants/Spacing';
 import { typography } from '@/constants/Typography';
+import { useNetwork } from '@/context/network-context';
 import { useHomeData } from '@/hooks/data/useHomeData';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { useUserData } from './_layout';
@@ -26,6 +27,7 @@ export default function HomeScreen() {
 
   // Menggunakan custom hook untuk data dan logic
   const { todayVisits, loadingVisits, error, refreshData } = useHomeData();
+  const { isConnected } = useNetwork();
 
   const formatDate = () => {
     return new Date().toLocaleDateString('id-ID', {
@@ -45,7 +47,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={isConnected ? ['top','left','right'] : ['left','right']}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.divider }]}>
         <View style={styles.headerContent}>
