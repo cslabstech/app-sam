@@ -10,10 +10,6 @@ import { spacing } from '@/constants/Spacing';
 import { typography } from '@/constants/Typography';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 
-/**
- * NotFoundScreen - Halaman untuk route yang tidak ditemukan
- * Mengikuti best practice SAM: menggunakan constants dan components yang konsisten
- */
 export default function NotFoundScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];

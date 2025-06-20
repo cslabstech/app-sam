@@ -79,18 +79,11 @@ export default function LoginOtpScreen() {
             contentContainerStyle={[styles.scrollContainer, keyboardVisible && { paddingBottom: 120 }]}
             showsVerticalScrollIndicator={false}
           >
-            {/* Logo dan judul - disembunyikan saat keyboard muncul
-            {!keyboardVisible && (
-              <View style={styles.logoContainer}>
-                <Image source={require('@/assets/images/icon.png')} style={styles.logo} resizeMode="contain" accessible accessibilityLabel="Logo aplikasi Audit Mobile" />
-                <Text style={[styles.logoText, { color: colors.primary }]}>SAM</Text>
-              </View>
-            )} */}
             <View style={styles.formContainer}>
               <Text style={[styles.title, { color: colors.text }]}>Login dengan WhatsApp</Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Masukkan nomor HP untuk menerima OTP via WhatsApp</Text>
               {error ? (
-                <View style={styles.errorContainer} accessible accessibilityLabel={`Error: ${error}`} accessibilityRole="alert">
+                <View style={styles.errorContainer} accessible accessibilityLabel={`Error: ${error}`}>
                   <Ionicons name="alert-circle" size={16} color={colors.danger} />
                   <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
                 </View>
@@ -130,12 +123,10 @@ export default function LoginOtpScreen() {
                   variant="primary"
                   loading={loading}
                   onPress={handleRequestOtp}
-                  style={{ ...otpButtonStyle, minHeight: 52 }}
+                  style={{ minHeight: 52, marginTop: spacing.lg }}
                   disabled={loading || phone.trim() === ''}
                   accessibilityLabel="Kirim OTP ke WhatsApp"
                   accessibilityHint="Menekan tombol ini akan mengirim kode OTP ke WhatsApp Anda"
-                  accessibilityRole="button"
-                  accessibilityState={{ disabled: loading || phone.trim() === '', busy: loading }}
                 />
               )}
               {showOtp && (
@@ -144,11 +135,10 @@ export default function LoginOtpScreen() {
                   variant="primary"
                   loading={loading}
                   onPress={handleVerifyOtp}
-                  style={{ ...otpButtonStyle, minHeight: 52 }}
+                  style={{ minHeight: 52, marginTop: spacing.lg }}
                   accessibilityLabel="Verifikasi OTP"
                   accessibilityHint="Menekan tombol ini akan memverifikasi kode OTP yang dimasukkan"
-                  accessibilityRole="button"
-                  accessibilityState={{ disabled: loading, busy: loading }}
+                  disabled={loading || otp.trim() === ''}
                 />
               )}
               {/* Separator ala login */}
@@ -168,7 +158,6 @@ export default function LoginOtpScreen() {
                   textStyle={{ color: colors.primary, fontWeight: '600' }}
                   accessibilityLabel="Login manual"
                   accessibilityHint="Login menggunakan username dan password"
-                  accessibilityRole="button"
                 />
               )}
             </View>
@@ -185,7 +174,7 @@ const styles = StyleSheet.create({
   logoContainer: { alignItems: 'center', marginTop: spacing.xl, marginBottom: spacing.lg },
   logo: { width: 120, height: 64 },
   logoText: { fontSize: typography.fontSizeLg, fontWeight: '600', fontFamily: typography.fontFamily, marginTop: spacing.sm, letterSpacing: 1 },
-  formContainer: { paddingHorizontal: spacing.lg, marginTop: spacing.sm },
+  formContainer: { paddingHorizontal: spacing.lg, marginTop: spacing['2xl'] },
   title: { fontSize: typography.fontSize2xl, fontWeight: '700', fontFamily: typography.fontFamily, marginBottom: 4 },
   subtitle: { fontSize: typography.fontSizeMd, fontFamily: typography.fontFamily, marginBottom: spacing.xl },
   formGroup: { marginBottom: spacing.lg },

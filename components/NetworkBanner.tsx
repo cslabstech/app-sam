@@ -6,10 +6,6 @@ import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-/**
- * NetworkBanner - Menampilkan banner ketika koneksi internet terputus
- * Mengikuti best practice: menggunakan constants untuk colors, spacing, dan typography
- */
 export const NetworkBanner = () => {
   const { isConnected } = useNetwork();
   const colorScheme = useColorScheme();

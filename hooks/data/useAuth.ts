@@ -168,7 +168,7 @@ export function useAuth() {
             body: { phone, otp },
             logLabel: 'OTP_VERIFY'
         });
-        await loginWithToken(data.data.access_token, data.data.user);
+        await loginWithToken(data.data.access_token, data.data.user, data.data.permissions);
         log('[OTP] Login success from OTP, token set');
         return data;
     };

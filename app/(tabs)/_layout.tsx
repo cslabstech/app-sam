@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import React, { createContext, useContext } from 'react';
-import { Platform } from 'react-native';
+import { ActivityIndicator, Platform, Text, View } from 'react-native';
 
 import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
@@ -10,7 +10,6 @@ import { useAuth } from '@/context/auth-context';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { useRouter } from 'expo-router';
 
-// Tambahkan context untuk user global di layout
 export const UserDataContext = createContext<any>(null);
 export const useUserData = () => useContext(UserDataContext);
 
@@ -27,10 +26,14 @@ export default function TabLayout() {
   }, [token, loading]);
 
   if (loading) {
-    return null;
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ marginTop: 16, color: colors.textSecondary, fontSize: 16 }}>Memuat...</Text>
+      </View>
+    );
   }
 
-  // Bungkus semua tab dengan UserDataContext agar user data bisa diakses di semua screen
   return (
     <UserDataContext.Provider value={user}>
       <Tabs
@@ -42,7 +45,6 @@ export default function TabLayout() {
           tabBarBackground: TabBarBackground,
           tabBarStyle: Platform.select({
             ios: {
-              // Use a transparent background on iOS to show the blur effect
               position: 'absolute',
             },
             default: {},

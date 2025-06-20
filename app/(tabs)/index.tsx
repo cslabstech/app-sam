@@ -91,7 +91,7 @@ export default function HomeScreen() {
           <View style={styles.quickActions}>
             <TouchableOpacity
               style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
-              onPress={() => router.push('/livevisit/check-in')}
+              onPress={() => router.push('/visit/check-in')}
               accessibilityLabel="Mulai Live Visit"
             >
               <View style={[styles.actionIconContainer, { backgroundColor: colors.primaryLight + '20' }]}>
@@ -103,7 +103,7 @@ export default function HomeScreen() {
 
             <TouchableOpacity
               style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
-              onPress={() => router.push('/register-outlet')}
+              onPress={() => router.push('/outlet/create')}
               accessibilityLabel="Rencanakan kunjungan"
             >
               <View style={[styles.actionIconContainer, { backgroundColor: colors.secondary + '20' }]}>
@@ -115,7 +115,7 @@ export default function HomeScreen() {
 
             <TouchableOpacity
               style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
-              onPress={() => router.push('/register-outlet')}
+              onPress={() => router.push('/outlet/create')}
               accessibilityLabel="Daftarkan outlet baru"
             >
               <View style={[styles.actionIconContainer, { backgroundColor: colors.success + '20' }]}>
@@ -217,7 +217,7 @@ export default function HomeScreen() {
                           title="Mulai Kunjungan"
                           size="sm"
                           variant="primary"
-                          onPress={() => router.push({ pathname: '/livevisit/check-in', params: { id: visit.id } })}
+                          onPress={() => router.push({ pathname: '/visit/check-in', params: { id: visit.id } })}
                           leftIcon={<IconSymbol name="play.fill" size={16} color={colors.textInverse} />}
                         />
                       ) : (visit.checkin_time && !visit.checkout_time) ? (
@@ -225,7 +225,7 @@ export default function HomeScreen() {
                           title="Check Out"
                           size="sm"
                           variant="secondary"
-                          onPress={() => router.push({ pathname: '/livevisit/check-out', params: { id: visit.id } })}
+                          onPress={() => router.push({ pathname: '/visit/check-out', params: { id: visit.id } })}
                           leftIcon={<IconSymbol name="stop.fill" size={16} color={colors.textInverse} />}
                         />
                       ) : (

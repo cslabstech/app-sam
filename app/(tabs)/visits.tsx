@@ -401,7 +401,7 @@ export default function VisitsScreen() {
           title="+ Plan Visit"
           size="medium"
           variant="primary"
-          onPress={() => router.push('/livevisit/check-in')}
+          onPress={() => router.push('/visit/check-in')}
           style={styles.actionButton}
         />
       </View>
@@ -459,7 +459,7 @@ export default function VisitsScreen() {
           title="+ Plan Visit"
           size="small"
           variant="primary"
-          onPress={() => router.push('/livevisit/check-in')}
+          onPress={() => router.push('/visit/check-in')}
         />
       </View>
 
@@ -557,7 +557,7 @@ export default function VisitsScreen() {
         refreshing={refreshing}
         renderItem={({ item }) => (
           <TouchableOpacity
-            onPress={() => router.push({ pathname: '/livevisit/view', params: { id: item.id } })}
+            onPress={() => router.push({ pathname: '/visit/view', params: { id: item.id } })}
             activeOpacity={0.7}
           >
             <Card>

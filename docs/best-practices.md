@@ -282,7 +282,7 @@ Sistem check-in memiliki fitur validasi lokasi yang fleksibel:
 - **Radius = 0**: Validasi lokasi dilewati (tidak ada batasan jarak)
 - **Radius tidak ada**: Fallback ke MAX_DISTANCE (100m)
 
-#### Implementasi di `app/livevisit/check-in.tsx`:
+#### Implementasi di `app/visit/check-in.tsx`:
 ```typescript
 // Jika radius outlet 0, skip validasi jarak (langsung valid)
 if (selectedOutlet.radius === 0) {
