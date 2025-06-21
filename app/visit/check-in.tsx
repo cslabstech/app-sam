@@ -4,7 +4,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Image, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, Image, Linking, Platform, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ViewShot, { captureRef } from 'react-native-view-shot';
@@ -438,25 +438,25 @@ export default function CheckInScreen() {
   const [locationBlocked, setLocationBlocked] = useState(false);
 
   return (
-    <View style={styles.safeArea}>
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <View style={styles.headerRow}>
+    <View className="flex-1 bg-white">
+      <View className="bg-[#FF8800] pb-4 px-4" style={{ paddingTop: insets.top + 8 }}>
+        <View className="flex-row items-center justify-between">
           <TouchableOpacity onPress={() => router.back()}>
             <IconSymbol name="chevron.left" size={24} color="#fff" />
           </TouchableOpacity>
-          <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTitle}>Check in</Text>
-            <Text style={styles.headerStep}>Langkah {currentStep} dari 2</Text>
+          <View className="flex-1 items-center">
+            <Text className="text-white text-[22px] font-bold">Check in</Text>
+            <Text className="text-white text-[14px] mt-1">Langkah {currentStep} dari 2</Text>
           </View>
           {currentStep === 1 ? (
             <TouchableOpacity onPress={getLocation}>
               <Ionicons name="refresh" size={22} color="#fff" />
             </TouchableOpacity>
           ) : (
-            <View style={styles.headerIconPlaceholder} />
+            <View className="w-[22px] h-[22px]" />
           )}
         </View>
-        <View style={styles.outletDropdownContainer}>
+        <View className="bg-white rounded-xl mt-4 p-4 shadow shadow-black/5">
           <OutletDropdown
             outlets={outlets}
             selectedOutletId={selectedOutletId}
@@ -471,9 +471,9 @@ export default function CheckInScreen() {
       
       {/* MAIN CONTENT */}
       {currentStep === 1 && !locationBlocked && (
-        <View style={styles.mapContainer}>
+        <View className="flex-1">
           <MapView
-            style={styles.map}
+            style={{ flex: 1 }}
             region={mapRegion}
             provider={PROVIDER_GOOGLE}
             showsUserLocation
@@ -488,16 +488,16 @@ export default function CheckInScreen() {
                 title={selectedOutlet.name}
                 description={selectedOutlet.district ?? ''}
               >
-                <View style={styles.markerContainer}>
-                  <View style={styles.markerIconWrapper}>
+                <View className="items-center justify-center">
+                  <View className="bg-white rounded-full p-1.5 border-2 border-[#C62828] shadow shadow-black/15">
                     <Ionicons name="business" size={28} color="#C62828" />
                   </View>
-                  <View style={styles.markerTriangle} />
+                  <View style={{ width: 0, height: 0, borderLeftWidth: 10, borderRightWidth: 10, borderTopWidth: 18, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: '#C62828', marginTop: -2 }} />
                 </View>
               </Marker>
             )}
           </MapView>
-          <View style={styles.locationStatusContainer}>
+          <View className="absolute left-0 right-0 bottom-0 p-4">
             {selectedOutlet && currentLocation && (
               <LocationStatus
                 locationValidated={locationValidated}
@@ -508,7 +508,7 @@ export default function CheckInScreen() {
               />
             )}
             <TouchableOpacity
-              style={[styles.lanjutkanButton, { backgroundColor: selectedOutlet ? '#FF8800' : '#ccc' }]}
+              className={`rounded-lg py-4 items-center mt-3 ${selectedOutlet ? 'bg-[#FF8800]' : 'bg-gray-300'}`}
               onPress={async () => {
                 if (!selectedOutlet || !selectedOutlet.id) {
                   Alert.alert('Pilih Outlet', 'Silakan pilih outlet terlebih dahulu.');
@@ -544,29 +544,29 @@ export default function CheckInScreen() {
               }}
               disabled={!selectedOutlet}
             >
-              <Text style={styles.lanjutkanButtonText}>Lanjutkan</Text>
+              <Text className="text-white text-lg font-bold">Lanjutkan</Text>
             </TouchableOpacity>
           </View>
         </View>
       )}
       {currentStep === 1 && locationBlocked && (
-        <View style={styles.blockedContainer}>
-          <Text style={styles.blockedText}>
+        <View className="flex-1 items-center justify-center p-8">
+          <Text className="text-[#C62828] text-base text-center mb-4">
             Lokasi outlet belum diisi. Silakan update data outlet terlebih dahulu sebelum check-in.
           </Text>
           <Button title="Update Outlet" onPress={() => router.push(`/outlet/${selectedOutlet?.id}/edit`)} />
         </View>
       )}
       {currentStep === 2 && (
-        <View style={styles.cameraStepContainer}>
-          <Animated.View style={styles.cameraAnimatedView}>
-            <TouchableOpacity style={styles.cameraBackButton} onPress={() => changeStep(1)}>
+        <View className="flex-1 bg-[#F5F6FA]">
+          <Animated.View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000', zIndex: 1 }}>
+            <TouchableOpacity style={{ position: 'absolute', top: 40, left: 24, backgroundColor: '#fff', borderRadius: 24, padding: 8, shadowColor: '#000', shadowOpacity: 0.10, shadowRadius: 8, elevation: 3, alignItems: 'center', justifyContent: 'center', zIndex: 3 }} onPress={() => changeStep(1)}>
               <Ionicons name="arrow-back" size={24} color="#222B45" />
             </TouchableOpacity>
             {!storePhoto && hasCameraPermission?.status === 'granted' && (
               <CameraView
                 ref={ref => setCameraRef(ref)}
-                style={styles.cameraView}
+                style={{ flex: 1, width: '100%', height: '100%' }}
                 onCameraReady={() => setIsCameraReady(true)}
                 facing="front"
                 ratio="16:9"
@@ -574,41 +574,41 @@ export default function CheckInScreen() {
               />
             )}
             {!storePhoto && hasCameraPermission?.status !== 'granted' && (
-              <View style={styles.cameraPermissionContainer}>
-                <TouchableOpacity onPress={requestCameraPermission} style={styles.cameraPermissionButton}>
+              <View className="flex-1 items-center justify-center bg-black">
+                <TouchableOpacity onPress={requestCameraPermission} style={{ alignItems: 'center', justifyContent: 'center' }}>
                   <Ionicons name="camera" size={60} color="#FF8800" />
-                  <Text style={styles.cameraPermissionText}>Izinkan akses kamera</Text>
+                  <Text className="text-white text-base mt-4">Izinkan akses kamera</Text>
                 </TouchableOpacity>
               </View>
             )}
             {storePhoto && (
-              <Image source={{ uri: storePhoto?.uri }} style={styles.cameraImage} />
+              <Image source={{ uri: storePhoto?.uri }} style={{ flex: 1, width: '100%', height: '100%' }} />
             )}
-            <View style={styles.cameraCircleOverlay} />
+            <View style={{ position: 'absolute', top: '50%', left: 0, right: 0, alignItems: 'center', marginTop: -110, pointerEvents: 'none', zIndex: 2, width: '100%' }} />
             {!storePhoto && hasCameraPermission?.status === 'granted' && (
-              <TouchableOpacity style={styles.cameraFlashButton} onPress={() => setIsFlashOn(f => !f)}>
+              <TouchableOpacity style={{ position: 'absolute', top: 40, right: 24, backgroundColor: '#fff', borderRadius: 24, padding: 8, shadowColor: '#000', shadowOpacity: 0.10, shadowRadius: 8, elevation: 3, alignItems: 'center', justifyContent: 'center', zIndex: 3 }} onPress={() => setIsFlashOn(f => !f)}>
                 <Ionicons name={isFlashOn ? 'flash' : 'flash-off'} size={24} color="#FF8800" />
               </TouchableOpacity>
             )}
             {storePhoto && (
-              <TouchableOpacity style={styles.cameraRemoveButton} onPress={handleRemovePhoto}>
+              <TouchableOpacity style={{ position: 'absolute', bottom: 40, right: 24, backgroundColor: '#fff', borderRadius: 24, padding: 8, shadowColor: '#000', shadowOpacity: 0.10, shadowRadius: 8, elevation: 3, alignItems: 'center', justifyContent: 'center', zIndex: 3 }} onPress={handleRemovePhoto}>
                 <Ionicons name="close" size={24} color="#222B45" />
               </TouchableOpacity>
             )}
             {!storePhoto && hasCameraPermission?.status === 'granted' && (
-              <View style={styles.cameraSendButtonContainer}>
+              <View className="absolute bottom-0 left-0 right-0 p-4 items-center">
                 <TouchableOpacity
-                  style={styles.cameraSendButton}
+                  className="bg-[#FF8800] rounded-lg py-4 items-center w-full"
                   onPress={handleKirim}
                   disabled={isProcessingPhoto || !isCameraReady}
                 >
-                  <Text style={styles.cameraSendButtonText}>Kirim</Text>
+                  <Text className="text-white text-lg font-semibold tracking-wide">Kirim</Text>
                 </TouchableOpacity>
               </View>
             )}
           </Animated.View>
           {rawPhoto && watermarkData && selectedOutlet && (
-            <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 0.5 }} style={styles.viewShot}>
+            <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 0.5 }} style={{ flex: 1, width: '100%', height: '100%' }}>
               <WatermarkOverlay
                 photoUri={rawPhoto}
                 watermarkData={watermarkData}
@@ -622,40 +622,3 @@ export default function CheckInScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#fff' },
-  container: { flex: 1 },
-  header: { backgroundColor: '#FF8800', paddingTop: 32, paddingBottom: 16, paddingHorizontal: 16 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  headerTitleContainer: { flex: 1, alignItems: 'center' },
-  headerTitle: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
-  headerStep: { color: '#fff', fontSize: 14, marginTop: 2 },
-  headerIconPlaceholder: { width: 22, height: 22 },
-  outletDropdownContainer: { backgroundColor: '#fff', borderRadius: 12, marginTop: 18, padding: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
-  mapContainer: { flex: 1 },
-  map: { flex: 1 },
-  markerContainer: { alignItems: 'center', justifyContent: 'center' },
-  markerIconWrapper: { backgroundColor: '#fff', borderRadius: 24, padding: 6, borderWidth: 2, borderColor: '#C62828', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 4, elevation: 4 },
-  markerTriangle: { width: 0, height: 0, borderLeftWidth: 10, borderRightWidth: 10, borderTopWidth: 18, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: '#C62828', marginTop: -2 },
-  locationStatusContainer: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 16, backgroundColor: 'transparent' },
-  lanjutkanButton: { borderRadius: 8, paddingVertical: 16, alignItems: 'center', marginTop: 12 },
-  lanjutkanButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  blockedContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  blockedText: { color: '#C62828', fontSize: 16, textAlign: 'center', marginBottom: 16 },
-  cameraStepContainer: { flex: 1, backgroundColor: '#F5F6FA' },
-  cameraAnimatedView: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000', zIndex: 1 },
-  cameraBackButton: { position: 'absolute', top: 40, left: 24, backgroundColor: '#fff', borderRadius: 24, padding: 8, shadowColor: '#000', shadowOpacity: 0.10, shadowRadius: 8, elevation: 3, alignItems: 'center', justifyContent: 'center', zIndex: 3 },
-  cameraView: { flex: 1, width: '100%', height: '100%' },
-  cameraPermissionContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#000' },
-  cameraPermissionButton: { alignItems: 'center', justifyContent: 'center' },
-  cameraPermissionText: { color: '#fff', fontSize: 16, marginTop: 16 },
-  cameraImage: { flex: 1, width: '100%', height: '100%' },
-  cameraCircleOverlay: { position: 'absolute', top: '50%', left: 0, right: 0, alignItems: 'center', marginTop: -110, pointerEvents: 'none', zIndex: 2, width: '100%' },
-  cameraFlashButton: { position: 'absolute', top: 40, right: 24, backgroundColor: '#fff', borderRadius: 24, padding: 8, shadowColor: '#000', shadowOpacity: 0.10, shadowRadius: 8, elevation: 3, alignItems: 'center', justifyContent: 'center', zIndex: 3 },
-  cameraRemoveButton: { position: 'absolute', bottom: 40, right: 24, backgroundColor: '#fff', borderRadius: 24, padding: 8, shadowColor: '#000', shadowOpacity: 0.10, shadowRadius: 8, elevation: 3, alignItems: 'center', justifyContent: 'center', zIndex: 3 },
-  cameraSendButtonContainer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: 'transparent', zIndex: 3, alignItems: 'center' },
-  cameraSendButton: { backgroundColor: '#FF8800', borderRadius: 8, paddingVertical: 16, alignItems: 'center', width: '100%' },
-  cameraSendButtonText: { color: '#fff', fontSize: 18, fontWeight: '600', letterSpacing: 0.5 },
-  viewShot: { flex: 1, width: '100%', height: '100%' },
-});

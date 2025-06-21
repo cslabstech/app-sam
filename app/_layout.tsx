@@ -11,6 +11,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const ONESIGNAL_APP_ID = process.env.EXPO_PUBLIC_ONESIGNAL_APP_ID;
 
@@ -84,19 +85,21 @@ export default function RootLayout() {
   }
 
   return (
-    <NetworkProvider>
-      <NotifIdProvider>
-        <NotifIdInitializer>
-          <AuthProvider>
-            <NetworkBanner />
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="+not-found" />
-            </Stack>
-            <StatusBar style="auto" />
-          </AuthProvider>
-        </NotifIdInitializer>
-      </NotifIdProvider>
-    </NetworkProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <NetworkProvider>
+        <NotifIdProvider>
+          <NotifIdInitializer>
+            <AuthProvider>
+              <NetworkBanner />
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="+not-found" />
+              </Stack>
+              <StatusBar style="auto" />
+            </AuthProvider>
+          </NotifIdInitializer>
+        </NotifIdProvider>
+      </NetworkProvider>
+    </GestureHandlerRootView>
   );
 }

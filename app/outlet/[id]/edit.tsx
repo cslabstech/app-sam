@@ -157,8 +157,8 @@ export default function OutletEditPage() {
           quality: 'low',
         });
         const info = await FileSystem.getInfoAsync(compressedUri);
-        if (!info.exists || !info.size || info.size > 2 * 1024 * 1024) {
-          Alert.alert('Video masih terlalu besar', 'Ukuran video hasil kompres harus di bawah 2MB. Silakan rekam ulang.');
+        if (!info.exists || !info.size || info.size > 8 * 1024 * 1024) {
+          Alert.alert('Video masih terlalu besar', 'Ukuran video hasil kompres harus di bawah 8MB. Silakan rekam ulang.');
           return;
         }
         setForm(f => ({ ...f, video: compressedUri }));
@@ -260,8 +260,8 @@ export default function OutletEditPage() {
         // Cek ukuran file video
         try {
           const info = await FileSystem.getInfoAsync(uri);
-          if (info.exists && typeof info.size === 'number' && info.size > 10 * 1024 * 1024) { // 2MB
-            Alert.alert('Video terlalu besar', 'Ukuran video maksimal 10MB. Silakan pilih video lain.');
+          if (info.exists && typeof info.size === 'number' && info.size > 8 * 1024 * 1024) {
+            Alert.alert('Video terlalu besar', 'Ukuran video maksimal 8MB. Silakan pilih video lain.');
             return;
           }
         } catch (e) {}

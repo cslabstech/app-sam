@@ -7,12 +7,12 @@ import { useVisit, Visit } from '@/hooks/data/useVisit';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const StatusBadge = ({ status, color }: { status: string; color: string }) => (
-  <View style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: color + '15' }}>
-    <Text style={{ fontSize: 13, fontWeight: '600', color }}>{status}</Text>
+  <View className="px-2 py-1 rounded-md" style={{ backgroundColor: color + '15' }}>
+    <Text className="text-[13px] font-semibold" style={{ color }}>{status}</Text>
   </View>
 );
 
@@ -38,9 +38,9 @@ export default function VisitViewPage() {
 
   if (error) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
+      <SafeAreaView className="flex-1 justify-center items-center" style={{ backgroundColor: colors.background }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
         <IconSymbol name="exclamationmark.triangle" size={48} color={colors.danger} />
-        <Text style={{ color: colors.danger, margin: 20, textAlign: 'center' }}>{error}</Text>
+        <Text className="my-5 text-center" style={{ color: colors.danger }}>{error}</Text>
         <Button title="Kembali" variant="primary" onPress={() => router.back()} />
       </SafeAreaView>
     );
@@ -48,18 +48,18 @@ export default function VisitViewPage() {
 
   if (loading || fetching) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
+      <SafeAreaView className="flex-1 justify-center items-center" style={{ backgroundColor: colors.background }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={{ color: colors.text, marginTop: 16 }}>Memuat data visit...</Text>
+        <Text className="mt-4" style={{ color: colors.text }}>Memuat data visit...</Text>
       </SafeAreaView>
     );
   }
 
   if (!visit) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
+      <SafeAreaView className="flex-1 justify-center items-center" style={{ backgroundColor: colors.background }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
         <IconSymbol name="exclamationmark.triangle" size={48} color={colors.danger} />
-        <Text style={{ color: colors.danger, margin: 20, textAlign: 'center' }}>Data visit tidak ditemukan.</Text>
+        <Text className="my-5 text-center" style={{ color: colors.danger }}>Data visit tidak ditemukan.</Text>
         <Button title="Kembali" variant="primary" onPress={() => router.back()} />
       </SafeAreaView>
     );
@@ -80,54 +80,54 @@ export default function VisitViewPage() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
-      <View style={[styles.header, { borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}> 
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
+      <View className="flex-row items-center justify-between border-b" style={{ borderBottomColor: colors.border, paddingHorizontal: 16, paddingVertical: 12 }}>
+        <View className="flex-row items-center">
+          <TouchableOpacity onPress={() => router.back()} className="mr-2">
             <IconSymbol name="chevron.left" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={[styles.title, { color: colors.text }]}> {visit?.outlet?.name || 'Detail Visit'} </Text>
+          <Text className="text-[20px] font-bold" style={{ color: colors.text }}> {visit?.outlet?.name || 'Detail Visit'} </Text>
         </View>
         <View style={{ width: 32 }} />
       </View>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
-        <View style={styles.tabContent}>
-          <Card style={styles.card}>
-            <View style={styles.cardRow}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Tanggal Kunjungan</Text>
-              <Text style={[styles.value, { color: colors.text }]}>{visit?.visit_date || '-'}</Text>
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        <View className="pt-4">
+          <Card style={{ padding: 16, marginBottom: 16, borderRadius: 12 }}>
+            <View className="flex-row justify-between items-center py-2 border-b border-b-[0.5px] border-b-[rgba(150,150,150,0.2)]">
+              <Text className="text-[14px] flex-1" style={{ color: colors.textSecondary }}>Tanggal Kunjungan</Text>
+              <Text className="text-[15px] font-medium text-right" style={{ color: colors.text }}>{visit?.visit_date || '-'}</Text>
             </View>
-            <View style={styles.cardRow}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Check-in</Text>
-              <Text style={[styles.value, { color: colors.text }]}>{visit?.checkin_time || '-'}</Text>
+            <View className="flex-row justify-between items-center py-2 border-b border-b-[0.5px] border-b-[rgba(150,150,150,0.2)]">
+              <Text className="text-[14px] flex-1" style={{ color: colors.textSecondary }}>Check-in</Text>
+              <Text className="text-[15px] font-medium text-right" style={{ color: colors.text }}>{visit?.checkin_time || '-'}</Text>
             </View>
-            <View style={styles.cardRow}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Check-out</Text>
-              <Text style={[styles.value, { color: colors.text }]}>{visit?.checkout_time || '-'}</Text>
+            <View className="flex-row justify-between items-center py-2 border-b border-b-[0.5px] border-b-[rgba(150,150,150,0.2)]">
+              <Text className="text-[14px] flex-1" style={{ color: colors.textSecondary }}>Check-out</Text>
+              <Text className="text-[15px] font-medium text-right" style={{ color: colors.text }}>{visit?.checkout_time || '-'}</Text>
             </View>
-            <View style={styles.cardRow}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>User</Text>
-              <Text style={[styles.value, { color: colors.text }]}>{visit?.user?.name} ({visit?.user?.username})</Text>
+            <View className="flex-row justify-between items-center py-2 border-b border-b-[0.5px] border-b-[rgba(150,150,150,0.2)]">
+              <Text className="text-[14px] flex-1" style={{ color: colors.textSecondary }}>User</Text>
+              <Text className="text-[15px] font-medium text-right" style={{ color: colors.text }}>{visit?.user?.name} ({visit?.user?.username})</Text>
             </View>
-            <View style={styles.cardRow}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Outlet</Text>
-              <Text style={[styles.value, { color: colors.text }]}>{visit?.outlet?.name} ({visit?.outlet?.code})</Text>
+            <View className="flex-row justify-between items-center py-2 border-b border-b-[0.5px] border-b-[rgba(150,150,150,0.2)]">
+              <Text className="text-[14px] flex-1" style={{ color: colors.textSecondary }}>Outlet</Text>
+              <Text className="text-[15px] font-medium text-right" style={{ color: colors.text }}>{visit?.outlet?.name} ({visit?.outlet?.code})</Text>
             </View>
-            <View style={styles.cardRow}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>District</Text>
-              <Text style={[styles.value, { color: colors.text }]}>{visit?.outlet?.district}</Text>
+            <View className="flex-row justify-between items-center py-2 border-b border-b-[0.5px] border-b-[rgba(150,150,150,0.2)]">
+              <Text className="text-[14px] flex-1" style={{ color: colors.textSecondary }}>District</Text>
+              <Text className="text-[15px] font-medium text-right" style={{ color: colors.text }}>{visit?.outlet?.district}</Text>
             </View>
-            <View style={styles.cardRow}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Status Outlet</Text>
+            <View className="flex-row justify-between items-center py-2 border-b border-b-[0.5px] border-b-[rgba(150,150,150,0.2)]">
+              <Text className="text-[14px] flex-1" style={{ color: colors.textSecondary }}>Status Outlet</Text>
               <StatusBadge status={visit?.outlet?.status ? visit.outlet.status.charAt(0).toUpperCase() + visit.outlet.status.slice(1) : '-'} color={getStatusColor(visit?.outlet?.status)} />
             </View>
-            <View style={styles.cardRow}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Lokasi Outlet</Text>
-              <Text style={[styles.value, { color: colors.text }]}>{visit?.outlet?.location}</Text>
+            <View className="flex-row justify-between items-center py-2 border-b border-b-[0.5px] border-b-[rgba(150,150,150,0.2)]">
+              <Text className="text-[14px] flex-1" style={{ color: colors.textSecondary }}>Lokasi Outlet</Text>
+              <Text className="text-[15px] font-medium text-right" style={{ color: colors.text }}>{visit?.outlet?.location}</Text>
             </View>
-            <View style={styles.cardRow}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Radius Outlet</Text>
-              <Text style={[styles.value, { color: colors.text }]}>{visit?.outlet?.radius}</Text>
+            <View className="flex-row justify-between items-center py-2 border-b border-b-[0.5px] border-b-[rgba(150,150,150,0.2)]">
+              <Text className="text-[14px] flex-1" style={{ color: colors.textSecondary }}>Radius Outlet</Text>
+              <Text className="text-[15px] font-medium text-right" style={{ color: colors.text }}>{visit?.outlet?.radius}</Text>
             </View>
           </Card>
         </View>
@@ -135,50 +135,3 @@ export default function VisitViewPage() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    marginRight: 8,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  tabContent: {
-    paddingTop: 16,
-  },
-  card: {
-    padding: 16,
-    marginBottom: 16,
-    borderRadius: 12,
-  },
-  cardRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(150, 150, 150, 0.2)',
-  },
-  label: {
-    fontSize: 14,
-    flex: 1,
-  },
-  value: {
-    fontSize: 15,
-    fontWeight: '500',
-    textAlign: 'right',
-  },
-});
