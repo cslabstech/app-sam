@@ -36,12 +36,60 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# Android
+android/build/
+android/.gradle/
+android/app/build/
+android/.idea/
+android/local.properties
+android/**/*.iml
+android/**/*.hprof
+android/.cxx/
+android/**/*.jsbundle
+android/app/debug.keystore
+android/app/release.keystore
+
+# iOS
+ios/build/
+ios/Pods/
+ios/**/*.xcuserstate
+ios/**/xcuserdata/
+ios/**/*.xccheckout
+ios/**/*.moved-aside
+ios/**/DerivedData/
+ios/**/*.hmap
+ios/**/*.ipa
+ios/**/project.xcworkspace/
+ios/.xcode.env.local
+ios/**/*.jsbundle
+
+# Keep important iOS/Android config files
+!ios/Podfile
+!ios/Podfile.lock
+!ios/Podfile.properties.json
+!ios/.xcode.env
+!ios/**/*.xcodeproj/
+!ios/**/*.xcworkspace/
+!ios/**/Info.plist
+!ios/**/Base.lproj/
+!ios/**/*.swift
+!ios/**/*.m
+!ios/**/*.h
+!ios/**/*.storyboard
+!ios/**/*.xib
+!android/build.gradle
+!android/settings.gradle
+!android/gradle.properties
+!android/gradlew
+!android/gradlew.bat
+!android/gradle/
+!android/app/build.gradle
+!android/app/src/
+!android/app/*.pro
+
+# Project specific
 app-example
 .env
 .github/
 .github/copilot-instructions.md
 .vscode/
-
-android/
-ios/
-.vscode

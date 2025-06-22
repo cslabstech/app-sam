@@ -20,14 +20,21 @@ function NotifIdInitializer({ children }: { children: React.ReactNode }) {
   const OneSignal = useOneSignal();
 
   useEffect(() => {
-    if (!OneSignal || Constants.appOwnership === 'expo' || !ONESIGNAL_APP_ID) {
+    // Skip initialization hanya jika OneSignal tidak tersedia atau APP_ID tidak ada
+    // Tidak lagi memblokir development build (expo dev client)
+    if (!OneSignal || !ONESIGNAL_APP_ID) {
       setNotifId('expo-default-notif-id');
       setNotificationPermission('default');
       setNotifIdLoading(false);
-      log('[OneSignal] Skipped initialization: appOwnership=expo or no ONESIGNAL_APP_ID');
+      log('[OneSignal] Skipped initialization: no OneSignal instance or no ONESIGNAL_APP_ID');
+      log('[OneSignal] OneSignal available:', !!OneSignal);
+      log('[OneSignal] ONESIGNAL_APP_ID:', ONESIGNAL_APP_ID);
+      log('[OneSignal] appOwnership:', Constants.appOwnership);
       return;
     }
+    
     log('[OneSignal] Initializing with APP_ID:', ONESIGNAL_APP_ID);
+    log('[OneSignal] appOwnership:', Constants.appOwnership);
     OneSignal.Debug?.setLogLevel?.(6);
     OneSignal.initialize(ONESIGNAL_APP_ID);
     OneSignal.Notifications.requestPermission(false);
