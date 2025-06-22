@@ -1,13 +1,12 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Image, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, Text, TextInput, TouchableWithoutFeedback, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, TouchableWithoutFeedback, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import ViewShot, { captureRef } from 'react-native-view-shot';
 
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { WatermarkOverlay } from '@/components/WatermarkOverlay';
 import { Colors } from '@/constants/Colors';
 import { useVisit } from '@/hooks/data/useVisit';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
@@ -56,11 +55,6 @@ export default function CheckOutScreen() {
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [isFlashOn, setIsFlashOn] = useState(false);
   const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
-  const [rawPhoto, setRawPhoto] = useState<string | null>(null);
-  const [storeImage, setStoreImage] = useState<string | null>(null);
-  const [watermarkData, setWatermarkData] = useState<{ waktu: string; outlet: string; lokasi: string } | null>(null);
-  const viewShotRef = useRef<any>(null);
-  const [isModalVisible, setIsModalVisible] = useState(false);
 
   const { location: currentLocation, getLocation } = useCurrentLocation();
   const insets = useSafeAreaInsets();
@@ -80,77 +74,22 @@ export default function CheckOutScreen() {
     fetchVisitDetail();
   }, [visitId]);
 
-  // Handler pakai useCallback agar tidak recreate tiap render
-  const handleTakePhoto = useCallback(async () => {
-    try {
-      if (!hasCameraPermission || hasCameraPermission.status !== 'granted') {
-        const { status } = await requestCameraPermission();
-        if (status !== 'granted') {
-          Alert.alert('Izin Kamera', 'Akses kamera diperlukan.');
-          return;
-        }
-      }
-      if (!cameraRef) {
-        Alert.alert('Kamera tidak siap', 'Kamera belum siap digunakan.');
+  // Handler baru: Ambil foto lalu langsung submit
+  const handleTakePhotoAndCheckOut = useCallback(async () => {
+    if (!hasCameraPermission || hasCameraPermission.status !== 'granted') {
+      const { status } = await requestCameraPermission();
+      if (status !== 'granted') {
+        Alert.alert('Izin Kamera', 'Akses kamera diperlukan.');
         return;
       }
-      setIsProcessingPhoto(true);
-      await getLocation();
-      let lokasi = currentLocation ? `${currentLocation.latitude?.toFixed(6)},${currentLocation.longitude?.toFixed(6)}` : '-';
-      const now = new Date();
-      const waktu = now.toLocaleString('id-ID', { hour12: false });
-      const outletName = visit?.outlet?.name || '-';
-      let photo, manipulated;
-      try {
-        photo = await cameraRef.takePictureAsync({ quality: 0.7, skipProcessing: true });
-        manipulated = await ImageManipulator.manipulateAsync(photo.uri, [
-          { resize: { width: 480 } },
-          { flip: ImageManipulator.FlipType.Horizontal }
-        ], { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG });
-      } catch (err) {
-        console.error('Error proses foto:', err);
-        Alert.alert('Gagal Mengambil Foto', 'Terjadi kesalahan saat mengambil foto. Silakan coba lagi.');
-        return;
-      }
-      setRawPhoto(manipulated.uri);
-      setWatermarkData({ waktu, outlet: outletName, lokasi });
-      setTimeout(async () => {
-        if (viewShotRef.current) {
-          setStoreImage(null);
-          setTimeout(async () => {
-            try {
-              const uri = await captureRef(viewShotRef, { format: 'jpg', quality: 0.5 });
-              setStoreImage(uri);
-              setIsModalVisible(true);
-              setWatermarkData(null);
-              setRawPhoto(null);
-            } catch (err) {
-              console.error('Error capture view:', err);
-              Alert.alert('Gagal Proses Gambar', 'Terjadi kesalahan saat memproses gambar.');
-            }
-          }, 300);
-        }
-      }, 100);
-    } catch (err) {
-      console.error('Error umum proses foto:', err);
-      Alert.alert('Gagal Mengambil Foto', 'Terjadi kesalahan tidak terduga.');
-    } finally {
-      setIsProcessingPhoto(false);
     }
-  }, [hasCameraPermission, requestCameraPermission, cameraRef, getLocation, currentLocation, visit]);
-
-  const handleCheckOut = useCallback(async () => {
-    if (!storeImage) {
-      Alert.alert('Image Required', 'Silakan ambil foto toko.');
+    if (!cameraRef) {
+      Alert.alert('Kamera tidak siap', 'Kamera belum siap digunakan.');
       return;
     }
     if (!visit?.outlet?.code) {
       Alert.alert('Outlet Error', 'Data outlet tidak valid. Silakan ulangi dari halaman utama.');
       return;
-    }
-    let latlong_out = '';
-    if (currentLocation) {
-      latlong_out = `${currentLocation.latitude},${currentLocation.longitude}`;
     }
     if (!notes.trim()) {
       Alert.alert('Catatan Wajib', 'Mohon isi catatan untuk check out.');
@@ -160,14 +99,33 @@ export default function CheckOutScreen() {
       Alert.alert('Transaksi Wajib', 'Mohon pilih status transaksi.');
       return;
     }
+    setIsProcessingPhoto(true);
     try {
+      // Ambil lokasi langsung dari API agar tidak null
+      let checkout_location = '';
+      try {
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        checkout_location = `${loc.coords.latitude},${loc.coords.longitude}`;
+      } catch (e) {
+        checkout_location = '';
+      }
+      const now = new Date();
+      const waktu = now.toLocaleString('id-ID', { hour12: false });
+      const outletName = visit?.outlet?.name || '-';
+      // Ambil foto
+      let photo = await cameraRef.takePictureAsync({ quality: 0.7, skipProcessing: true });
+      let manipulated = await ImageManipulator.manipulateAsync(photo.uri, [
+        { resize: { width: 480 } },
+        { flip: ImageManipulator.FlipType.Horizontal }
+      ], { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG });
+      // Kirim ke backend
       const fileObj = {
-        uri: storeImage,
+        uri: manipulated.uri,
         name: `checkout-${Date.now()}.jpg`,
         type: 'image/jpeg',
       };
       const formData = new FormData();
-      formData.append('checkout_location', latlong_out);
+      formData.append('checkout_location', checkout_location);
       formData.append('checkout_photo', fileObj as any);
       formData.append('transaction', transaksi);
       formData.append('report', notes);
@@ -185,16 +143,15 @@ export default function CheckOutScreen() {
     } catch (err) {
       console.error('Error checkout:', err);
       Alert.alert('Check Out Failed', 'Terjadi kesalahan saat mengirim data.');
+    } finally {
+      setIsProcessingPhoto(false);
     }
-  }, [storeImage, visit, currentLocation, notes, transaksi, checkOutVisit, visitId]);
+  }, [hasCameraPermission, requestCameraPermission, cameraRef, notes, transaksi, checkOutVisit, visit, visitId]);
 
   // Reset state saat unmount
   useEffect(() => {
     return () => {
-      setRawPhoto(null);
-      setStoreImage(null);
-      setWatermarkData(null);
-      setIsModalVisible(false);
+      // Tidak perlu reset state foto/modal
       setNotes('');
       setTransaksi(null);
     };
@@ -249,123 +206,75 @@ export default function CheckOutScreen() {
           </View>
         </View>
         <View className="flex-1 bg-black">
-          {!storeImage && !watermarkData ? (
-            <View className="flex-1 w-full h-full">
-              {hasCameraPermission?.status === 'granted' ? (
-                <CameraView
-                  ref={ref => setCameraRef(ref)}
-                  style={{ flex: 1, width: '100%', height: '100%' }}
-                  onCameraReady={() => setIsCameraReady(true)}
-                  flash={isFlashOn ? 'on' : 'off'}
-                  facing="front"
-                />
-              ) : (
-                <Pressable onPress={requestCameraPermission} className="flex-1 items-center justify-center bg-black" accessibilityRole="button">
-                  <IconSymbol name="camera.fill" size={60} color="#FF8800" />
-                  <Text className="text-white text-base mt-4">Izinkan akses kamera</Text>
-                </Pressable>
-              )}
-              {hasCameraPermission?.status === 'granted' && (
-                <Pressable className="absolute top-10 right-6 bg-white rounded-full p-2 shadow" onPress={() => setIsFlashOn(f => !f)} accessibilityRole="button">
-                  <IconSymbol name={isFlashOn ? 'bolt.fill' : 'bolt.slash'} size={24} color="#FF8800" />
-                </Pressable>
-              )}
-              <View className="absolute bottom-0 left-0 right-0 p-4 z-10 items-center">
-                {hasCameraPermission?.status === 'granted' && (
-                  <Pressable
-                    className={`w-full h-12 rounded-md items-center justify-center ${!isCameraReady || isProcessingPhoto ? 'bg-gray-400' : 'bg-primary-500 active:bg-primary-600'}`}
-                    onPress={async () => {
-                      setIsProcessingPhoto(true);
-                      await handleTakePhoto();
-                      setIsProcessingPhoto(false);
-                    }}
-                    disabled={!isCameraReady || isProcessingPhoto}
-                    accessibilityRole="button"
-                  >
-                    <Text className={`text-base font-semibold ${!isCameraReady || isProcessingPhoto ? 'text-neutral-500' : 'text-white'}`}>
-                      {isProcessingPhoto ? 'Memproses...' : 'Ambil Foto'}
-                    </Text>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+          >
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+              <View className="flex-1 w-full h-full">
+                {hasCameraPermission?.status === 'granted' ? (
+                  <CameraView
+                    ref={ref => setCameraRef(ref)}
+                    style={{ flex: 1, width: '100%', height: '100%' }}
+                    onCameraReady={() => setIsCameraReady(true)}
+                    flash={isFlashOn ? 'on' : 'off'}
+                    facing="front"
+                  />
+                ) : (
+                  <Pressable onPress={requestCameraPermission} className="flex-1 items-center justify-center bg-black" accessibilityRole="button">
+                    <IconSymbol name="camera.fill" size={60} color="#FF8800" />
+                    <Text className="text-white text-base mt-4">Izinkan akses kamera</Text>
                   </Pressable>
                 )}
+                {hasCameraPermission?.status === 'granted' && (
+                  <Pressable className="absolute top-10 right-6 bg-white rounded-full p-2 shadow" onPress={() => setIsFlashOn(f => !f)} accessibilityRole="button">
+                    <IconSymbol name={isFlashOn ? 'bolt.fill' : 'bolt.slash'} size={24} color="#FF8800" />
+                  </Pressable>
+                )}
+                {/* Form input di bawah kamera */}
+                <View className="absolute bottom-0 left-0 right-0 p-4 z-10 bg-white rounded-t-2xl">
+                  <Text className="text-lg font-bold mb-4 text-primary-900">Catatan & Transaksi</Text>
+                  <Text className="text-base font-semibold mb-2 text-primary-900">Transaksi</Text>
+                  <View className="flex-row gap-4 mb-4">
+                    <Pressable
+                      className={`flex-row items-center p-2.5 rounded-lg mr-2 ${transaksi === 'YES' ? 'bg-primary-500' : 'bg-gray-100'}`}
+                      onPress={() => setTransaksi('YES')}
+                      accessibilityRole="button"
+                    >
+                      <IconSymbol name="checkmark.circle.fill" size={20} color={transaksi === 'YES' ? '#fff' : '#FF8800'} />
+                      <Text className={`ml-2 font-semibold ${transaksi === 'YES' ? 'text-white' : 'text-primary-900'}`}>YES</Text>
+                    </Pressable>
+                    <Pressable
+                      className={`flex-row items-center p-2.5 rounded-lg mr-2 ${transaksi === 'NO' ? 'bg-primary-500' : 'bg-gray-100'}`}
+                      onPress={() => setTransaksi('NO')}
+                      accessibilityRole="button"
+                    >
+                      <IconSymbol name="xmark.circle.fill" size={20} color={transaksi === 'NO' ? '#fff' : '#FF8800'} />
+                      <Text className={`ml-2 font-semibold ${transaksi === 'NO' ? 'text-white' : 'text-primary-900'}`}>NO</Text>
+                    </Pressable>
+                  </View>
+                  <Text className="text-base font-semibold mb-2 text-primary-900">Catatan (Opsional)</Text>
+                  <TextInput
+                    className="bg-white rounded-lg border border-slate-200 p-3 min-h-[80px] text-primary-900 mb-4"
+                    placeholder="Tambahkan catatan untuk kunjungan ini..."
+                    placeholderTextColor="#7B8FA1"
+                    multiline
+                    value={notes}
+                    onChangeText={setNotes}
+                  />
+                  <Pressable
+                    className={`w-full h-12 rounded-md items-center justify-center ${!isCameraReady || isProcessingPhoto || !notes.trim() || !transaksi ? 'bg-gray-400' : 'bg-primary-500 active:bg-primary-600'}`}
+                    onPress={handleTakePhotoAndCheckOut}
+                    disabled={!isCameraReady || isProcessingPhoto || !notes.trim() || !transaksi}
+                    accessibilityRole="button"
+                  >
+                    <Text className={`text-base font-semibold ${!isCameraReady || isProcessingPhoto || !notes.trim() || !transaksi ? 'text-neutral-500' : 'text-white'}`}>{isProcessingPhoto ? 'Memproses...' : 'Ambil Foto & Check Out'}</Text>
+                  </Pressable>
+                </View>
               </View>
-            </View>
-          ) : null}
-          {watermarkData && rawPhoto && (
-            <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 0.5 }} style={{ flex: 1, width: '100%', height: '100%' }}>
-              <WatermarkOverlay
-                photoUri={rawPhoto}
-                watermarkData={watermarkData}
-                currentLocation={currentLocation}
-                selectedOutlet={outlet}
-              />
-            </ViewShot>
-          )}
-          {storeImage && !watermarkData && (
-            <View className="flex-1 w-full h-full">
-              <Image source={{ uri: storeImage }} className="flex-1 w-full h-full" />
-              <Pressable className="absolute top-10 right-6 bg-white rounded-full p-2 shadow" onPress={() => { setStoreImage(null); setIsModalVisible(false); }} accessibilityRole="button">
-                <IconSymbol name="xmark" size={24} color="#222B45" />
-              </Pressable>
-              <Modal visible={isModalVisible} animationType="slide" transparent onRequestClose={() => setIsModalVisible(false)}>
-                <KeyboardAvoidingView
-                  behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                  style={{ flex: 1 }}
-                  keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-                >
-                  <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-                    <View className="flex-1 bg-black/50 justify-center items-center">
-                      <View className="bg-white rounded-2xl p-6 w-[90%]">
-                        <Text className="text-lg font-bold mb-4 text-primary-900">Catatan & Transaksi</Text>
-                        <Text className="text-base font-semibold mb-2 text-primary-900">Transaksi</Text>
-                        <View className="flex-row gap-4 mb-4">
-                          <Pressable
-                            className={`flex-row items-center p-2.5 rounded-lg mr-2 ${transaksi === 'YES' ? 'bg-primary-500' : 'bg-gray-100'}`}
-                            onPress={() => setTransaksi('YES')}
-                            accessibilityRole="button"
-                          >
-                            <IconSymbol name="checkmark.circle.fill" size={20} color={transaksi === 'YES' ? '#fff' : '#FF8800'} />
-                            <Text className={`ml-2 font-semibold ${transaksi === 'YES' ? 'text-white' : 'text-primary-900'}`}>YES</Text>
-                          </Pressable>
-                          <Pressable
-                            className={`flex-row items-center p-2.5 rounded-lg mr-2 ${transaksi === 'NO' ? 'bg-primary-500' : 'bg-gray-100'}`}
-                            onPress={() => setTransaksi('NO')}
-                            accessibilityRole="button"
-                          >
-                            <IconSymbol name="xmark.circle.fill" size={20} color={transaksi === 'NO' ? '#fff' : '#FF8800'} />
-                            <Text className={`ml-2 font-semibold ${transaksi === 'NO' ? 'text-white' : 'text-primary-900'}`}>NO</Text>
-                          </Pressable>
-                        </View>
-                        <Text className="text-base font-semibold mb-2 text-primary-900">Catatan (Opsional)</Text>
-                        <TextInput
-                          className="bg-white rounded-lg border border-slate-200 p-3 min-h-[80px] text-primary-900 mb-4"
-                          placeholder="Tambahkan catatan untuk kunjungan ini..."
-                          placeholderTextColor="#7B8FA1"
-                          multiline
-                          value={notes}
-                          onChangeText={setNotes}
-                        />
-                        <Pressable
-                          className={`w-full h-12 rounded-md items-center justify-center ${!storeImage || !notes.trim() || !transaksi ? 'bg-gray-400' : 'bg-primary-500 active:bg-primary-600'}`}
-                          onPress={() => { setIsModalVisible(false); handleCheckOut(); }}
-                          disabled={!storeImage || !notes.trim() || !transaksi}
-                          accessibilityRole="button"
-                        >
-                          <Text className={`text-base font-semibold ${!storeImage || !notes.trim() || !transaksi ? 'text-neutral-500' : 'text-white'}`}>Check Out</Text>
-                        </Pressable>
-                        <Pressable
-                          className="w-full h-12 rounded-md items-center justify-center mt-2 bg-gray-200"
-                          onPress={() => setIsModalVisible(false)}
-                          accessibilityRole="button"
-                        >
-                          <Text className="text-primary-900 text-base font-semibold">Batal</Text>
-                        </Pressable>
-                      </View>
-                    </View>
-                  </TouchableWithoutFeedback>
-                </KeyboardAvoidingView>
-              </Modal>
-            </View>
-          )}
+            </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
         </View>
       </View>
     </ErrorBoundary>
