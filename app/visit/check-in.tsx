@@ -1,16 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as Location from 'expo-location';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Image, Linking, Platform, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, Image, KeyboardAvoidingView, Linking, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ViewShot, { captureRef } from 'react-native-view-shot';
+import { useDebounce } from 'use-debounce';
 
 import { LocationStatus } from '@/components/LocationStatus';
-import { OutletDropdown } from '@/components/OutletDropdown';
 import { Button } from '@/components/ui/Button';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { WatermarkOverlay } from '@/components/WatermarkOverlay';
@@ -46,7 +47,7 @@ export default function CheckInScreen() {
   const outletId = params.id as string;
 
   const [selectedOutletId, setSelectedOutletId] = useState<string | null>(outletId || null);
-  const { outlets, loading: loadingOutlets } = useOutlet('');
+  const { outlets, loading: loadingOutlets, fetchOutletsAdvanced } = useOutlet('');
   const selectedOutlet = outlets.find(o => o.id === selectedOutletId) || null;
 
   const { checkInVisit } = useVisit();
@@ -57,7 +58,7 @@ export default function CheckInScreen() {
   const [currentLocation, setCurrentLocation] = useState<LocationCoords | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState<number>(1);
   const [locationValidated, setLocationValidated] = useState(false);
   const [distance, setDistance] = useState<number | null>(null);
   const [mapRegion, setMapRegion] = useState<any>(null);
@@ -82,6 +83,22 @@ export default function CheckInScreen() {
 
   const insets = useSafeAreaInsets();
 
+  const [showOutletList, setShowOutletList] = useState(false);
+  const [outletSearch, setOutletSearch] = useState('');
+  const [debouncedSearch] = useDebounce(outletSearch, 400);
+
+  const router = useRouter();
+
+  useEffect(() => {
+    fetchOutletsAdvanced({ search: debouncedSearch, per_page: 100 });
+  }, [debouncedSearch, fetchOutletsAdvanced]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchOutletsAdvanced({ search: debouncedSearch, per_page: 100 });
+    }, [debouncedSearch, fetchOutletsAdvanced])
+  );
+
   useEffect(() => {
     if (currentStep === 2) {
       const timer = setInterval(() => {
@@ -91,21 +108,6 @@ export default function CheckInScreen() {
       return () => clearInterval(timer);
     }
   }, [currentStep]);
-
-  const changeStep = (newStep: number) => {
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 150,
-      useNativeDriver: true,
-    }).start(() => {
-      setCurrentStep(newStep);
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }).start();
-    });
-  };
 
   useEffect(() => {
     const now = new Date();
@@ -437,6 +439,21 @@ export default function CheckInScreen() {
   const [showOutletDropdown, setShowOutletDropdown] = useState(false);
   const [locationBlocked, setLocationBlocked] = useState(false);
 
+  const changeStep = (newStep: number) => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 150,
+      useNativeDriver: true,
+    }).start(() => {
+      setCurrentStep(newStep);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }).start();
+    });
+  };
+
   return (
     <View className="flex-1 bg-white">
       <View className="bg-[#FF8800] pb-4 px-4" style={{ paddingTop: insets.top + 8 }}>
@@ -456,97 +473,148 @@ export default function CheckInScreen() {
             <View className="w-[22px] h-[22px]" />
           )}
         </View>
-        <View className="bg-white rounded-xl mt-4 p-4 shadow shadow-black/5">
-          <OutletDropdown
-            outlets={outlets}
-            selectedOutletId={selectedOutletId}
-            onSelect={setSelectedOutletId}
-            disabled={currentStep === 2}
-            loading={loadingOutlets}
-            showDropdown={showOutletDropdown}
-            setShowDropdown={setShowOutletDropdown}
-          />
-        </View>
       </View>
       
-      {/* MAIN CONTENT */}
       {currentStep === 1 && !locationBlocked && (
         <View className="flex-1">
-          <MapView
-            style={{ flex: 1 }}
-            region={mapRegion}
-            provider={PROVIDER_GOOGLE}
-            showsUserLocation
-            showsMyLocationButton={false}
-          >
-            {selectedOutlet && selectedOutlet.location && (
-              <Marker
-                coordinate={{
-                  latitude: Number(selectedOutlet.location.split(',')[0]),
-                  longitude: Number(selectedOutlet.location.split(',')[1]),
-                }}
-                title={selectedOutlet.name}
-                description={selectedOutlet.district ?? ''}
-              >
-                <View className="items-center justify-center">
-                  <View className="bg-white rounded-full p-1.5 border-2 border-[#C62828] shadow shadow-black/15">
-                    <Ionicons name="business" size={28} color="#C62828" />
+          <View className="flex-1">
+            <MapView
+              style={{ flex: 1 }}
+              region={mapRegion}
+              provider={PROVIDER_GOOGLE}
+              showsUserLocation
+              showsMyLocationButton={false}
+            >
+              {selectedOutlet && selectedOutlet.location && (
+                <Marker
+                  coordinate={{
+                    latitude: Number(selectedOutlet.location.split(',')[0]),
+                    longitude: Number(selectedOutlet.location.split(',')[1]),
+                  }}
+                  title={selectedOutlet.name}
+                  description={selectedOutlet.district ?? ''}
+                >
+                  <View className="items-center justify-center">
+                    <View className="bg-white rounded-full p-1.5 border-2 border-[#C62828] shadow shadow-black/15">
+                      <Ionicons name="business" size={28} color="#C62828" />
+                    </View>
+                    <View style={{ width: 0, height: 0, borderLeftWidth: 10, borderRightWidth: 10, borderTopWidth: 18, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: '#C62828', marginTop: -2 }} />
                   </View>
-                  <View style={{ width: 0, height: 0, borderLeftWidth: 10, borderRightWidth: 10, borderTopWidth: 18, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: '#C62828', marginTop: -2 }} />
-                </View>
-              </Marker>
-            )}
-          </MapView>
-          <View className="absolute left-0 right-0 bottom-0 p-4">
+                </Marker>
+              )}
+            </MapView>
             {selectedOutlet && currentLocation && (
-              <LocationStatus
-                locationValidated={locationValidated}
-                distance={distance ?? 0}
-                outletRadius={selectedOutlet.radius ?? 0}
-                onUpdateOutlet={() => router.push(`/outlet/${selectedOutlet.id}/edit` as any)}
-                colors={colors}
-              />
+              <View className="absolute left-4 right-4 top-4 z-10">
+                <LocationStatus
+                  locationValidated={locationValidated}
+                  distance={distance ?? 0}
+                  outletRadius={selectedOutlet.radius ?? 0}
+                  onUpdateOutlet={() => router.push(`/outlet/${selectedOutlet.id}/edit` as any)}
+                  colors={colors}
+                />
+              </View>
             )}
-            <TouchableOpacity
-              className={`rounded-lg py-4 items-center mt-3 ${selectedOutlet ? 'bg-[#FF8800]' : 'bg-gray-300'}`}
-              onPress={async () => {
-                if (!selectedOutlet || !selectedOutlet.id) {
-                  Alert.alert('Pilih Outlet', 'Silakan pilih outlet terlebih dahulu.');
-                  return;
-                }
-                if (!locationValidated && selectedOutlet.radius > 0) {
-                  Alert.alert(
-                    'Lokasi Terlalu Jauh',
-                    `Anda berada ${Math.round(distance || 0)}m dari outlet, sedangkan maksimal jarak adalah ${selectedOutlet.radius}m. Apakah Anda ingin memperbarui lokasi outlet?`,
-                    [
-                      { text: 'Batal', style: 'cancel' },
-                      { text: 'Update ', onPress: () => router.push(`/outlet/${selectedOutlet.id}/edit` as any) },
-                    ]
-                  );
-                  return;
-                }
-                try {
-                  const result = await checkVisitStatus(selectedOutlet.id);
-                  if (result?.meta?.code === 400 && result?.meta?.message?.includes('berjalan')) {
-                    Alert.alert('Visit Aktif', result?.meta?.message || 'Masih ada visit yang berjalan, silakan check-out terlebih dahulu.');
-                    return;
-                  } else if (result?.meta?.code === 400 && result?.meta?.message?.includes('sudah pernah visit')) {
-                    Alert.alert('Sudah Pernah Visit', result?.meta?.message || 'Anda sudah pernah visit ke outlet ini hari ini.');
-                    return;
-                  } else if (result?.success === false) {
-                    Alert.alert('Cek Status Gagal', result?.error || 'Gagal memeriksa status kunjungan. Silakan coba lagi.');
+          </View>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+            className="absolute left-0 right-0 bottom-0"
+          >
+            {/* Card outlet hanya untuk search & list, tanpa LocationStatus */}
+            <View className="bg-white rounded-2xl p-4 shadow shadow-black/10 w-full">
+              {/* Search & List Outlet */}
+              <View className="mb-3">
+                <Text className="font-bold text-base mb-2">Pilih Outlet</Text>
+                <View className="flex-row items-center border border-gray-300 rounded-lg px-3 mb-2 bg-white">
+                  <Ionicons name="search" size={18} color={colors.textSecondary} />
+                  <TextInput
+                    className="flex-1 h-10 ml-2 text-black"
+                    placeholder="Cari outlet berdasarkan nama/kode..."
+                    placeholderTextColor={colors.textSecondary}
+                    value={outletSearch}
+                    onChangeText={setOutletSearch}
+                  />
+                  {outletSearch ? (
+                    <TouchableOpacity onPress={() => setOutletSearch('')}>
+                      <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+                <View className="max-h-40">
+                  {loadingOutlets ? (
+                    <Text className="p-4 text-gray-400">Memuat outlet...</Text>
+                  ) : outlets.length === 0 ? (
+                    <Text className="p-4 text-gray-400">Outlet tidak ditemukan</Text>
+                  ) : (
+                    <Animated.ScrollView persistentScrollbar>
+                      {outlets.map(outlet => (
+                        <TouchableOpacity
+                          key={outlet.id}
+                          onPress={() => {
+                            setSelectedOutletId(outlet.id);
+                          }}
+                          className={`py-2 px-3 border-b border-gray-200 rounded ${selectedOutletId === outlet.id ? 'bg-orange-50' : 'bg-white'} mb-0.5`}
+                        >
+                          <Text className="font-semibold text-black text-[15px]" numberOfLines={1}>
+                            {outlet.name}
+                          </Text>
+                          <View className="flex-row items-center mt-0.5">
+                            <Text className="text-gray-500 text-xs mr-2" numberOfLines={1}>
+                              {outlet.code}
+                            </Text>
+                            {outlet.district && (
+                              <Text className="text-gray-400 text-xs" numberOfLines={1}>
+                                {outlet.district}
+                              </Text>
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </Animated.ScrollView>
+                  )}
+                </View>
+              </View>
+              <TouchableOpacity
+                className={`rounded-lg py-4 items-center mt-3 ${selectedOutlet ? 'bg-[#FF8800]' : 'bg-gray-300'}`}
+                onPress={async () => {
+                  if (!selectedOutlet || !selectedOutlet.id) {
+                    Alert.alert('Pilih Outlet', 'Silakan pilih outlet terlebih dahulu.');
                     return;
                   }
-                  changeStep(2);
-                } catch (err) {
-                  Alert.alert('Cek Status Gagal', 'Gagal memeriksa status kunjungan. Silakan coba lagi.');
-                }
-              }}
-              disabled={!selectedOutlet}
-            >
-              <Text className="text-white text-lg font-bold">Lanjutkan</Text>
-            </TouchableOpacity>
-          </View>
+                  if (!locationValidated && selectedOutlet.radius > 0) {
+                    Alert.alert(
+                      'Lokasi Terlalu Jauh',
+                      `Anda berada ${Math.round(distance || 0)}m dari outlet, sedangkan maksimal jarak adalah ${selectedOutlet.radius}m. Apakah Anda ingin memperbarui lokasi outlet?`,
+                      [
+                        { text: 'Batal', style: 'cancel' },
+                        { text: 'Update ', onPress: () => router.push(`/outlet/${selectedOutlet.id}/edit` as any) },
+                      ]
+                    );
+                    return;
+                  }
+                  try {
+                    const result = await checkVisitStatus(selectedOutlet.id);
+                    if (result?.meta?.code === 400 && result?.meta?.message?.includes('berjalan')) {
+                      Alert.alert('Visit Aktif', result?.meta?.message || 'Masih ada visit yang berjalan, silakan check-out terlebih dahulu.');
+                      return;
+                    } else if (result?.meta?.code === 400 && result?.meta?.message?.includes('sudah pernah visit')) {
+                      Alert.alert('Sudah Pernah Visit', result?.meta?.message || 'Anda sudah pernah visit ke outlet ini hari ini.');
+                      return;
+                    } else if (result?.success === false) {
+                      Alert.alert('Cek Status Gagal', result?.error || 'Gagal memeriksa status kunjungan. Silakan coba lagi.');
+                      return;
+                    }
+                    changeStep(2);
+                  } catch (err) {
+                    Alert.alert('Cek Status Gagal', 'Gagal memeriksa status kunjungan. Silakan coba lagi.');
+                  }
+                }}
+                disabled={!selectedOutlet}
+              >
+                <Text className="text-white text-lg font-bold">Lanjutkan</Text>
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
         </View>
       )}
       {currentStep === 1 && locationBlocked && (
