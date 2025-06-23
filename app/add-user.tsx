@@ -20,7 +20,7 @@ export default function AddUserScreen() {
   const [divisi, setDivisi] = useState('');
   const [region, setRegion] = useState('');
   const [cluster, setCluster] = useState('');
-  const { loading, error, success, addUser } = useAddUser();
+  const { loading, error, addUser } = useAddUser();
   const {
     roles,
     badanUsaha,
@@ -35,17 +35,13 @@ export default function AddUserScreen() {
   } = useReferenceDropdowns();
 
   React.useEffect(() => {
-    if (success && !error) {
-      Alert.alert('Sukses', 'User berhasil ditambahkan!', [
-        { text: 'OK', onPress: () => router.back() }
-      ]);
-    } else if (error) {
+    if (error) {
       Alert.alert('Gagal', error);
     }
-  }, [success, error]);
+  }, [error]);
 
   const handleSubmit = async () => {
-    await addUser({
+    const result = await addUser({
       name,
       username,
       phone,
@@ -55,6 +51,12 @@ export default function AddUserScreen() {
       region,
       cluster,
     });
+    
+    if (result.success) {
+      Alert.alert('Sukses', 'User berhasil ditambahkan!', [
+        { text: 'OK', onPress: () => router.back() }
+      ]);
+    }
   };
 
   if (error) return (
@@ -168,7 +170,7 @@ export default function AddUserScreen() {
                         setCluster('');
                         fetchDivisions(itemValue);
                       }}
-                      options={Object.entries(badanUsaha).map(([id, name]) => ({ label: name, value: id }))}
+                      options={badanUsaha.map((item) => ({ label: item.name, value: String(item.id) }))}
                       placeholder="Pilih Badan Usaha"
                     />
                   </View>
@@ -185,7 +187,7 @@ export default function AddUserScreen() {
                         setCluster('');
                         fetchRegions(itemValue);
                       }}
-                      options={Object.entries(divisions).map(([id, name]) => ({ label: name, value: id }))}
+                      options={divisions.map((item) => ({ label: item.name, value: String(item.id) }))}
                       placeholder="Pilih Divisi"
                     />
                   </View>
@@ -201,7 +203,7 @@ export default function AddUserScreen() {
                         setCluster('');
                         fetchClusters(itemValue);
                       }}
-                      options={Object.entries(regions).map(([id, name]) => ({ label: name, value: id }))}
+                      options={regions.map((item) => ({ label: item.name, value: String(item.id) }))}
                       placeholder="Pilih Region"
                     />
                   </View>
@@ -213,7 +215,7 @@ export default function AddUserScreen() {
                     <Select
                       value={cluster}
                       onValueChange={setCluster}
-                      options={Object.entries(clusters).map(([id, name]) => ({ label: name, value: id }))}
+                      options={clusters.map((item) => ({ label: item.name, value: String(item.id) }))}
                       placeholder="Pilih Cluster"
                     />
                   </View>

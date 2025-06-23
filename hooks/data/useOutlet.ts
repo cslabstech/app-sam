@@ -1,14 +1,27 @@
 import { useAuth } from '@/context/auth-context';
+import { BaseResponse, apiRequest } from '@/utils/api';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+// Interface untuk outlet photos
+export interface OutletPhotos {
+  shop_sign: string | null;
+  front: string | null;
+  left: string | null;
+  right: string | null;
+  id_card: string | null;
+}
+
+// Interface untuk outlet API sesuai backend baru
 export interface OutletAPI {
   id: string;
   code: string;
   name: string;
+  owner_name: string | null;
+  owner_phone: string | null;
+  address: string | null;
+  location: string;
   district: string;
   status: string;
-  radius: number;
-  location: string;
   badan_usaha_id: number;
   division_id: number;
   region_id: number;
@@ -29,7 +42,26 @@ export interface OutletAPI {
     id: number;
     name: string;
   };
+  photos: OutletPhotos;
+  video: string | null;
+  radius?: number; // Optional untuk backward compatibility
 }
+
+// Interface untuk response paginated outlets
+export interface OutletsResponse extends BaseResponse<OutletAPI[]> {
+  meta: {
+    code: number;
+    status: 'success' | 'error';
+    message: string;
+    current_page: number;
+    last_page: number;
+    total: number;
+    per_page: number;
+  };
+}
+
+// Interface untuk response single outlet
+export interface OutletResponse extends BaseResponse<OutletAPI> {}
 
 const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
 
@@ -50,16 +82,18 @@ export function useOutlet(searchQuery: string) {
   const transformOutletData = useCallback((data: any[]): OutletAPI[] => {
     return data.map((item: any) => ({
       id: String(item.id),
-      code: item.code,
-      name: item.name,
-      district: item.district,
-      status: item.status,
-      radius: item.radius,
-      location: item.location,
-      badan_usaha_id: item.badan_usaha_id,
-      division_id: item.division_id,
-      region_id: item.region_id,
-      cluster_id: item.cluster_id,
+      code: item.code || '',
+      name: item.name || '',
+      owner_name: item.owner_name || null,
+      owner_phone: item.owner_phone || null,
+      address: item.address || null,
+      location: item.location || '',
+      district: item.district || '',
+      status: item.status || '',
+      badan_usaha_id: item.badan_usaha_id || 0,
+      division_id: item.division_id || 0,
+      region_id: item.region_id || 0,
+      cluster_id: item.cluster_id || 0,
       badan_usaha: {
         id: item.badan_usaha?.id || 0,
         name: item.badan_usaha?.name || '',
@@ -76,31 +110,90 @@ export function useOutlet(searchQuery: string) {
         id: item.cluster?.id || 0,
         name: item.cluster?.name || '',
       },
+      photos: {
+        shop_sign: item.photos?.shop_sign || null,
+        front: item.photos?.front || null,
+        left: item.photos?.left || null,
+        right: item.photos?.right || null,
+        id_card: item.photos?.id_card || null,
+      },
+      video: item.video || null,
+      radius: item.radius || 0, // Default untuk backward compatibility
     }));
   }, []);
 
-  // Fetch all outlets
+  // Transform single outlet data
+  const transformSingleOutletData = useCallback((item: any): OutletAPI => {
+    return {
+      id: String(item.id),
+      code: item.code || '',
+      name: item.name || '',
+      owner_name: item.owner_name || null,
+      owner_phone: item.owner_phone || null,
+      address: item.address || null,
+      location: item.location || '',
+      district: item.district || '',
+      status: item.status || '',
+      badan_usaha_id: item.badan_usaha_id || 0,
+      division_id: item.division_id || 0,
+      region_id: item.region_id || 0,
+      cluster_id: item.cluster_id || 0,
+      badan_usaha: {
+        id: item.badan_usaha?.id || 0,
+        name: item.badan_usaha?.name || '',
+      },
+      division: {
+        id: item.division?.id || 0,
+        name: item.division?.name || '',
+      },
+      region: {
+        id: item.region?.id || 0,
+        name: item.region?.name || '',
+      },
+      cluster: {
+        id: item.cluster?.id || 0,
+        name: item.cluster?.name || '',
+      },
+      photos: {
+        shop_sign: item.photos?.shop_sign || null,
+        front: item.photos?.front || null,
+        left: item.photos?.left || null,
+        right: item.photos?.right || null,
+        id_card: item.photos?.id_card || null,
+      },
+      video: item.video || null,
+      radius: item.radius || 0,
+    };
+  }, []);
+
+  // Fetch all outlets (basic - no pagination)
   const fetchOutlets = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${BASE_URL}/outlet`, {
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : '',
-        },
+      const json: OutletsResponse = await apiRequest({
+        url: `${BASE_URL}/outlet`,
+        method: 'GET',
+        body: null,
+        logLabel: 'FETCH_OUTLETS',
+        token
       });
-      const json = await res.json();
-      if (json.meta && json.meta.code === 200 && Array.isArray(json.data)) {
+      
+      if (Array.isArray(json.data)) {
         const transformed = transformOutletData(json.data);
         setOutlets(transformed);
+        setMeta(json.meta);
       } else {
         setOutlets([]);
-        setError('No data or error in response');
+        setMeta(null);
+        setError('Invalid data format in response');
       }
     } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : 'Failed to fetch outlets';
       setOutlets([]);
-      setError('Failed to fetch outlets');
+      setMeta(null);
+      setError(errorMessage);
+      console.error('[fetchOutlets] Error:', e);
     }
     setLoading(false);
   }, [token, transformOutletData]);
@@ -110,81 +203,49 @@ export function useOutlet(searchQuery: string) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${BASE_URL}/outlet/${encodeURIComponent(id)}`, {
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : '',
-        },
+      const json: OutletResponse = await apiRequest({
+        url: `${BASE_URL}/outlet/${encodeURIComponent(id)}`,
+        method: 'GET',
+        body: null,
+        logLabel: 'FETCH_OUTLET',
+        token
       });
-      const json = await res.json();
-      if (json.meta && json.meta.code === 200 && json.data) {
-        const dataObj = Array.isArray(json.data) ? json.data[0] : json.data;
-        const mappedOutlet: OutletAPI = {
-          id: String(dataObj.id ?? ''),
-          code: dataObj.code ?? '',
-          name: dataObj.name ?? '',
-          district: dataObj.district ?? '',
-          status: dataObj.status ?? '',
-          radius: dataObj.radius ?? 0,
-          location: dataObj.location ?? '',
-          badan_usaha_id: dataObj.badan_usaha_id ?? 0,
-          division_id: dataObj.division_id ?? 0,
-          region_id: dataObj.region_id ?? 0,
-          cluster_id: dataObj.cluster_id ?? 0,
-          badan_usaha: {
-            id: dataObj.badan_usaha?.id || 0,
-            name: dataObj.badan_usaha?.name || '',
-          },
-          division: {
-            id: dataObj.division?.id || 0,
-            name: dataObj.division?.name || '',
-          },
-          region: {
-            id: dataObj.region?.id || 0,
-            name: dataObj.region?.name || '',
-          },
-          cluster: {
-            id: dataObj.cluster?.id || 0,
-            name: dataObj.cluster?.name || '',
-          },
-        };
+      
+      if (json.data) {
+        const mappedOutlet = transformSingleOutletData(json.data);
         setOutlet(mappedOutlet);
       } else {
         setError('Outlet not found');
         setOutlet(null);
       }
     } catch (e) {
-      setError('Failed to fetch outlet');
+      const errorMessage = e instanceof Error ? e.message : 'Failed to fetch outlet';
+      setError(errorMessage);
       setOutlet(null);
+      console.error('[fetchOutlet] Error:', e);
     }
     setLoading(false);
-  }, [token]);
+  }, [token, transformSingleOutletData]);
 
   // Create outlet
   const createOutlet = useCallback(async (data: Partial<OutletAPI>) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${BASE_URL}/outlet`, {
+      await apiRequest({
+        url: `${BASE_URL}/outlet`,
         method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : '',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
+        body: data,
+        logLabel: 'CREATE_OUTLET',
+        token
       });
-      const json = await res.json();
-      if (json.meta && json.meta.code === 200) {
-        await fetchOutlets(); // refresh list
-        return { success: true };
-      } else {
-        setError(json.meta?.message || 'Failed to create outlet');
-        return { success: false, error: json.meta?.message };
-      }
+      
+      await fetchOutlets(); // refresh list
+      return { success: true };
     } catch (e) {
-      setError('Failed to create outlet');
-      return { success: false, error: 'Failed to create outlet' };
+      const errorMessage = e instanceof Error ? e.message : 'Failed to create outlet';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
@@ -195,26 +256,20 @@ export function useOutlet(searchQuery: string) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${BASE_URL}/outlet/${encodeURIComponent(id)}`, {
+      await apiRequest({
+        url: `${BASE_URL}/outlet/${encodeURIComponent(id)}`,
         method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : '',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
+        body: data,
+        logLabel: 'UPDATE_OUTLET',
+        token
       });
-      const json = await res.json();
-      if (json.meta && json.meta.code === 200) {
-        await fetchOutlets(); // refresh list
-        return { success: true };
-      } else {
-        setError(json.meta?.message || 'Failed to update outlet');
-        return { success: false, error: json.meta?.message };
-      }
+      
+      await fetchOutlets(); // refresh list
+      return { success: true };
     } catch (e) {
-      setError('Failed to update outlet');
-      return { success: false, error: 'Failed to update outlet' };
+      const errorMessage = e instanceof Error ? e.message : 'Failed to update outlet';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
@@ -225,32 +280,26 @@ export function useOutlet(searchQuery: string) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${BASE_URL}/outlet/${encodeURIComponent(id)}`, {
+      await apiRequest({
+        url: `${BASE_URL}/outlet/${encodeURIComponent(id)}`,
         method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : '',
-          // Jangan set Content-Type, biarkan browser set multipart boundary
-        },
         body: formData,
+        logLabel: 'UPDATE_OUTLET_WITH_FILE',
+        token
       });
-      const json = await res.json();
-      if (json.meta && json.meta.code === 200) {
-        await fetchOutlets(); // refresh list
-        return { success: true };
-      } else {
-        setError(json.meta?.message || 'Failed to update outlet');
-        return { success: false, error: json.meta?.message };
-      }
+      
+      await fetchOutlets(); // refresh list
+      return { success: true };
     } catch (e) {
-      setError('Failed to update outlet');
-      return { success: false, error: 'Failed to update outlet' };
+      const errorMessage = e instanceof Error ? e.message : 'Failed to update outlet';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
   }, [token, fetchOutlets]);
 
-  // Fetch outlets with advanced params
+  // Fetch outlets with advanced params (with pagination support)
   const fetchOutletsAdvanced = useCallback(async (params?: {
     page?: number;
     per_page?: number;
@@ -275,25 +324,29 @@ export function useOutlet(searchQuery: string) {
           }
         });
       }
-      const res = await fetch(`${BASE_URL}/outlet?${query.toString()}`, {
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : '',
-        },
+      
+      const json: OutletsResponse = await apiRequest({
+        url: `${BASE_URL}/outlet?${query.toString()}`,
+        method: 'GET',
+        body: null,
+        logLabel: 'FETCH_OUTLETS_ADVANCED',
+        token
       });
-      const json = await res.json();
-      if (json.meta && json.meta.code === 200 && Array.isArray(json.data)) {
+      
+      if (Array.isArray(json.data)) {
         setMeta(json.meta);
         setOutlets(transformOutletData(json.data));
       } else {
         setOutlets([]);
         setMeta(null);
-        setError('No data or error in response');
+        setError('Invalid data format in response');
       }
     } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : 'Failed to fetch outlets';
       setOutlets([]);
       setMeta(null);
-      setError('Failed to fetch outlets');
+      setError(errorMessage);
+      console.error('[fetchOutletsAdvanced] Error:', e);
     }
     setLoading(false);
   }, [token, transformOutletData]);
@@ -307,7 +360,9 @@ export function useOutlet(searchQuery: string) {
     return outlets.filter(outlet =>
       outlet.name.toLowerCase().includes(query) ||
       outlet.code.toLowerCase().includes(query) ||
-      outlet.district.toLowerCase().includes(query)
+      outlet.district.toLowerCase().includes(query) ||
+      (outlet.owner_name && outlet.owner_name.toLowerCase().includes(query)) ||
+      (outlet.address && outlet.address.toLowerCase().includes(query))
     );
   }, [outlets, searchQuery]);
 
@@ -326,6 +381,6 @@ export function useOutlet(searchQuery: string) {
     fetchOutlet,
     createOutlet,
     updateOutlet,
-    updateOutletWithFile, // <-- expose new method
+    updateOutletWithFile,
   };
 }

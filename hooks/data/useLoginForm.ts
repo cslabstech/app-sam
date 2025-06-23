@@ -57,7 +57,19 @@ export function useLoginForm() {
       if (e.message?.includes('Network') || e.code === 'ECONNABORTED') {
         setError('Tidak dapat terhubung ke server. Periksa koneksi internet Anda.');
       } else {
-        setError(e?.response?.data?.message || e?.message || 'Periksa email/kata sandi Anda');
+        let errorMessage = e?.message || 'Login gagal';
+        
+        if (e?.code === 401) {
+          errorMessage = 'Username atau password salah';
+        } else if (e?.code === 422) {
+          errorMessage = e?.message || 'Data yang dimasukkan tidak valid';
+        } else if (e?.code === 429) {
+          errorMessage = 'Terlalu banyak percobaan login. Silakan coba lagi nanti.';
+        } else if (e?.code >= 500) {
+          errorMessage = 'Terjadi kesalahan pada server. Silakan coba lagi.';
+        }
+        
+        setError(errorMessage);
       }
     } finally {
       setLoading(false);

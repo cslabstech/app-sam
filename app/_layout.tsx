@@ -3,7 +3,7 @@ import { AuthProvider } from '@/context/auth-context';
 import { NetworkProvider } from '@/context/network-context';
 import { NotifIdProvider, useNotifId } from '@/context/notifid-context';
 import '@/global.css';
-import { useOneSignal } from '@/hooks/utils/useOneSignal';
+import { generateFallbackNotifId, isOneSignalAvailable, useOneSignal } from '@/hooks/utils/useOneSignal';
 import { log } from '@/utils/logger';
 import Constants from 'expo-constants';
 import { useFonts } from 'expo-font';
@@ -20,60 +20,115 @@ function NotifIdInitializer({ children }: { children: React.ReactNode }) {
   const OneSignal = useOneSignal();
 
   useEffect(() => {
-    // Skip initialization hanya jika OneSignal tidak tersedia atau APP_ID tidak ada
-    // Tidak lagi memblokir development build (expo dev client)
-    if (!OneSignal || !ONESIGNAL_APP_ID) {
-      setNotifId('expo-default-notif-id');
-      setNotificationPermission('default');
-      setNotifIdLoading(false);
-      log('[OneSignal] Skipped initialization: no OneSignal instance or no ONESIGNAL_APP_ID');
-      log('[OneSignal] OneSignal available:', !!OneSignal);
-      log('[OneSignal] ONESIGNAL_APP_ID:', ONESIGNAL_APP_ID);
-      log('[OneSignal] appOwnership:', Constants.appOwnership);
-      return;
-    }
-    
-    log('[OneSignal] Initializing with APP_ID:', ONESIGNAL_APP_ID);
-    log('[OneSignal] appOwnership:', Constants.appOwnership);
-    OneSignal.Debug?.setLogLevel?.(6);
-    OneSignal.initialize(ONESIGNAL_APP_ID);
-    OneSignal.Notifications.requestPermission(false);
-    const pushSub = OneSignal.User.pushSubscription;
-    setNotifIdLoading(true);
-    const fetchNotifIdWithRetry = async (retries = 5, delay = 1000) => {
-      let notifId = await pushSub.getIdAsync();
-      if (notifId) return notifId;
-      for (let i = 0; i < retries; i++) {
-        await new Promise(res => setTimeout(res, delay));
-        notifId = await pushSub.getIdAsync();
-        if (notifId) return notifId;
+    const initializeNotifId = async () => {
+      log('[OneSignal] Starting initialization process');
+      log('[OneSignal] Environment info:', {
+        appOwnership: Constants.appOwnership,
+        executionEnvironment: Constants.executionEnvironment,
+        isOneSignalAvailable: isOneSignalAvailable(),
+        hasOneSignalAppId: !!ONESIGNAL_APP_ID
+      });
+
+      // Jika tidak ada OneSignal instance atau APP_ID, gunakan fallback
+      if (!OneSignal || !ONESIGNAL_APP_ID) {
+        const fallbackId = generateFallbackNotifId();
+        log('[OneSignal] Using fallback notif_id:', fallbackId);
+        setNotifId(fallbackId);
+        setNotificationPermission('default');
+        setNotifIdLoading(false);
+        return;
       }
-      return null;
-    };
-    pushSub.getIdAsync().then(async (id: string | null) => {
-      log('[OneSignal] notifId fetched:', id);
-      if (!id) {
-        try {
-          await OneSignal.Notifications.requestPermission(true);
-          const newId = await fetchNotifIdWithRetry(5, 1000);
-          log('[OneSignal] notifId baru setelah requestPermission & retry:', newId);
-          setNotifId(newId || null);
-        } catch (e) {
-          log('[OneSignal] Gagal mendapatkan notifId:', e);
-          setNotifId(null);
+
+      // Jika di Expo Go, gunakan fallback ID yang konsisten
+      if (Constants.appOwnership === 'expo') {
+        const expoFallbackId = 'expo-go-fallback-id';
+        log('[OneSignal] Using Expo Go fallback notif_id:', expoFallbackId);
+        setNotifId(expoFallbackId);
+        setNotificationPermission('default');
+        setNotifIdLoading(false);
+        return;
+      }
+
+      try {
+        log('[OneSignal] Initializing with APP_ID:', ONESIGNAL_APP_ID);
+        
+        // Set debug level jika tersedia
+        if (OneSignal.Debug?.setLogLevel) {
+          OneSignal.Debug.setLogLevel(6);
         }
-      } else {
-        setNotifId(id);
+        
+        // Initialize OneSignal
+        OneSignal.initialize(ONESIGNAL_APP_ID);
+        
+        // Request permission (false = tidak memaksa popup)
+        OneSignal.Notifications.requestPermission(false);
+        
+        const pushSub = OneSignal.User.pushSubscription;
+        setNotifIdLoading(true);
+
+        // Helper function untuk retry mendapatkan notif ID
+        const fetchNotifIdWithRetry = async (retries = 5, delay = 1000): Promise<string | null> => {
+          let notifId = await pushSub.getIdAsync();
+          if (notifId) return notifId;
+          
+          for (let i = 0; i < retries; i++) {
+            log(`[OneSignal] Retry ${i + 1}/${retries} untuk mendapatkan notif_id`);
+            await new Promise(res => setTimeout(res, delay));
+            notifId = await pushSub.getIdAsync();
+            if (notifId) return notifId;
+          }
+          return null;
+        };
+
+        // Coba dapatkan notif ID
+        let notifId = await pushSub.getIdAsync();
+        log('[OneSignal] Initial notif_id:', notifId);
+
+        if (!notifId) {
+          log('[OneSignal] No initial notif_id, requesting permission and retrying');
+          try {
+            await OneSignal.Notifications.requestPermission(true);
+            notifId = await fetchNotifIdWithRetry(5, 1000);
+            log('[OneSignal] notif_id after permission request & retry:', notifId);
+          } catch (permissionError) {
+            log('[OneSignal] Permission request failed:', permissionError);
+          }
+        }
+
+        // Set hasil final
+        if (notifId) {
+          setNotifId(notifId);
+          log('[OneSignal] Successfully set notif_id:', notifId);
+        } else {
+          const fallbackId = generateFallbackNotifId();
+          log('[OneSignal] Failed to get notif_id, using fallback:', fallbackId);
+          setNotifId(fallbackId);
+        }
+
+        // Setup listener untuk perubahan notif ID
+        if (pushSub.addEventListener) {
+          pushSub.addEventListener('change', async (event: any) => {
+            const newId = await event?.to?.getIdAsync();
+            log('[OneSignal] notif_id changed:', newId);
+            setNotifId(newId || generateFallbackNotifId());
+          });
+        }
+
+      } catch (error) {
+        const fallbackId = generateFallbackNotifId();
+        log('[OneSignal] Initialization failed, using fallback:', {
+          error: error instanceof Error ? error.message : String(error),
+          fallbackId
+        });
+        setNotifId(fallbackId);
+      } finally {
+        setNotifIdLoading(false);
       }
-      setNotifIdLoading(false);
-    });
-    pushSub.addEventListener?.('change', async (event: any) => {
-      const newId = await event?.to?.getIdAsync();
-      log('[OneSignal] notifId changed:', newId);
-      setNotifId(newId || null);
-      setNotifIdLoading(false);
-    });
+    };
+
+    initializeNotifId();
   }, [setNotifId, setNotificationPermission, setNotifIdLoading, OneSignal]);
+
   return <>{children}</>;
 }
 

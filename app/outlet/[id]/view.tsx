@@ -21,6 +21,13 @@ const StatusBadge = ({ status, color }: { status: string; color: string }) => (
   </View>
 );
 
+// Helper untuk mendapatkan URL gambar yang benar
+const getImageUrl = (path: string | null) => {
+  if (!path || path === '-') return null;
+  if (path.startsWith('http')) return path;
+  return `${BASE_URL_STORAGE}${path}`;
+};
+
 export default function OutletViewPage() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -32,13 +39,17 @@ export default function OutletViewPage() {
 
   // --- MEDIA TAB STATE ---
   type MediaImage = { label: string; uri: string };
-  const imageList: MediaImage[] = [
-    // Note: Media fields are not available in the new API structure
-    // These can be removed or replaced with alternative media handling
-  ];
+  const imageList: MediaImage[] = outlet?.photos ? [
+    { label: 'Shop Sign', uri: getImageUrl(outlet.photos.shop_sign) || '' },
+    { label: 'Front View', uri: getImageUrl(outlet.photos.front) || '' },
+    { label: 'Left View', uri: getImageUrl(outlet.photos.left) || '' },
+    { label: 'Right View', uri: getImageUrl(outlet.photos.right) || '' },
+    { label: 'ID Card', uri: getImageUrl(outlet.photos.id_card) || '' },
+  ].filter(img => img.uri) : [];
+  
   const [videoLoading, setVideoLoading] = useState(true);
-
-  const videoPlayer = useVideoPlayer({ uri: '' }); // Video not available in new API
+  const videoUrl = outlet?.video ? getImageUrl(outlet.video) : null;
+  const videoPlayer = useVideoPlayer({ uri: videoUrl || '' });
 
   useEffect(() => {
     if (id) fetchOutlet(id as string);
@@ -150,7 +161,9 @@ export default function OutletViewPage() {
         {/* Tab Content */}
         {activeTab === 'info' && (
           <View style={styles.tabContent}>
+            {/* Basic Info Card */}
             <Card style={styles.card}>
+              <Text style={[styles.cardTitle, { color: colors.text }]}>Informasi Outlet</Text>
               <View style={styles.cardRow}>
                 <Text style={[styles.label, { color: colors.textSecondary }]}>Kode Outlet</Text>
                 <Text style={[styles.value, { color: colors.text }]}>{outlet!.code || '-'}</Text>
@@ -170,9 +183,59 @@ export default function OutletViewPage() {
                   color={getStatusColor(outlet!.status || '')}
                 />
               </View>
+              {outlet!.radius && (
+                <View style={styles.cardRow}>
+                  <Text style={[styles.label, { color: colors.textSecondary }]}>Radius</Text>
+                  <Text style={[styles.value, { color: colors.text }]}>{outlet!.radius?.toString() + ' m' || '-'}</Text>
+                </View>
+              )}
+            </Card>
+
+            {/* Owner Info Card */}
+            {(outlet!.owner_name || outlet!.owner_phone) && (
+              <Card style={styles.card}>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>Informasi Pemilik</Text>
+                {outlet!.owner_name && (
+                  <View style={styles.cardRow}>
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>Nama Pemilik</Text>
+                    <Text style={[styles.value, { color: colors.text }]}>{outlet!.owner_name}</Text>
+                  </View>
+                )}
+                {outlet!.owner_phone && (
+                  <View style={styles.cardRow}>
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>No. Telepon</Text>
+                    <Text style={[styles.value, { color: colors.text }]}>{outlet!.owner_phone}</Text>
+                  </View>
+                )}
+              </Card>
+            )}
+
+            {/* Address Card */}
+            {outlet!.address && (
+              <Card style={styles.card}>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>Alamat</Text>
+                <Text style={[styles.addressText, { color: colors.text }]}>{outlet!.address}</Text>
+              </Card>
+            )}
+
+            {/* Organization Info Card */}
+            <Card style={styles.card}>
+              <Text style={[styles.cardTitle, { color: colors.text }]}>Informasi Organisasi</Text>
               <View style={styles.cardRow}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Radius</Text>
-                <Text style={[styles.value, { color: colors.text }]}>{outlet!.radius?.toString() || '-'}</Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Badan Usaha</Text>
+                <Text style={[styles.value, { color: colors.text }]}>{outlet!.badan_usaha?.name || '-'}</Text>
+              </View>
+              <View style={styles.cardRow}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Division</Text>
+                <Text style={[styles.value, { color: colors.text }]}>{outlet!.division?.name || '-'}</Text>
+              </View>
+              <View style={styles.cardRow}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Region</Text>
+                <Text style={[styles.value, { color: colors.text }]}>{outlet!.region?.name || '-'}</Text>
+              </View>
+              <View style={styles.cardRow}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Cluster</Text>
+                <Text style={[styles.value, { color: colors.text }]}>{outlet!.cluster?.name || '-'}</Text>
               </View>
             </Card>
           </View>
@@ -180,6 +243,7 @@ export default function OutletViewPage() {
         {activeTab === 'location' && (
           <View style={styles.tabContent}>
             <Card style={styles.card}>
+              <Text style={[styles.cardTitle, { color: colors.text }]}>Informasi Lokasi</Text>
               <View style={styles.cardRow}>
                 <Text style={[styles.label, { color: colors.textSecondary }]}>District</Text>
                 <Text style={[styles.value, { color: colors.text, textAlign: 'right', flex: 1, maxWidth: '70%' }]}>{outlet!.district || '-'}</Text>
@@ -193,14 +257,24 @@ export default function OutletViewPage() {
                 <Text style={[styles.value, { color: colors.text }]}>{outlet!.cluster?.name || '-'}</Text>
               </View>
               <View style={styles.cardRow}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Location</Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Koordinat</Text>
                 <Text style={[styles.value, { color: colors.text }]}>{outlet!.location || '-'}</Text>
               </View>
-              <View style={styles.cardRow}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Radius</Text>
-                <Text style={[styles.value, { color: colors.text }]}>{outlet!.radius?.toString() || '-'}</Text>
-              </View>
+              {outlet!.radius && (
+                <View style={styles.cardRow}>
+                  <Text style={[styles.label, { color: colors.textSecondary }]}>Radius</Text>
+                  <Text style={[styles.value, { color: colors.text }]}>{outlet!.radius?.toString() + ' m' || '-'}</Text>
+                </View>
+              )}
             </Card>
+            
+            {/* Address Card */}
+            {outlet!.address && (
+              <Card style={styles.card}>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>Alamat Lengkap</Text>
+                <Text style={[styles.addressText, { color: colors.text }]}>{outlet!.address}</Text>
+              </Card>
+            )}
           </View>
         )}
         {activeTab === 'media' && (
@@ -209,7 +283,7 @@ export default function OutletViewPage() {
             {imageList.length > 0 ? (
               imageList.map((img) => (
                 <Card key={img.label} style={{ marginBottom: 12, alignItems: 'center', padding: 12 }}>
-                  <Text style={styles.mediaLabel}>{img.label}</Text>
+                  <Text style={[styles.mediaLabel, { color: colors.text }]}>{img.label}</Text>
                   <MediaPreview uri={img.uri} type="image" />
                 </Card>
               ))
@@ -219,17 +293,17 @@ export default function OutletViewPage() {
                 <Text style={{ color: colors.textSecondary, marginTop: 8 }}>Tidak ada foto outlet.</Text>
               </View>
             )}
+            
             <Text style={{ fontWeight: 'bold', fontSize: 16, color: colors.text, marginTop: 20, marginBottom: 12 }}>Video Outlet</Text>
-            <View style={styles.mediaVideoContainer}>
+            {videoUrl ? (
+              <Card style={{ marginBottom: 12, alignItems: 'center', padding: 12 }}>
+                <Text style={[styles.mediaLabel, { color: colors.text }]}>Video Outlet</Text>
+                <MediaPreview uri={videoUrl} type="video" />
+              </Card>
+            ) : (
               <View style={styles.mediaEmptyState}>
                 <IconSymbol name="video" size={48} color={colors.textSecondary} />
-                <Text style={{ color: colors.textSecondary, marginTop: 8 }}>Video tidak tersedia di API baru.</Text>
-              </View>
-            </View>
-            {imageList.length === 0 && (
-              <View style={styles.mediaEmptyState}>
-                <IconSymbol name="photo" size={48} color={colors.textSecondary} />
-                <Text style={{ color: colors.textSecondary, marginTop: 8 }}>Media tidak tersedia di API baru.</Text>
+                <Text style={{ color: colors.textSecondary, marginTop: 8 }}>Tidak ada video outlet.</Text>
               </View>
             )}
           </View>
@@ -285,6 +359,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderRadius: 12,
   },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
   cardRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -302,106 +381,14 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'right',
   },
-  mediaGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 8,
-  },
-  mediaItem: {
-    width: '30%',
-    alignItems: 'center',
-    marginBottom: 16,
+  addressText: {
+    fontSize: 15,
+    lineHeight: 22,
   },
   mediaLabel: {
-    fontSize: 12,
-    color: '#888',
-    marginBottom: 4,
-    fontWeight: '600',
-  },
-  mediaImage: {
-    width: 90,
-    height: 60,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#eee',
-    backgroundColor: '#fafafa',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    marginBottom: 2,
-  },
-  mediaPlaceholder: {
-    width: 90,
-    height: 60,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#eee',
-    marginBottom: 2,
-  },
-  mediaPlaceholderText: {
-    color: '#bbb',
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-  mediaVideoContainer: {
-    alignItems: 'center',
+    fontSize: 14,
     marginBottom: 8,
-  },
-  mediaVideo: {
-    width: 220,
-    height: 140,
-    borderRadius: 10,
-    backgroundColor: '#000',
-  },
-  loadingOverlay: {
-    position: 'absolute',
-    left: 0, top: 0, right: 0, bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.6)',
-    borderRadius: 8,
-    zIndex: 2,
-  },
-  lightboxBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  lightboxImageWrap: {
-    width: 320,
-    height: 420,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: 8,
-  },
-  lightboxImage: {
-    width: 300,
-    height: 340,
-    borderRadius: 16,
-    backgroundColor: '#222',
-  },
-  lightboxLabel: {
-    color: '#fff',
-    fontSize: 16,
     fontWeight: '600',
-    marginTop: 12,
-    textShadowColor: '#000',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
-  lightboxClose: {
-    position: 'absolute',
-    top: 32,
-    right: 24,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 24,
-    padding: 4,
   },
   mediaEmptyState: {
     alignItems: 'center',

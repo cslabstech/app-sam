@@ -32,7 +32,18 @@ export function useOtpLoginForm() {
       setSuccess(true);
       setShowOtp(true);
     } catch (err: any) {
-      setError(err.message || 'Gagal mengirim OTP');
+      let errorMessage = err?.message || 'Gagal mengirim OTP';
+      
+      // Handle berbagai kode error dari backend
+      if (err?.code === 422) {
+        errorMessage = err?.message || 'Nomor telepon tidak valid';
+      } else if (err?.code === 429) {
+        errorMessage = 'Terlalu banyak permintaan OTP. Silakan tunggu beberapa saat.';
+      } else if (err?.code >= 500) {
+        errorMessage = 'Terjadi kesalahan pada server. Silakan coba lagi.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -45,10 +56,23 @@ export function useOtpLoginForm() {
     try {
       const data = await auth.verifyOtp(phone, otp);
       setSuccess(true);
-      await auth.loginWithToken(data.data.access_token, data.data.user);
+      // loginWithToken sudah ditangani di dalam verifyOtp method
       router.replace('/(tabs)');
     } catch (err: any) {
-      setError(err.message || 'OTP salah atau login gagal');
+      let errorMessage = err?.message || 'OTP salah atau login gagal';
+      
+      // Handle berbagai kode error dari backend
+      if (err?.code === 401) {
+        errorMessage = 'OTP salah atau sudah kedaluwarsa';
+      } else if (err?.code === 422) {
+        errorMessage = err?.message || 'OTP tidak valid';
+      } else if (err?.code === 429) {
+        errorMessage = 'Terlalu banyak percobaan verifikasi OTP. Silakan tunggu beberapa saat.';
+      } else if (err?.code >= 500) {
+        errorMessage = 'Terjadi kesalahan pada server. Silakan coba lagi.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

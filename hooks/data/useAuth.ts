@@ -1,16 +1,51 @@
 import { useNotifId } from '@/context/notifid-context';
+import { BaseResponse, apiRequest } from '@/utils/api';
 import { log } from '@/utils/logger';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 
 const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
 
+export interface LoginResponse extends BaseResponse<{
+    access_token: string;
+    token_type: string;
+    user: User;
+}> {}
+
+export interface OtpResponse extends BaseResponse<{
+    access_token: string;
+    token_type: string;
+    user: User;
+}> {}
+
+export interface SendOtpResponse extends BaseResponse<any> {}
+
+export interface UserResponse extends BaseResponse<User> {}
+
 export interface User {
     id: string;
     username: string;
     name: string;
-    role: string;
-    permissions?: string[]; // tambahkan agar bisa diakses context
+    phone?: string | null;
+    role_id: number;
+    tm_id?: string | null;
+    notif_id: string;
+    role: {
+        id: number;
+        name: string;
+        scope_required_fields?: any;
+        permissions: Array<{
+            name: string;
+        }>;
+    };
+    user_scopes: Array<{
+        user_id: number;
+        badan_usaha_id?: number | null;
+        division_id?: number | null;
+        region_id?: number | null;
+        cluster_id?: number | null;
+    }>;
+    permissions?: string[]; // computed field untuk compatibility
     [key: string]: any;
 }
 
@@ -32,9 +67,12 @@ export function useAuth() {
                 setToken(storedToken);
                 const parsedUser = JSON.parse(storedUser);
                 setUser(parsedUser);
-                // Ambil permissions dari AsyncStorage jika ada, fallback ke user.permissions
+                // Ambil permissions dari AsyncStorage jika ada, fallback ke user.permissions atau user.role.permissions
                 if (storedPermissions) {
                     setPermissions(JSON.parse(storedPermissions));
+                } else if (parsedUser?.role?.permissions && Array.isArray(parsedUser.role.permissions)) {
+                    const perms = parsedUser.role.permissions.map((p: any) => p.name);
+                    setPermissions(perms);
                 } else if (parsedUser && Array.isArray(parsedUser.permissions)) {
                     setPermissions(parsedUser.permissions);
                 } else {
@@ -46,55 +84,40 @@ export function useAuth() {
         loadAuth();
     }, []);
 
-    // Helper untuk fetch + log + error handling
-    async function fetchWithLog({ url, method = 'POST', body, logLabel }: { url: string, method?: string, body?: any, logLabel: string }) {
-        log(`[${logLabel}] Request:`, { url, method, body });
-        const res = await fetch(url, {
-            method,
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-            },
-            ...(body ? { body: JSON.stringify(body) } : {})
-        });
-        log(`[${logLabel}] Response status:`, res.status);
-        const data = await res.json();
-        log(`[${logLabel}] Response body:`, data);
-        if (!res.ok || (data?.meta && data?.meta?.code && data.meta.code !== 200)) {
-            log(`[${logLabel}] Failed:`, data?.meta?.message || data?.message);
-            throw new Error(data?.meta?.message || data?.message || 'Request gagal');
-        }
-        return data;
-    }
-
     const login = async (username: string, password: string) => {
-        setLoading(true);
-        try {
-            if (notifIdLoading) {
-                log('[LOGIN] notif_id OneSignal sedang diproses.');
-                throw new Error('notif_id OneSignal sedang diproses. Silakan tunggu sebentar dan coba lagi.');
-            }
-            let notif_id: string | null = notifId;
-            if (!notif_id) {
-                log('[LOGIN] notif_id OneSignal tidak tersedia.');
-                throw new Error('notif_id OneSignal tidak tersedia. Pastikan aplikasi sudah terdaftar di OneSignal.');
-            }
-            const data = await fetchWithLog({
-                url: `${BASE_URL}/user/login`,
-                body: { version: '1.0.3', username, password, notif_id },
-                logLabel: 'LOGIN'
-            });
-            await loginWithToken(data.data.access_token, data.data.user, data.data.permissions);
-            setPermissions(data.data.permissions || []);
-            // Simpan permissions ke AsyncStorage
-            await AsyncStorage.setItem('permissions', JSON.stringify(data.data.permissions || []));
-            log('[LOGIN] Login success, token set');
-        } catch (err) {
-            log('[LOGIN] Error:', err);
-            throw err;
-        } finally {
-            setLoading(false);
+        log('[LOGIN] Attempting login for username:', username);
+        
+        if (!notifId) {
+            log('[LOGIN] Warning: notif_id not available, using fallback');
         }
+        
+        const data: LoginResponse = await apiRequest({
+            url: `${BASE_URL}/user/login`,
+            method: 'POST',
+            body: {
+                version: '1.0.3',
+                username,
+                password,
+                notif_id: notifId || 'fallback-notif-id'
+            },
+            logLabel: 'LOGIN',
+            token: null
+        });
+        
+        // Extract permissions from user.role.permissions
+        const userPermissions = data.data.user?.role?.permissions?.map((p: any) => p.name) || [];
+        
+        // Add computed permissions field to user object for compatibility
+        const userWithPermissions = {
+            ...data.data.user,
+            permissions: userPermissions
+        };
+        
+        await loginWithToken(data.data.access_token, userWithPermissions, userPermissions);
+        setPermissions(userPermissions);
+        // Simpan permissions ke AsyncStorage
+        await AsyncStorage.setItem('permissions', JSON.stringify(userPermissions));
+        log('[LOGIN] Login success, token set');
     };
 
     const logout = async () => {
@@ -109,8 +132,10 @@ export function useAuth() {
             }
             await AsyncStorage.removeItem('token');
             await AsyncStorage.removeItem('user');
+            await AsyncStorage.removeItem('permissions');
             setToken(null);
             setUser(null);
+            setPermissions([]);
             log('[LOGOUT] Logout success, token and user removed');
         } finally {
             setLoading(false);
@@ -121,17 +146,28 @@ export function useAuth() {
         if (!token) return;
         setLoading(true);
         try {
-            const data = await fetchWithLog({
+            const data: UserResponse = await apiRequest({
                 url: `${BASE_URL}/user`,
                 method: 'GET',
-                logLabel: 'REFRESH_USER'
+                logLabel: 'REFRESH_USER',
+                token
             });
-            setUser(data.data);
-            setPermissions(data.data.permissions || []);
-            await AsyncStorage.setItem('user', JSON.stringify(data.data));
+            
+            // Extract permissions from user.role.permissions
+            const userPermissions = data.data?.role?.permissions?.map((p: any) => p.name) || [];
+            
+            // Add computed permissions field to user object for compatibility
+            const userWithPermissions = {
+                ...data.data,
+                permissions: userPermissions
+            };
+            
+            setUser(userWithPermissions);
+            setPermissions(userPermissions);
+            await AsyncStorage.setItem('user', JSON.stringify(userWithPermissions));
             // Simpan permissions ke AsyncStorage
-            await AsyncStorage.setItem('permissions', JSON.stringify(data.data.permissions || []));
-            log('[REFRESH_USER] User data refreshed:', data.data);
+            await AsyncStorage.setItem('permissions', JSON.stringify(userPermissions));
+            log('[REFRESH_USER] User data refreshed:', userWithPermissions);
         } catch (err) {
             log('[REFRESH_USER] Failed:', err);
             throw err;
@@ -154,21 +190,56 @@ export function useAuth() {
 
     // Request OTP
     const requestOtp = async (phone: string) => {
-        return fetchWithLog({
+        return apiRequest({
             url: `${BASE_URL}/user/send-otp`,
             body: { phone },
-            logLabel: 'OTP'
-        });
+            logLabel: 'REQUEST_OTP'
+        }) as Promise<SendOtpResponse>;
     };
 
     // Verify OTP
     const verifyOtp = async (phone: string, otp: string) => {
-        const data = await fetchWithLog({
-            url: `${BASE_URL}/user/verify-otp`,
-            body: { phone, otp },
-            logLabel: 'OTP_VERIFY'
+        if (notifIdLoading) {
+            log('[OTP_VERIFY] notif_id OneSignal sedang diproses.');
+            throw new Error('notif_id OneSignal sedang diproses. Silakan tunggu sebentar dan coba lagi.');
+        }
+        
+        let notif_id: string | null = notifId;
+        if (!notif_id) {
+            log('[OTP_VERIFY] notif_id OneSignal tidak tersedia.');
+            throw new Error('notif_id OneSignal tidak tersedia. Pastikan aplikasi sudah terdaftar di OneSignal.');
+        }
+        
+        // Log informasi environment dan notif_id untuk debugging
+        log('[OTP_VERIFY] Environment info:', {
+            notif_id,
+            notifIdLoading,
+            isExpoGo: notif_id?.includes('expo'),
+            isFallback: notif_id?.includes('fallback')
         });
-        await loginWithToken(data.data.access_token, data.data.user, data.data.permissions);
+        
+        const data: OtpResponse = await apiRequest({
+            url: `${BASE_URL}/user/verify-otp`,
+            method: 'POST',
+            body: {
+                phone,
+                otp,
+                notif_id: notif_id || 'fallback-notif-id'
+            },
+            logLabel: 'OTP_LOGIN',
+            token: null
+        });
+        
+        // Extract permissions from user.role.permissions
+        const userPermissions = data.data.user?.role?.permissions?.map((p: any) => p.name) || [];
+        
+        // Add computed permissions field to user object for compatibility
+        const userWithPermissions = {
+            ...data.data.user,
+            permissions: userPermissions
+        };
+        
+        await loginWithToken(data.data.access_token, userWithPermissions, userPermissions);
         log('[OTP] Login success from OTP, token set');
         return data;
     };
