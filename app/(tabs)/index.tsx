@@ -93,7 +93,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               className="flex-1 p-4 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 items-center"
-              onPress={() => router.push('/outlet/create')}
+              onPress={() => router.push('/plan-visit')}
               accessibilityLabel="Rencanakan kunjungan"
               activeOpacity={0.85}
             >

@@ -1,4 +1,4 @@
-import { Colors } from '@/constants/Colors';
+import { useThemeStyles } from '@/hooks/utils/useThemeStyles';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Animated, Text, TouchableOpacity, View } from 'react-native';
@@ -29,36 +29,67 @@ export const OutletDropdown: React.FC<OutletDropdownProps> = ({
   setShowDropdown,
 }) => {
   const selectedOutlet = outlets.find(o => o.id === selectedOutletId) || null;
-  const colors = Colors['light']; // Ganti dengan theme jika perlu
+  const { colors, styles } = useThemeStyles();
 
   return (
-    <View style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 8, marginBottom: 8, opacity: disabled ? 0.6 : 1 }}>
+    <View style={[
+      { 
+        borderWidth: 1, 
+        borderRadius: 8, 
+        marginBottom: 8, 
+        opacity: disabled ? 0.6 : 1 
+      },
+      styles.border.default,
+      styles.background.input
+    ]}>
       <TouchableOpacity
-        style={{ flexDirection: 'row', alignItems: 'center', padding: 12, justifyContent: 'space-between' }}
+        style={{ 
+          flexDirection: 'row', 
+          alignItems: 'center', 
+          padding: 12, 
+          justifyContent: 'space-between' 
+        }}
         onPress={() => { if (!disabled) setShowDropdown(!showDropdown); }}
         disabled={disabled}
       >
-        <Text style={{ color: colors.text, fontSize: 16 }}>
+        <Text style={[{ fontSize: 16 }, styles.text.primary]}>
           {selectedOutlet ? `${selectedOutlet.name} (${selectedOutlet.code})` : 'Pilih outlet...'}
         </Text>
-        <Ionicons name={showDropdown ? 'chevron-up' : 'chevron-down'} size={20} color={colors.textSecondary} />
+        <Ionicons 
+          name={showDropdown ? 'chevron-up' : 'chevron-down'} 
+          size={20} 
+          color={colors.textSecondary} 
+        />
       </TouchableOpacity>
       {showDropdown && !disabled && (
-        <View style={{ maxHeight: 320, backgroundColor: '#fff', borderTopWidth: 1, borderColor: colors.border }}>
+        <View style={[
+          { 
+            maxHeight: 320, 
+            borderTopWidth: 1,
+          },
+          styles.background.input,
+          styles.border.default
+        ]}>
           {loading ? (
-            <Text style={{ padding: 16, color: colors.textSecondary }}>Memuat outlet...</Text>
+            <Text style={[{ padding: 16 }, styles.text.secondary]}>Memuat outlet...</Text>
           ) : (
             <Animated.ScrollView persistentScrollbar>
               {outlets.map(outlet => (
                 <TouchableOpacity
                   key={outlet.id}
-                  style={{ padding: 12, borderBottomWidth: 1, borderColor: colors.border }}
+                  style={[
+                    { 
+                      padding: 12, 
+                      borderBottomWidth: 1,
+                    },
+                    styles.border.default
+                  ]}
                   onPress={() => {
                     onSelect(outlet.id);
                     setShowDropdown(false);
                   }}
                 >
-                  <Text style={{ color: colors.text }}>{outlet.name} ({outlet.code})</Text>
+                  <Text style={styles.text.primary}>{outlet.name} ({outlet.code})</Text>
                 </TouchableOpacity>
               ))}
             </Animated.ScrollView>

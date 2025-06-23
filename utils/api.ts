@@ -152,14 +152,22 @@ export async function apiRequest({
                 metaCode: data?.meta?.code,
                 metaStatus: data?.meta?.status,
                 message: data?.meta?.message,
+                // Field errors are in errors property for validation errors (422)
+                validationErrors: data?.meta?.code === 422 ? data?.errors : null,
+                // For other errors, check errors property
                 errors: data?.errors
             });
             
             // Buat error message yang informatif
             let errorMessage = data?.meta?.message || 'Request gagal';
             
-            // Tambahkan detail errors jika ada (untuk validation errors)
-            if (data?.errors) {
+            // Handle validation errors (422) - field errors are in errors property
+            if (data?.meta?.code === 422 && data?.errors) {
+                const errorDetails = Object.values(data.errors).flat().join(', ');
+                errorMessage += `: ${errorDetails}`;
+            }
+            // Handle other errors - errors might be in errors property
+            else if (data?.errors) {
                 const errorDetails = Object.values(data.errors).flat().join(', ');
                 errorMessage += `: ${errorDetails}`;
             }
@@ -168,7 +176,9 @@ export async function apiRequest({
             // Tambahkan metadata error untuk handling yang lebih spesifik
             (error as any).code = data?.meta?.code || res.status;
             (error as any).status = data?.meta?.status || 'error';
+            // Field errors are always in errors property
             (error as any).errors = data?.errors;
+            (error as any).data = data?.data; // Also preserve original data
             (error as any).httpStatus = res.status;
             
             throw error;
