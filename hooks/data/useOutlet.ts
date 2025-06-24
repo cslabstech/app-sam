@@ -253,14 +253,14 @@ export function useOutlet(searchQuery: string) {
     }
   }, [token, fetchOutlets]);
 
-  // Update outlet (sesuai API dokumentasi menggunakan PUT)
+  // Update outlet (sesuai API dokumentasi menggunakan POST)
   const updateOutlet = useCallback(async (id: string, data: Partial<OutletAPI>) => {
     setLoading(true);
     setError(null);
     try {
       await apiRequest({
         url: `${BASE_URL}/outlets/${encodeURIComponent(id)}`,
-        method: 'PUT',
+        method: 'POST',
         body: data,
         logLabel: 'UPDATE_OUTLET',
         token

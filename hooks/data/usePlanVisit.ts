@@ -173,35 +173,6 @@ export function usePlanVisit() {
     }
   }, [token, fetchPlanVisits]);
 
-  // Update plan visit
-  const updatePlanVisit = useCallback(async (id: string | number, data: UpdatePlanVisitData): Promise<ApiResult<PlanVisit>> => {
-    setLoading(true);
-    setError(null);
-    log('[PLAN_VISIT] updatePlanVisit', { id, data });
-
-    try {
-      const response: PlanVisitResponse = await apiRequest({
-        url: `${BASE_URL}/plan-visits/${encodeURIComponent(id)}`,
-        method: 'PUT',
-        body: data,
-        logLabel: 'UPDATE_PLANVISIT',
-        token
-      });
-
-      // Refresh list after update
-      await fetchPlanVisits();
-      setPlanVisit(response.data);
-      return { success: true, data: response.data, meta: response.meta };
-    } catch (e: any) {
-      const errorMessage = e.message || 'Failed to update plan visit';
-      setError(errorMessage);
-      log('[UPDATE_PLANVISIT] error:', errorMessage);
-      return { success: false, error: errorMessage };
-    } finally {
-      setLoading(false);
-    }
-  }, [token, fetchPlanVisits]);
-
   // Delete plan visit
   const deletePlanVisit = useCallback(async (id: string | number): Promise<ApiResult<void>> => {
     setLoading(true);
@@ -245,7 +216,6 @@ export function usePlanVisit() {
     fetchPlanVisits,
     fetchPlanVisit,
     createPlanVisit,
-    updatePlanVisit,
     deletePlanVisit,
   };
 }

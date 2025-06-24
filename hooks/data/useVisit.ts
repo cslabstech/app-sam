@@ -188,13 +188,13 @@ export function useVisit() {
     }
   };
 
-  // Check-out Visit (update) - using PUT method with FormData for file uploads
+  // Check-out Visit (update) - using POST method with FormData for file uploads
   const checkOutVisit = async (visitId: string, formData: FormData) => {
     log('[CHECK_OUT_VISIT] params', { visitId, formData });
     try {
       const json = await apiRequest({
         url: `${BASE_URL}/visits/${visitId}`,
-        method: 'PUT',
+        method: 'POST',
         body: formData,
         logLabel: 'CHECK_OUT_VISIT',
         token
