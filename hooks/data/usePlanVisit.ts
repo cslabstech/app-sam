@@ -19,6 +19,7 @@ export interface PlanVisit {
     location: string;
     district: string;
     status: string;
+    radius?: number; // Optional karena mungkin tidak selalu ada
     badan_usaha_id: string | number;
     division_id: string | number;
     region_id: string | number;

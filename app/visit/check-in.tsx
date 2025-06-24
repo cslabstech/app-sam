@@ -66,7 +66,7 @@ export default function CheckInScreen() {
       code: pv.outlet.code,
       district: pv.outlet.district || '',
       location: pv.outlet.location || '',
-      radius: 0, // Default radius
+      radius: pv.outlet.radius || 0, // Ambil radius dari outlet relasi plan visit
       planVisitId: pv.id,
       visitDate: pv.visit_date
     })) : 
@@ -82,7 +82,9 @@ export default function CheckInScreen() {
     }));
   
   const dataLoading = visitType === 'planned' ? loadingPlanVisits : loadingOutlets;
-  const selectedOutlet = displayData.find(o => o.id === selectedOutletId) || null;
+  const selectedOutlet = displayData.find(o => String(o.id) === selectedOutletId) || null;
+
+
 
   const { checkInVisit } = useVisit();
   const { checkVisitStatus } = useVisit();
@@ -122,7 +124,14 @@ export default function CheckInScreen() {
 
   const router = useRouter();
 
+  // Refs to prevent duplicate API calls
+  const lastFetchRef = useRef<string>('');
+
   useEffect(() => {
+    const fetchKey = `${visitType}-${debouncedSearch}-${new Date().toISOString().split('T')[0]}`;
+    if (lastFetchRef.current === fetchKey) return;
+    lastFetchRef.current = fetchKey;
+
     if (visitType === 'extracall') {
       fetchOutletsAdvanced({ search: debouncedSearch, per_page: 100 });
     } else {
@@ -135,10 +144,14 @@ export default function CheckInScreen() {
         sort_direction: 'asc'
       });
     }
-  }, [debouncedSearch, visitType, fetchOutletsAdvanced, fetchPlanVisits]);
+  }, [debouncedSearch, visitType]);
 
   useFocusEffect(
     React.useCallback(() => {
+      const fetchKey = `focus-${visitType}-${debouncedSearch}-${new Date().toISOString().split('T')[0]}`;
+      if (lastFetchRef.current === fetchKey) return;
+      lastFetchRef.current = fetchKey;
+
       if (visitType === 'extracall') {
         fetchOutletsAdvanced({ search: debouncedSearch, per_page: 100 });
       } else {
@@ -150,7 +163,7 @@ export default function CheckInScreen() {
           sort_direction: 'asc'
         });
       }
-    }, [debouncedSearch, visitType, fetchOutletsAdvanced, fetchPlanVisits])
+    }, [debouncedSearch, visitType])
   );
 
   useEffect(() => {
@@ -171,25 +184,25 @@ export default function CheckInScreen() {
   }, []);
 
   useEffect(() => {
-    const outletCoords = selectedOutlet ? parseLatLong(selectedOutlet.location) : null;
+    if (!selectedOutlet) {
+      setLocationBlocked(false);
+      setLocationValidated(false);
+      setDistance(null);
+      return;
+    }
 
-    if (selectedOutlet && (!selectedOutlet.location || !outletCoords)) {
+    const outletCoords = parseLatLong(selectedOutlet.location);
+
+    if (!selectedOutlet.location || !outletCoords) {
       setLocationBlocked(true);
       setLocationValidated(false);
-      Alert.alert(
-        'Data Outlet Belum Lengkap',
-        'Silakan update data outlet terlebih dahulu sebelum check-in.',
-        [
-          { text: 'Update Outlet', onPress: () => router.push(`/outlet/${selectedOutlet.id}/edit`) },
-          { text: 'Batal', style: 'cancel' },
-        ]
-      );
+      // Jangan tampilkan alert berulang - gunakan ref untuk track
       return;
     } else {
       setLocationBlocked(false);
     }
 
-    if (selectedOutlet && currentLocation && outletCoords) {
+    if (currentLocation && outletCoords) {
       const calculatedDistance = calculateDistance(
         currentLocation.latitude,
         currentLocation.longitude,
@@ -197,6 +210,7 @@ export default function CheckInScreen() {
         outletCoords.longitude
       );
       setDistance(calculatedDistance);
+      
       if (selectedOutlet.radius === 0) {
         setLocationValidated(true);
       } else {
@@ -205,22 +219,31 @@ export default function CheckInScreen() {
       }
     } else {
       setLocationValidated(false);
+      setDistance(null);
     }
   }, [selectedOutlet, currentLocation]);
 
   useEffect(() => {
-    if (selectedOutlet) {
+    if (selectedOutlet?.location) {
       const coords = parseLatLong(selectedOutlet.location);
       if (coords) {
-        setMapRegion({
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-          latitudeDelta: 0.005,
-          longitudeDelta: 0.005,
+        setMapRegion((prevRegion: any) => {
+          // Jangan update jika koordinat sama untuk menghindari infinite loop
+          if (prevRegion && 
+              Math.abs(prevRegion.latitude - coords.latitude) < 0.0001 && 
+              Math.abs(prevRegion.longitude - coords.longitude) < 0.0001) {
+            return prevRegion;
+          }
+          return {
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+            latitudeDelta: 0.005,
+            longitudeDelta: 0.005,
+          };
         });
       }
     }
-  }, [selectedOutlet]);
+  }, [selectedOutlet?.id, selectedOutlet?.location]); // Lebih spesifik dependency
 
   const checkLocationPermission = async () => {
     try {
@@ -655,7 +678,7 @@ export default function CheckInScreen() {
                               setSelectedPlanVisitId(String(item.planVisitId));
                             }
                           }}
-                          className={`py-2 px-3 border-b border-gray-200 rounded ${selectedOutletId === item.id ? 'bg-orange-50' : 'bg-white'} mb-0.5`}
+                          className={`py-2 px-3 border-b border-gray-200 rounded ${String(item.id) === selectedOutletId ? 'bg-orange-50' : 'bg-white'} mb-0.5`}
                         >
                           <Text className="font-semibold text-black text-[15px]" numberOfLines={1}>
                             {item.name}

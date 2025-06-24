@@ -23,6 +23,7 @@ export interface OutletAPI {
   location: string;
   district: string;
   status: string;
+  radius: number;
   badan_usaha_id: string | number;
   division_id: string | number;
   region_id: string | number;
@@ -45,7 +46,6 @@ export interface OutletAPI {
   };
   photos: OutletPhotos;
   video: string | null;
-  radius?: number; // Optional field
 }
 
 // Interface untuk response paginated outlets

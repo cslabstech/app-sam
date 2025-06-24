@@ -144,11 +144,27 @@ export default function OutletEditPage() {
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['videos'],
       allowsEditing: false,
-      videoMaxDuration: 10,
-      quality: 0.5,
+      videoMaxDuration: 8, // Kurangi durasi maksimal untuk ukuran lebih kecil
+      quality: 0.3, // Kurangi quality untuk ukuran lebih kecil
     });
     if (!result.canceled && result.assets[0]) {
       let uri = result.assets[0].uri;
+      
+      // Cek ukuran video original terlebih dahulu
+      try {
+        const originalInfo = await FileSystem.getInfoAsync(uri);
+        if (originalInfo.exists && 'size' in originalInfo) {
+          console.log(`Original video size: ${(originalInfo.size / 1024 / 1024).toFixed(2)} MB`);
+          
+          if (originalInfo.size > 15 * 1024 * 1024) {
+            Alert.alert('Video terlalu besar', 'Video yang direkam terlalu besar. Silakan rekam video yang lebih pendek.');
+            return;
+          }
+        }
+      } catch (e) {
+        console.error('Error checking original video:', e);
+      }
+
       try {
         // Kompres video jika di native, jika di Expo Go return uri asli
         const compressedUri = await compress(uri, {
@@ -156,14 +172,25 @@ export default function OutletEditPage() {
           preset: 'H264_640x480',
           quality: 'low',
         });
+        
+        // Validasi hasil kompresi
         const info = await FileSystem.getInfoAsync(compressedUri);
-        if (!info.exists || !info.size || info.size > 8 * 1024 * 1024) {
-          Alert.alert('Video masih terlalu besar', 'Ukuran video hasil kompres harus di bawah 8MB. Silakan rekam ulang.');
+        if (!info.exists) {
+          Alert.alert('Gagal kompres video', 'File video tidak dapat diakses setelah kompresi. Silakan coba lagi.');
           return;
         }
+        
+        if ('size' in info && info.size > 5 * 1024 * 1024) {
+          Alert.alert('Video masih terlalu besar', 'Ukuran video hasil kompres masih di atas 5MB. Silakan rekam video yang lebih pendek.');
+          return;
+        }
+        
+        const sizeInfo = 'size' in info ? `${(info.size / 1024 / 1024).toFixed(2)} MB` : 'unknown';
+        console.log(`Compressed video size: ${sizeInfo}`);
         setForm(f => ({ ...f, video: compressedUri }));
       } catch (e) {
-        Alert.alert('Gagal kompres video', 'Terjadi kesalahan saat kompresi.');
+        console.error('Video compression error:', e);
+        Alert.alert('Gagal kompres video', 'Terjadi kesalahan saat kompresi. Silakan coba lagi.');
       }
     }
   };
@@ -179,7 +206,7 @@ export default function OutletEditPage() {
     if (Object.keys(errors).length > 0) return;
 
     // Jika ada file (photo/video), gunakan FormData
-    const hasFile = !!form.photo_shop_sign || !!form.video;
+    const hasFile = !!form.photo_shop_sign || !!form.photo_front || !!form.photo_left || !!form.photo_right || !!form.video;
     if (hasFile) {
       const formData = new FormData();
       formData.append('code', form.code);
@@ -255,16 +282,43 @@ export default function OutletEditPage() {
       if (form.video) {
         const uri = form.video;
         const name = uri.split('/').pop() || 'video.mp4';
+        
+        // Validasi format video yang didukung
+        const supportedFormats = ['.mp4', '.mov', '.avi'];
+        const isValidFormat = supportedFormats.some(format => name.toLowerCase().endsWith(format));
+        if (!isValidFormat) {
+          Alert.alert('Format video tidak didukung', 'Hanya mendukung format MP4, MOV, dan AVI.');
+          return;
+        }
+
         let type = 'video/mp4';
         if (name.endsWith('.mov')) type = 'video/quicktime';
-        // Cek ukuran file video
+        if (name.endsWith('.avi')) type = 'video/x-msvideo';
+        
+        // Cek ukuran file video dan validasi file exists
         try {
           const info = await FileSystem.getInfoAsync(uri);
-          if (info.exists && typeof info.size === 'number' && info.size > 8 * 1024 * 1024) {
-            Alert.alert('Video terlalu besar', 'Ukuran video maksimal 8MB. Silakan pilih video lain.');
+          if (!info.exists) {
+            Alert.alert('File video tidak ditemukan', 'File video tidak dapat diakses. Silakan rekam ulang.');
             return;
           }
-        } catch (e) {}
+          
+          if ('size' in info) {
+            // Batasi ukuran maksimal 5MB untuk menghindari error upload
+            if (info.size > 5 * 1024 * 1024) {
+              Alert.alert('Video terlalu besar', 'Ukuran video maksimal 5MB. Silakan rekam video yang lebih pendek.');
+              return;
+            }
+            
+            // Log ukuran untuk debugging
+            console.log(`Video size: ${(info.size / 1024 / 1024).toFixed(2)} MB`);
+          }
+        } catch (e) {
+          console.error('Error checking video file:', e);
+          Alert.alert('Error', 'Tidak dapat memvalidasi file video. Silakan coba lagi.');
+          return;
+        }
+        
         formData.append('video', { uri, name, type } as any);
       }
       log('[OUTLET][UPDATE][FORMDATA]', formData);
@@ -277,7 +331,68 @@ export default function OutletEditPage() {
         if (result.error) {
           log('[OUTLET][UPDATE][ERROR]', result.error);
         }
-        Alert.alert('Error', result.error || 'Failed to update outlet');
+        
+        // Jika error khusus video validation, tawarkan opsi untuk skip video
+        if (result.error && result.error.includes('video') && form.video) {
+          Alert.alert(
+            'Video Upload Failed', 
+            'Upload video gagal. Apakah Anda ingin menyimpan outlet tanpa video?',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { 
+                text: 'Skip Video', 
+                onPress: async () => {
+                  // Retry tanpa video
+                  const formDataNoVideo = new FormData();
+                  formDataNoVideo.append('code', form.code);
+                  formDataNoVideo.append('location', form.location);
+                  formDataNoVideo.append('owner_name', form.owner_name);
+                  formDataNoVideo.append('owner_phone', form.owner_phone);
+                  
+                  // Tambahkan foto yang ada
+                  if (form.photo_shop_sign) {
+                    let uri = form.photo_shop_sign;
+                    let name = uri.split('/').pop() || 'photo.jpg';
+                    let type = 'image/jpeg';
+                    if (name.endsWith('.png')) type = 'image/png';
+                    formDataNoVideo.append('photo_shop_sign', { uri, name, type } as any);
+                  }
+                  if (form.photo_front) {
+                    let uri = form.photo_front;
+                    let name = uri.split('/').pop() || 'photo_front.jpg';
+                    let type = 'image/jpeg';
+                    if (name.endsWith('.png')) type = 'image/png';
+                    formDataNoVideo.append('photo_front', { uri, name, type } as any);
+                  }
+                  if (form.photo_left) {
+                    let uri = form.photo_left;
+                    let name = uri.split('/').pop() || 'photo_left.jpg';
+                    let type = 'image/jpeg';
+                    if (name.endsWith('.png')) type = 'image/png';
+                    formDataNoVideo.append('photo_left', { uri, name, type } as any);
+                  }
+                  if (form.photo_right) {
+                    let uri = form.photo_right;
+                    let name = uri.split('/').pop() || 'photo_right.jpg';
+                    let type = 'image/jpeg';
+                    if (name.endsWith('.png')) type = 'image/png';
+                    formDataNoVideo.append('photo_right', { uri, name, type } as any);
+                  }
+                  
+                  const retryResult = await updateOutletWithFile(outlet.id.toString(), formDataNoVideo);
+                  if (retryResult.success) {
+                    Alert.alert('Success', 'Outlet updated successfully (without video)');
+                    router.back();
+                  } else {
+                    Alert.alert('Error', retryResult.error || 'Failed to update outlet');
+                  }
+                }
+              }
+            ]
+          );
+        } else {
+          Alert.alert('Error', result.error || 'Failed to update outlet');
+        }
       }
       return;
     }
