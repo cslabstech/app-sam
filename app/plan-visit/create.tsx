@@ -1,6 +1,6 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -13,7 +13,9 @@ import { useThemeStyles } from '@/hooks/utils/useThemeStyles';
 export default function CreatePlanVisitScreen() {
   const { createPlanVisit, loading } = usePlanVisit();
   const { outlets, loading: outletsLoading, fetchOutlets } = useOutlet('');
-  const [selectedOutletId, setSelectedOutletId] = useState<string | null>(null);
+  
+  // State dengan better typing
+  const [selectedOutletId, setSelectedOutletId] = useState<string>('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [planDate, setPlanDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -27,48 +29,88 @@ export default function CreatePlanVisitScreen() {
   const { colors, styles } = useThemeStyles();
   const insets = useSafeAreaInsets();
 
+  // Refs untuk cleanup dan tracking
+  const mounted = useRef(true);
+  const abortController = useRef<AbortController | null>(null);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      mounted.current = false;
+      if (abortController.current) {
+        abortController.current.abort();
+      }
+    };
+  }, []);
+
   const loadOutlets = useCallback(async () => {
-    await fetchOutlets();
+    // Abort previous request if exists
+    if (abortController.current) {
+      abortController.current.abort();
+    }
+    
+    // Create new abort controller
+    abortController.current = new AbortController();
+    
+    try {
+      await fetchOutlets();
+    } catch (error) {
+      // Handle abort errors gracefully
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('Outlet fetch aborted');
+        return;
+      }
+      console.error('Error loading outlets:', error);
+    }
   }, [fetchOutlets]);
 
   useEffect(() => {
-    loadOutlets();
+    if (mounted.current) {
+      loadOutlets();
+    }
   }, [loadOutlets]);
 
-  const handleDateChange = (event: any, selectedDate?: Date) => {
+  const handleDateChange = useCallback((event: any, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
       setShowDatePicker(false);
     }
-    if (selectedDate) {
+    if (selectedDate && mounted.current) {
       setPlanDate(selectedDate);
       // Clear date error when user selects a date
       if (fieldErrors.visit_date) {
         setFieldErrors(prev => ({ ...prev, visit_date: undefined }));
       }
     }
-  };
+  }, [fieldErrors.visit_date]);
 
-  const handleOutletSelect = (outletId: string) => {
+  const handleOutletSelect = useCallback((outletId: string) => {
+    if (!mounted.current) return;
+    
     setSelectedOutletId(outletId);
+    setShowDropdown(false); // Auto close dropdown
+    
     // Clear outlet error when user selects an outlet
     if (fieldErrors.outlet_id) {
       setFieldErrors(prev => ({ ...prev, outlet_id: undefined }));
     }
-  };
+  }, [fieldErrors.outlet_id]);
 
-  const formatDate = (date: Date) => {
+  const formatDate = useCallback((date: Date) => {
     return date.toLocaleDateString('id-ID', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
-  };
+  }, []);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
+    if (!mounted.current) return;
+
     // Clear previous errors
     setFieldErrors({});
 
+    // Validation
     if (!selectedOutletId) {
       Alert.alert('Error', 'Mohon pilih outlet');
       return;
@@ -82,45 +124,70 @@ export default function CreatePlanVisitScreen() {
       visit_date: dateString,
     };
 
-    const result = await createPlanVisit(data);
-    
-    if (result.success) {
-      Alert.alert('Berhasil', 'Plan visit berhasil dibuat', [
-        {
-          text: 'OK',
-          onPress: () => router.back(),
-        },
-      ]);
-    } else {
-      const errorMessage = result.error || 'Gagal membuat plan visit';
+    try {
+      const result = await createPlanVisit(data);
       
-      // Check if field errors are available directly from result
-      if ((result as any).fieldErrors) {
-        setFieldErrors((result as any).fieldErrors);
-        Alert.alert('Error Validasi', 'Silakan periksa dan perbaiki field yang bermasalah');
-      } 
-      // Fallback: Parse field errors from error message for backward compatibility
-      else if (errorMessage.includes('visit_date:') || errorMessage.includes('outlet_id:') || 
-               errorMessage.includes('Tanggal kunjungan') || errorMessage.includes('Outlet')) {
-        
-        const fieldErrors: any = {};
-        
-        // Parse specific field errors from error message
-        if (errorMessage.includes('visit_date:') || errorMessage.includes('Tanggal kunjungan')) {
-          fieldErrors.visit_date = ['Tanggal kunjungan wajib diisi.'];
-        }
-        if (errorMessage.includes('outlet_id:') || errorMessage.includes('Outlet')) {
-          fieldErrors.outlet_id = ['Outlet wajib dipilih.'];
-        }
-        
-        setFieldErrors(fieldErrors);
-        Alert.alert('Error Validasi', 'Silakan periksa dan perbaiki field yang bermasalah');
+      if (!mounted.current) return; // Check if component is still mounted
+      
+      if (result.success) {
+        Alert.alert('Berhasil', 'Plan visit berhasil dibuat', [
+          {
+            text: 'OK',
+            onPress: () => {
+              if (mounted.current) {
+                router.back();
+              }
+            },
+          },
+        ]);
       } else {
-        // General error for non-validation errors
-        Alert.alert('Error', errorMessage);
+        const errorMessage = result.error || 'Gagal membuat plan visit';
+        
+        // Check if field errors are available directly from result
+        if ((result as any).fieldErrors) {
+          setFieldErrors((result as any).fieldErrors);
+          Alert.alert('Error Validasi', 'Silakan periksa dan perbaiki field yang bermasalah');
+        } 
+        // Fallback: Parse field errors from error message for backward compatibility
+        else if (errorMessage.includes('visit_date:') || errorMessage.includes('outlet_id:') || 
+                 errorMessage.includes('Tanggal kunjungan') || errorMessage.includes('Outlet')) {
+          
+          const newFieldErrors: any = {};
+          
+          // Parse specific field errors from error message
+          if (errorMessage.includes('visit_date:') || errorMessage.includes('Tanggal kunjungan')) {
+            newFieldErrors.visit_date = ['Tanggal kunjungan wajib diisi.'];
+          }
+          if (errorMessage.includes('outlet_id:') || errorMessage.includes('Outlet')) {
+            newFieldErrors.outlet_id = ['Outlet wajib dipilih.'];
+          }
+          
+          setFieldErrors(newFieldErrors);
+          Alert.alert('Error Validasi', 'Silakan periksa dan perbaiki field yang bermasalah');
+        } else {
+          // General error for non-validation errors
+          Alert.alert('Error', errorMessage);
+        }
+      }
+    } catch (error) {
+      if (mounted.current) {
+        console.error('Submit error:', error);
+        Alert.alert('Error', 'Terjadi kesalahan saat menyimpan data');
       }
     }
-  };
+  }, [selectedOutletId, planDate, createPlanVisit]);
+
+  // Handle dropdown state dengan better control
+  const handleDropdownToggle = useCallback((show: boolean) => {
+    setShowDropdown(show);
+  }, []);
+
+  // Close dropdown when component loses focus
+  const handleScreenPress = useCallback(() => {
+    if (showDropdown) {
+      setShowDropdown(false);
+    }
+  }, [showDropdown]);
 
   return (
     <View style={[{ flex: 1 }, styles.background.primary]}>
@@ -138,7 +205,11 @@ export default function CreatePlanVisitScreen() {
       </View>
 
       {/* Content */}
-      <ScrollView style={{ flex: 1, paddingHorizontal: 16, paddingTop: 24 }}>
+      <ScrollView 
+        style={{ flex: 1, paddingHorizontal: 16, paddingTop: 24 }}
+        onTouchStart={handleScreenPress}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Outlet Selection */}
         <View style={{ marginBottom: 24 }}>
           <Text style={[{ fontSize: 16, marginBottom: 12 }, styles.form.label]}>
@@ -147,15 +218,16 @@ export default function CreatePlanVisitScreen() {
           <View style={fieldErrors.outlet_id ? { borderWidth: 1, borderRadius: 8, ...styles.border.error } : {}}>
             <OutletDropdown
               outlets={outlets.map(outlet => ({
-                id: outlet.id.toString(),
+                id: outlet.id.toString(), // Ensure string type
                 name: outlet.name,
                 code: outlet.code,
               }))}
-              selectedOutletId={selectedOutletId}
+              selectedOutletId={selectedOutletId || null}
               onSelect={handleOutletSelect}
               showDropdown={showDropdown}
-              setShowDropdown={setShowDropdown}
+              setShowDropdown={handleDropdownToggle}
               loading={outletsLoading}
+              disabled={loading}
             />
           </View>
           {fieldErrors.outlet_id && (
@@ -190,6 +262,7 @@ export default function CreatePlanVisitScreen() {
             ]}
             onPress={() => setShowDatePicker(true)}
             accessibilityRole="button"
+            disabled={loading}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <IconSymbol name="calendar" size={20} color={colors.primary} />

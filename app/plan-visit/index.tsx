@@ -15,6 +15,12 @@ interface FilterParams {
   date?: string;
 }
 
+interface FetchState {
+  loading: boolean;
+  error: string | null;
+  lastParams: string;
+}
+
 export default function PlanVisitListScreen() {
   const { planVisits, loading, error, meta, fetchPlanVisits, deletePlanVisit } = usePlanVisit();
   const [refreshing, setRefreshing] = useState(false);
@@ -23,12 +29,32 @@ export default function PlanVisitListScreen() {
   const [currentFilters, setCurrentFilters] = useState<FilterParams>({
     filterType: 'all'
   });
+  const [fetchState, setFetchState] = useState<FetchState>({
+    loading: false,
+    error: null,
+    lastParams: ''
+  });
+  
   const { colors, styles } = useThemeStyles();
   const insets = useSafeAreaInsets();
   
-  // Track mounted state and last fetch params to prevent duplicate calls
-  const isMounted = useRef(true);
-  const lastFetchParamsRef = useRef<string>('');
+  // Refs untuk tracking state dan cleanup
+  const mounted = useRef(true);
+  const abortController = useRef<AbortController | null>(null);
+  const fetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      mounted.current = false;
+      if (abortController.current) {
+        abortController.current.abort();
+      }
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Convert filter params to API params - memoized function
   const getApiParams = useCallback((filters: FilterParams, pageNum: number) => {
@@ -41,84 +67,147 @@ export default function PlanVisitListScreen() {
 
     // Add date filters based on filter type
     if (filters.filterType === 'month' && filters.month && filters.year) {
-      // Filter by month and year
       params.month = filters.month;
       params.year = filters.year;
     } else if (filters.filterType === 'date' && filters.date) {
-      // Filter by specific date
       params.date = filters.date;
     }
 
     return params;
   }, [perPage]);
 
-  // Fetch function that doesn't change reference unnecessarily
-  const fetchData = useCallback(async (pageNum: number, filters: FilterParams) => {
+  // Robust fetch function dengan abort controller dan debouncing
+  const fetchData = useCallback(async (pageNum: number, filters: FilterParams, forceRefresh = false) => {
+    if (!mounted.current) return;
+
     const apiParams = getApiParams(filters, pageNum);
     const paramsString = JSON.stringify(apiParams);
     
-    // Prevent duplicate calls with same parameters
-    if (lastFetchParamsRef.current === paramsString) {
+    // Prevent duplicate calls with same parameters unless forced
+    if (!forceRefresh && fetchState.lastParams === paramsString) {
       return;
     }
-    
-    lastFetchParamsRef.current = paramsString;
-    await fetchPlanVisits(apiParams);
-  }, [fetchPlanVisits, getApiParams]);
 
-  // Handle filter changes
+    // Abort previous request
+    if (abortController.current) {
+      abortController.current.abort();
+    }
+
+    // Clear existing timeout
+    if (fetchTimeoutRef.current) {
+      clearTimeout(fetchTimeoutRef.current);
+    }
+
+    // Create new abort controller
+    abortController.current = new AbortController();
+
+    // Update fetch state
+    setFetchState(prev => ({
+      ...prev,
+      loading: true,
+      error: null,
+      lastParams: paramsString
+    }));
+
+    try {
+           // Add small delay untuk debouncing
+     await new Promise(resolve => {
+       fetchTimeoutRef.current = setTimeout(resolve, 100) as any;
+     });
+
+      if (!mounted.current) return;
+
+      await fetchPlanVisits(apiParams);
+
+      if (mounted.current) {
+        setFetchState(prev => ({
+          ...prev,
+          loading: false,
+          error: null
+        }));
+      }
+    } catch (fetchError) {
+      if (!mounted.current) return;
+
+      // Handle abort errors gracefully
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        console.log('Fetch aborted');
+        return;
+      }
+
+      console.error('Fetch error:', fetchError);
+      setFetchState(prev => ({
+        ...prev,
+        loading: false,
+        error: fetchError instanceof Error ? fetchError.message : 'Unknown error'
+      }));
+    }
+  }, [fetchPlanVisits, getApiParams, fetchState.lastParams]);
+
+  // Handle filter changes dengan debouncing
   const handleFilterChange = useCallback((filters: FilterParams) => {
+    if (!mounted.current) return;
+
     setCurrentFilters(filters);
     setPage(1); // Reset to page 1
-  }, []);
+    
+    // Debounce filter changes
+    if (fetchTimeoutRef.current) {
+      clearTimeout(fetchTimeoutRef.current);
+    }
+    
+    fetchTimeoutRef.current = setTimeout(() => {
+      if (mounted.current) {
+        fetchData(1, filters, true);
+      }
+    }, 200);
+  }, [fetchData]);
 
-  // Effect for fetching data when page or filters change
+  // Effect for fetching data when page changes (not filters)
   useEffect(() => {
-    if (isMounted.current) {
+    if (mounted.current && page > 1) {
       fetchData(page, currentFilters);
     }
-  }, [page, currentFilters, fetchData]);
+  }, [page, fetchData, currentFilters]);
 
-  // Refresh data setiap kali halaman di-focus (ketika kembali dari halaman lain)
+  // Initial load
+  useEffect(() => {
+    if (mounted.current) {
+      fetchData(1, currentFilters, true);
+    }
+  }, []);
+
+  // Refresh data setiap kali halaman di-focus
   useFocusEffect(
     useCallback(() => {
-      // Only refresh if component is still mounted
-      if (!isMounted.current) {
-        isMounted.current = true;
+      if (!mounted.current) {
+        mounted.current = true;
       }
       
-      // Always reset to page 1 when focusing
-      if (page !== 1) {
-        setPage(1);
-      } else {
-        // Only fetch if we're already on page 1
-        fetchData(1, currentFilters);
-      }
-    }, [currentFilters, page, fetchData])
+      // Always refresh when focusing
+      fetchData(page, currentFilters, true);
+    }, [page, currentFilters, fetchData])
   );
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      isMounted.current = false;
-    };
-  }, []);
 
   // Handle pull-to-refresh
   const handleRefresh = useCallback(async () => {
+    if (!mounted.current) return;
+
     setRefreshing(true);
     try {
-      // Reset last fetch params to allow refresh
-      lastFetchParamsRef.current = '';
-      await fetchData(1, currentFilters);
-      setPage(1);
+      await fetchData(1, currentFilters, true);
+      if (mounted.current && page !== 1) {
+        setPage(1);
+      }
     } finally {
-      setRefreshing(false);
+      if (mounted.current) {
+        setRefreshing(false);
+      }
     }
-  }, [fetchData, currentFilters]);
+  }, [fetchData, currentFilters, page]);
 
   const handleDelete = useCallback(async (item: PlanVisit) => {
-    if (!item.id) {
+    if (!mounted.current || !item.id) {
       Alert.alert('Error', 'ID plan visit tidak ditemukan');
       return;
     }
@@ -132,15 +221,23 @@ export default function PlanVisitListScreen() {
           text: 'Hapus',
           style: 'destructive',
           onPress: async () => {
-            const result = await deletePlanVisit(item.id);
-            
-            if (result.success) {
-              Alert.alert('Berhasil', 'Plan visit berhasil dihapus');
-              // Reset last fetch params to allow refresh after delete
-              lastFetchParamsRef.current = '';
-              await fetchData(page, currentFilters);
-            } else {
-              Alert.alert('Error', result.error || 'Gagal menghapus plan visit');
+            try {
+              const result = await deletePlanVisit(item.id);
+              
+              if (!mounted.current) return;
+              
+              if (result.success) {
+                Alert.alert('Berhasil', 'Plan visit berhasil dihapus');
+                // Refresh data after successful delete
+                await fetchData(page, currentFilters, true);
+              } else {
+                Alert.alert('Error', result.error || 'Gagal menghapus plan visit');
+              }
+            } catch (deleteError) {
+              if (mounted.current) {
+                console.error('Delete error:', deleteError);
+                Alert.alert('Error', 'Terjadi kesalahan saat menghapus data');
+              }
             }
           },
         },
@@ -148,9 +245,9 @@ export default function PlanVisitListScreen() {
     );
   }, [deletePlanVisit, fetchData, page, currentFilters]);
 
-  const handleCreate = () => {
+  const handleCreate = useCallback(() => {
     router.push('/plan-visit/create');
-  };
+  }, []);
 
   const renderPlanVisitItem = useCallback(({ item }: { item: PlanVisit }) => (
     <View style={[
@@ -168,16 +265,22 @@ export default function PlanVisitListScreen() {
             {item.outlet?.name || 'Unknown Outlet'}
           </Text>
           <Text style={[{ fontSize: 14, marginBottom: 4 }, styles.text.secondary]}>
-            {item.outlet?.code} • {item.outlet?.district}
+            {item.outlet?.code} • {item.outlet?.district || 'No District'}
           </Text>
           <Text style={[{ fontSize: 16, marginBottom: 8 }, styles.text.primary]}>
-            📅 {new Date(item.visit_date).toLocaleDateString('id-ID')}
+            📅 {new Date(item.visit_date).toLocaleDateString('id-ID', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            })}
           </Text>
         </View>
         <Pressable
           style={{ padding: 8 }}
           onPress={() => handleDelete(item)}
           accessibilityRole="button"
+          accessibilityLabel={`Hapus plan visit ${item.outlet?.name}`}
         >
           <IconSymbol name="trash" size={20} color={colors.danger} />
         </Pressable>
@@ -185,7 +288,8 @@ export default function PlanVisitListScreen() {
     </View>
   ), [styles, colors, handleDelete]);
 
-  if (loading && !refreshing && planVisits.length === 0) {
+  // Show loading only on initial load
+  if (loading && !refreshing && planVisits.length === 0 && !fetchState.loading) {
     return (
       <View style={[{ flex: 1 }, styles.background.primary]}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -221,7 +325,8 @@ export default function PlanVisitListScreen() {
           initialFilters={currentFilters}
         />
 
-        {error && (
+        {/* Error Display */}
+        {(error || fetchState.error) && (
           <View style={{
             backgroundColor: colors.danger + '10',
             borderColor: colors.danger + '30',
@@ -230,7 +335,14 @@ export default function PlanVisitListScreen() {
             padding: 12,
             marginBottom: 16
           }}>
-            <Text style={[styles.text.error]}>{error}</Text>
+            <Text style={[styles.text.error]}>{error || fetchState.error}</Text>
+          </View>
+        )}
+
+        {/* Loading Indicator for subsequent loads */}
+        {fetchState.loading && planVisits.length > 0 && (
+          <View style={{ paddingVertical: 8, alignItems: 'center' }}>
+            <ActivityIndicator size="small" color={colors.primary} />
           </View>
         )}
 
@@ -256,13 +368,23 @@ export default function PlanVisitListScreen() {
               renderItem={renderPlanVisitItem}
               keyExtractor={(item, index) => String(item.id || `plan-visit-${index}`)}
               refreshControl={
-                <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+                <RefreshControl 
+                  refreshing={refreshing} 
+                  onRefresh={handleRefresh}
+                  colors={[colors.primary]}
+                  tintColor={colors.primary}
+                />
               }
               showsVerticalScrollIndicator={false}
               removeClippedSubviews={true}
               initialNumToRender={10}
               maxToRenderPerBatch={5}
               windowSize={10}
+              getItemLayout={(data, index) => ({
+                length: 120, // Approximate item height
+                offset: 120 * index,
+                index,
+              })}
             />
           </>
         ) : (

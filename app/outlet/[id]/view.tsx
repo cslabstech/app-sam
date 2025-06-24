@@ -25,7 +25,10 @@ const StatusBadge = ({ status, color }: { status: string; color: string }) => (
 const getImageUrl = (path: string | null) => {
   if (!path || path === '-') return null;
   if (path.startsWith('http')) return path;
-  return `${BASE_URL_STORAGE}${path}`;
+  // Pastikan BASE_URL_STORAGE diakhiri dengan '/' dan path tidak dimulai dengan '/'
+  const baseUrl = BASE_URL_STORAGE?.endsWith('/') ? BASE_URL_STORAGE : `${BASE_URL_STORAGE}/`;
+  const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+  return `${baseUrl}${cleanPath}`;
 };
 
 export default function OutletViewPage() {
@@ -185,10 +188,10 @@ export default function OutletViewPage() {
                   color={getStatusColor(outlet!.status || '')}
                 />
               </View>
-              {outlet!.radius && (
+              {outlet!.radius !== undefined && outlet!.radius !== null && (
                 <View style={styles.cardRow}>
                   <Text style={[styles.label, { color: colors.textSecondary }]}>Radius</Text>
-                  <Text style={[styles.value, { color: colors.text }]}>{outlet!.radius?.toString() + ' m' || '-'}</Text>
+                  <Text style={[styles.value, { color: colors.text }]}>{outlet!.radius} m</Text>
                 </View>
               )}
             </Card>
@@ -262,10 +265,10 @@ export default function OutletViewPage() {
                 <Text style={[styles.label, { color: colors.textSecondary }]}>Koordinat</Text>
                 <Text style={[styles.value, { color: colors.text }]}>{outlet!.location || '-'}</Text>
               </View>
-              {outlet!.radius && (
+              {outlet!.radius !== undefined && outlet!.radius !== null && (
                 <View style={styles.cardRow}>
                   <Text style={[styles.label, { color: colors.textSecondary }]}>Radius</Text>
-                  <Text style={[styles.value, { color: colors.text }]}>{outlet!.radius?.toString() + ' m' || '-'}</Text>
+                  <Text style={[styles.value, { color: colors.text }]}>{outlet!.radius} m</Text>
                 </View>
               )}
             </Card>
