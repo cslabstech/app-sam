@@ -5,7 +5,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Image, KeyboardAvoidingView, Linking, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Image, KeyboardAvoidingView, Linking, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ViewShot, { captureRef } from 'react-native-view-shot';
@@ -17,6 +17,7 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { WatermarkOverlay } from '@/components/WatermarkOverlay';
 import { Colors } from '@/constants/Colors';
 import { useOutlet } from '@/hooks/data/useOutlet';
+import { usePlanVisit } from '@/hooks/data/usePlanVisit';
 import { useVisit } from '@/hooks/data/useVisit';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 
@@ -46,14 +47,46 @@ export default function CheckInScreen() {
   const params = useLocalSearchParams();
   const outletId = params.id as string;
 
+  // Toggle untuk tipe visit
+  const [visitType, setVisitType] = useState<'planned' | 'extracall'>('planned');
   const [selectedOutletId, setSelectedOutletId] = useState<string | null>(outletId || null);
+  const [selectedPlanVisitId, setSelectedPlanVisitId] = useState<string | null>(null);
+  
+  // Hook untuk outlet (extracall)
   const { outlets, loading: loadingOutlets, fetchOutletsAdvanced } = useOutlet('');
-  const selectedOutlet = outlets.find(o => o.id === selectedOutletId) || null;
+  
+  // Hook untuk plan visit (planned)
+  const { planVisits, loading: loadingPlanVisits, fetchPlanVisits } = usePlanVisit();
+  
+  // Data yang akan ditampilkan berdasarkan tipe
+  const displayData = visitType === 'planned' ? 
+    planVisits.map(pv => ({
+      id: pv.outlet.id,
+      name: pv.outlet.name,
+      code: pv.outlet.code,
+      district: pv.outlet.district || '',
+      location: pv.outlet.location || '',
+      radius: 0, // Default radius
+      planVisitId: pv.id,
+      visitDate: pv.visit_date
+    })) : 
+    outlets.map(outlet => ({
+      id: outlet.id,
+      name: outlet.name,
+      code: outlet.code,
+      district: outlet.district || '',
+      location: outlet.location || '',
+      radius: outlet.radius || 0,
+      planVisitId: null,
+      visitDate: null
+    }));
+  
+  const dataLoading = visitType === 'planned' ? loadingPlanVisits : loadingOutlets;
+  const selectedOutlet = displayData.find(o => o.id === selectedOutletId) || null;
 
   const { checkInVisit } = useVisit();
   const { checkVisitStatus } = useVisit();
 
-  const [isLoading, setIsLoading] = useState(false);
   const [storePhoto, setStorePhoto] = useState<PhotoMeta | null>(null);
   const [currentLocation, setCurrentLocation] = useState<LocationCoords | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -90,13 +123,34 @@ export default function CheckInScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    fetchOutletsAdvanced({ search: debouncedSearch, per_page: 100 });
-  }, [debouncedSearch, fetchOutletsAdvanced]);
+    if (visitType === 'extracall') {
+      fetchOutletsAdvanced({ search: debouncedSearch, per_page: 100 });
+    } else {
+      // Fetch plan visits untuk hari ini
+      const today = new Date().toISOString().split('T')[0];
+      fetchPlanVisits({
+        per_page: 100,
+        'filters[date]': today,
+        sort_column: 'visit_date',
+        sort_direction: 'asc'
+      });
+    }
+  }, [debouncedSearch, visitType, fetchOutletsAdvanced, fetchPlanVisits]);
 
   useFocusEffect(
     React.useCallback(() => {
-      fetchOutletsAdvanced({ search: debouncedSearch, per_page: 100 });
-    }, [debouncedSearch, fetchOutletsAdvanced])
+      if (visitType === 'extracall') {
+        fetchOutletsAdvanced({ search: debouncedSearch, per_page: 100 });
+      } else {
+        const today = new Date().toISOString().split('T')[0];
+        fetchPlanVisits({
+          per_page: 100,
+          'filters[date]': today,
+          sort_column: 'visit_date',
+          sort_direction: 'asc'
+        });
+      }
+    }, [debouncedSearch, visitType, fetchOutletsAdvanced, fetchPlanVisits])
   );
 
   useEffect(() => {
@@ -407,7 +461,10 @@ export default function CheckInScreen() {
             const formData = new FormData();
             formData.append('outlet_id', selectedOutletId);
             formData.append('checkin_location', `${currentLocation.latitude},${currentLocation.longitude}`);
-            formData.append('type', 'EXTRACALL');
+            formData.append('type', visitType.toUpperCase());
+            if (visitType === 'planned' && selectedOutlet?.planVisitId) {
+              formData.append('plan_visit_id', String(selectedOutlet.planVisitId));
+            }
             formData.append('checkin_photo', {
               uri,
               name: `checkin-${Date.now()}.jpg`,
@@ -520,51 +577,101 @@ export default function CheckInScreen() {
             keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
             className="absolute left-0 right-0 bottom-0"
           >
-            {/* Card outlet hanya untuk search & list, tanpa LocationStatus */}
+            {/* Card outlet dengan toggle dan list */}
             <View className="bg-white rounded-2xl p-4 shadow shadow-black/10 w-full">
+              {/* Toggle Visit Type */}
+              <View className="mb-4">
+                <Text className="font-bold text-base mb-3">Tipe Kunjungan</Text>
+                <View className="flex-row bg-gray-100 rounded-lg p-1">
+                  <TouchableOpacity
+                    onPress={() => {
+                      setVisitType('planned');
+                      setSelectedOutletId(null);
+                      setSelectedPlanVisitId(null);
+                    }}
+                    className={`flex-1 py-2 px-4 rounded-md ${visitType === 'planned' ? 'bg-[#FF8800]' : 'bg-transparent'}`}
+                  >
+                    <Text className={`text-center font-semibold ${visitType === 'planned' ? 'text-white' : 'text-gray-600'}`}>
+                      Planned
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setVisitType('extracall');
+                      setSelectedOutletId(null);
+                      setSelectedPlanVisitId(null);
+                    }}
+                    className={`flex-1 py-2 px-4 rounded-md ${visitType === 'extracall' ? 'bg-[#FF8800]' : 'bg-transparent'}`}
+                  >
+                    <Text className={`text-center font-semibold ${visitType === 'extracall' ? 'text-white' : 'text-gray-600'}`}>
+                      Extracall
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
               {/* Search & List Outlet */}
               <View className="mb-3">
-                <Text className="font-bold text-base mb-2">Pilih Outlet</Text>
-                <View className="flex-row items-center border border-gray-300 rounded-lg px-3 mb-2 bg-white">
-                  <Ionicons name="search" size={18} color={colors.textSecondary} />
-                  <TextInput
-                    className="flex-1 h-10 ml-2 text-black"
-                    placeholder="Cari outlet berdasarkan nama/kode..."
-                    placeholderTextColor={colors.textSecondary}
-                    value={outletSearch}
-                    onChangeText={setOutletSearch}
-                  />
-                  {outletSearch ? (
-                    <TouchableOpacity onPress={() => setOutletSearch('')}>
-                      <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                  ) : null}
-                </View>
+                <Text className="font-bold text-base mb-2">
+                  {visitType === 'planned' ? 'Pilih Plan Visit Hari Ini' : 'Pilih Outlet'}
+                </Text>
+                
+                {visitType === 'extracall' && (
+                  <View className="flex-row items-center border border-gray-300 rounded-lg px-3 mb-2 bg-white">
+                    <Ionicons name="search" size={18} color={colors.textSecondary} />
+                    <TextInput
+                      className="flex-1 h-10 ml-2 text-black"
+                      placeholder="Cari outlet berdasarkan nama/kode..."
+                      placeholderTextColor={colors.textSecondary}
+                      value={outletSearch}
+                      onChangeText={setOutletSearch}
+                    />
+                    {outletSearch ? (
+                      <TouchableOpacity onPress={() => setOutletSearch('')}>
+                        <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+                )}
+                
                 <View className="max-h-40">
-                  {loadingOutlets ? (
-                    <Text className="p-4 text-gray-400">Memuat outlet...</Text>
-                  ) : outlets.length === 0 ? (
-                    <Text className="p-4 text-gray-400">Outlet tidak ditemukan</Text>
+                  {dataLoading ? (
+                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 16 }}>
+                      <ActivityIndicator size="large" color={colors.primary} />
+                      <Text style={{ marginTop: 16, color: colors.textSecondary, fontSize: 16 }}>Memuat...</Text>
+                    </View>
+                  ) : displayData.length === 0 ? (
+                    <Text className="p-4 text-gray-400">
+                      {visitType === 'planned' ? 'Tidak ada plan visit untuk hari ini' : 'Outlet tidak ditemukan'}
+                    </Text>
                   ) : (
                     <Animated.ScrollView persistentScrollbar>
-                      {outlets.map(outlet => (
+                      {displayData.map(item => (
                         <TouchableOpacity
-                          key={outlet.id}
+                          key={item.id}
                           onPress={() => {
-                            setSelectedOutletId(outlet.id);
+                            setSelectedOutletId(String(item.id));
+                            if (visitType === 'planned' && item.planVisitId) {
+                              setSelectedPlanVisitId(String(item.planVisitId));
+                            }
                           }}
-                          className={`py-2 px-3 border-b border-gray-200 rounded ${selectedOutletId === outlet.id ? 'bg-orange-50' : 'bg-white'} mb-0.5`}
+                          className={`py-2 px-3 border-b border-gray-200 rounded ${selectedOutletId === item.id ? 'bg-orange-50' : 'bg-white'} mb-0.5`}
                         >
                           <Text className="font-semibold text-black text-[15px]" numberOfLines={1}>
-                            {outlet.name}
+                            {item.name}
                           </Text>
                           <View className="flex-row items-center mt-0.5">
                             <Text className="text-gray-500 text-xs mr-2" numberOfLines={1}>
-                              {outlet.code}
+                              {item.code}
                             </Text>
-                            {outlet.district && (
+                            {item.district && (
                               <Text className="text-gray-400 text-xs" numberOfLines={1}>
-                                {outlet.district}
+                                {item.district}
+                              </Text>
+                            )}
+                            {visitType === 'planned' && item.visitDate && (
+                              <Text className="text-blue-500 text-xs ml-auto" numberOfLines={1}>
+                                📅 {new Date(item.visitDate).toLocaleDateString('id-ID')}
                               </Text>
                             )}
                           </View>
@@ -574,6 +681,7 @@ export default function CheckInScreen() {
                   )}
                 </View>
               </View>
+              
               <TouchableOpacity
                 className={`rounded-lg py-4 items-center mt-3 ${selectedOutlet ? 'bg-[#FF8800]' : 'bg-gray-300'}`}
                 onPress={async () => {
@@ -581,10 +689,10 @@ export default function CheckInScreen() {
                     Alert.alert('Pilih Outlet', 'Silakan pilih outlet terlebih dahulu.');
                     return;
                   }
-                  if (!locationValidated && selectedOutlet.radius > 0) {
+                  if (!locationValidated && (selectedOutlet.radius || 0) > 0) {
                     Alert.alert(
                       'Lokasi Terlalu Jauh',
-                      `Anda berada ${Math.round(distance || 0)}m dari outlet, sedangkan maksimal jarak adalah ${selectedOutlet.radius}m. Apakah Anda ingin memperbarui lokasi outlet?`,
+                      `Anda berada ${Math.round(distance || 0)}m dari outlet, sedangkan maksimal jarak adalah ${selectedOutlet.radius || 0}m. Apakah Anda ingin memperbarui lokasi outlet?`,
                       [
                         { text: 'Batal', style: 'cancel' },
                         { text: 'Update ', onPress: () => router.push(`/outlet/${selectedOutlet.id}/edit` as any) },
@@ -593,7 +701,7 @@ export default function CheckInScreen() {
                     return;
                   }
                   try {
-                    const result = await checkVisitStatus(selectedOutlet.id);
+                    const result = await checkVisitStatus(String(selectedOutlet.id));
                     if (result?.meta?.code === 400 && result?.meta?.message?.includes('berjalan')) {
                       Alert.alert('Visit Aktif', result?.meta?.message || 'Masih ada visit yang berjalan, silakan check-out terlebih dahulu.');
                       return;

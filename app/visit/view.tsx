@@ -48,9 +48,11 @@ export default function VisitViewPage() {
 
   if (loading || fetching) {
     return (
-      <SafeAreaView className="flex-1 justify-center items-center" style={{ backgroundColor: colors.background }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text className="mt-4" style={{ color: colors.text }}>Memuat data visit...</Text>
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={{ marginTop: 16, color: colors.textSecondary, fontSize: 16 }}>Memuat...</Text>
+        </View>
       </SafeAreaView>
     );
   }

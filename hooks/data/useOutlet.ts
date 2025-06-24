@@ -1,5 +1,6 @@
 import { useAuth } from '@/context/auth-context';
 import { BaseResponse, apiRequest } from '@/utils/api';
+import { log } from '@/utils/logger';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 // Interface untuk outlet photos
@@ -189,20 +190,11 @@ export function useOutlet(searchQuery: string) {
         setError('Invalid data format in response');
       }
     } catch (e: any) {
-      // Parse error sesuai StandardResponse format
-      let errorMessage = 'Failed to fetch outlets';
-      if (e?.response?.data?.meta?.message) {
-        errorMessage = e.response.data.meta.message;
-      } else if (e?.meta?.message) {
-        errorMessage = e.meta.message;
-      } else if (e?.code === 'NETWORK_ERROR' || e?.message?.includes('Network')) {
-        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
-      }
-      
+      const errorMessage = e.message || 'Failed to fetch outlets';
+      setError(errorMessage);
       setOutlets([]);
       setMeta(null);
-      setError(errorMessage);
-      console.error('[fetchOutlets] Error:', e);
+      log('[FETCH_OUTLETS] error:', errorMessage);
     }
     setLoading(false);
   }, [token, transformOutletData]);
@@ -228,19 +220,10 @@ export function useOutlet(searchQuery: string) {
         setOutlet(null);
       }
     } catch (e: any) {
-      // Parse error sesuai StandardResponse format
-      let errorMessage = 'Failed to fetch outlet';
-      if (e?.response?.data?.meta?.message) {
-        errorMessage = e.response.data.meta.message;
-      } else if (e?.meta?.message) {
-        errorMessage = e.meta.message;
-      } else if (e?.code === 'NETWORK_ERROR' || e?.message?.includes('Network')) {
-        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
-      }
-      
+      const errorMessage = e.message || 'Failed to fetch outlet';
       setError(errorMessage);
       setOutlet(null);
-      console.error('[fetchOutlet] Error:', e);
+      log('[FETCH_OUTLET] error:', errorMessage);
     }
     setLoading(false);
   }, [token, transformSingleOutletData]);
@@ -261,17 +244,9 @@ export function useOutlet(searchQuery: string) {
       await fetchOutlets(); // refresh list
       return { success: true };
     } catch (e: any) {
-      // Parse error sesuai StandardResponse format
-      let errorMessage = 'Failed to create outlet';
-      if (e?.response?.data?.meta?.message) {
-        errorMessage = e.response.data.meta.message;
-      } else if (e?.meta?.message) {
-        errorMessage = e.meta.message;
-      } else if (e?.code === 'NETWORK_ERROR' || e?.message?.includes('Network')) {
-        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
-      }
-      
+      const errorMessage = e.message || 'Failed to create outlet';
       setError(errorMessage);
+      log('[CREATE_OUTLET] error:', errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
@@ -294,17 +269,9 @@ export function useOutlet(searchQuery: string) {
       await fetchOutlets(); // refresh list
       return { success: true };
     } catch (e: any) {
-      // Parse error sesuai StandardResponse format
-      let errorMessage = 'Failed to update outlet';
-      if (e?.response?.data?.meta?.message) {
-        errorMessage = e.response.data.meta.message;
-      } else if (e?.meta?.message) {
-        errorMessage = e.meta.message;
-      } else if (e?.code === 'NETWORK_ERROR' || e?.message?.includes('Network')) {
-        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
-      }
-      
+      const errorMessage = e.message || 'Failed to update outlet';
       setError(errorMessage);
+      log('[UPDATE_OUTLET] error:', errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
@@ -327,17 +294,9 @@ export function useOutlet(searchQuery: string) {
       await fetchOutlets(); // refresh list
       return { success: true };
     } catch (e: any) {
-      // Parse error sesuai StandardResponse format
-      let errorMessage = 'Failed to update outlet';
-      if (e?.response?.data?.meta?.message) {
-        errorMessage = e.response.data.meta.message;
-      } else if (e?.meta?.message) {
-        errorMessage = e.meta.message;
-      } else if (e?.code === 'NETWORK_ERROR' || e?.message?.includes('Network')) {
-        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
-      }
-      
+      const errorMessage = e.message || 'Failed to update outlet';
       setError(errorMessage);
+      log('[UPDATE_OUTLET_WITH_FILE] error:', errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
@@ -387,20 +346,11 @@ export function useOutlet(searchQuery: string) {
         setError('Invalid data format in response');
       }
     } catch (e: any) {
-      // Parse error sesuai StandardResponse format
-      let errorMessage = 'Failed to fetch outlets';
-      if (e?.response?.data?.meta?.message) {
-        errorMessage = e.response.data.meta.message;
-      } else if (e?.meta?.message) {
-        errorMessage = e.meta.message;
-      } else if (e?.code === 'NETWORK_ERROR' || e?.message?.includes('Network')) {
-        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
-      }
-      
+      const errorMessage = e.message || 'Failed to fetch outlets';
+      setError(errorMessage);
       setOutlets([]);
       setMeta(null);
-      setError(errorMessage);
-      console.error('[fetchOutletsAdvanced] Error:', e);
+      log('[FETCH_OUTLETS_ADVANCED] error:', errorMessage);
     }
     setLoading(false);
   }, [token, transformOutletData]);

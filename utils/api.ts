@@ -140,7 +140,7 @@ export async function uploadFile({
     formData, 
     logLabel,
     token,
-    timeout = 60000 // Longer timeout for file uploads
+    timeout = 30000 // Longer timeout for file uploads
 }: { 
     url: string, 
     method?: string, 

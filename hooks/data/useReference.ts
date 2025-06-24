@@ -1,8 +1,7 @@
 import { useAuth } from '@/context/auth-context';
-import { ApiResult, useBaseApi } from '@/hooks/utils/useBaseApi';
 import { BaseResponse, apiRequest } from '@/utils/api';
 import { log } from '@/utils/logger';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
 
@@ -18,6 +17,13 @@ export interface ReferenceItem {
   name: string;
 }
 
+export interface ApiResult<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  meta?: any;
+}
+
 // Interface untuk ResponseFormatter format sesuai foundation.md
 export interface RolesResponse extends BaseResponse<Role[]> {}
 export interface BadanUsahaResponse extends BaseResponse<ReferenceItem[]> {}
@@ -28,10 +34,8 @@ export interface ClustersResponse extends BaseResponse<ReferenceItem[]> {}
 export function useReference() {
   const { token } = useAuth();
   
-  // Use baseApi for roles
-  const rolesApi = useBaseApi<Role>('role', '/references/role');
-  
-  // Reference dropdowns state
+  // State management
+  const [roles, setRoles] = useState<Role[]>([]);
   const [badanUsaha, setBadanUsaha] = useState<ReferenceItem[]>([]);
   const [divisions, setDivisions] = useState<ReferenceItem[]>([]);
   const [regions, setRegions] = useState<ReferenceItem[]>([]);
@@ -40,60 +44,84 @@ export function useReference() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch roles on mount
-  useEffect(() => {
-    if (token) {
-      rolesApi.fetchList();
+  // Fetch roles
+  const fetchRoles = useCallback(async (): Promise<ApiResult<Role[]>> => {
+    if (!token) {
+      return { success: false, error: 'Token tidak tersedia' };
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response: RolesResponse = await apiRequest({
+        url: `${BASE_URL}/references/role`,
+        method: 'GET',
+        body: null,
+        logLabel: 'FETCH_ROLES',
+        token
+      });
+      
+      if (response.data && Array.isArray(response.data)) {
+        setRoles(response.data);
+        return { success: true, data: response.data };
+      } else {
+        setRoles([]);
+        setError('Invalid data format');
+        log('[FETCH_ROLES] Invalid data format:', response.data);
+        return { success: false, error: 'Invalid data format' };
+      }
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to fetch roles';
+      setRoles([]);
+      setError(errorMessage);
+      log('[FETCH_ROLES] error:', errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
     }
   }, [token]);
 
-  // Fetch badan usaha with new ResponseFormatter format
-  useEffect(() => {
-    if (!token) return;
-    
-    const fetchBadanUsaha = async () => {
-      setLoading(true);
-      setError(null);
+  // Fetch badan usaha
+  const fetchBadanUsaha = useCallback(async (): Promise<ApiResult<ReferenceItem[]>> => {
+    if (!token) {
+      return { success: false, error: 'Token tidak tersedia' };
+    }
 
-      try {
-        const json: BadanUsahaResponse = await apiRequest({
-          url: `${BASE_URL}/references/badan-usaha`,
-          method: 'GET',
-          body: null,
-          logLabel: 'FETCH_BADAN_USAHA',
-          token
-        });
-        
-        if (json.data && Array.isArray(json.data)) {
-          setBadanUsaha(json.data);
-        } else {
-          log('[useReference] Invalid badan usaha data format:', json.data);
-          setBadanUsaha([]);
-        }
-      } catch (err: any) {
-        // Parse error sesuai StandardResponse format
-        let errorMessage = 'Failed to fetch badan usaha';
-        if (err?.response?.data?.meta?.message) {
-          errorMessage = err.response.data.meta.message;
-        } else if (err?.meta?.message) {
-          errorMessage = err.meta.message;
-        } else if (err?.code === 'NETWORK_ERROR' || err?.message?.includes('Network')) {
-          errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
-        }
-        
-        log('[useReference] Failed to fetch badan usaha:', err);
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response: BadanUsahaResponse = await apiRequest({
+        url: `${BASE_URL}/references/badan-usaha`,
+        method: 'GET',
+        body: null,
+        logLabel: 'FETCH_BADAN_USAHA',
+        token
+      });
+      
+      if (response.data && Array.isArray(response.data)) {
+        setBadanUsaha(response.data);
+        return { success: true, data: response.data };
+      } else {
         setBadanUsaha([]);
-        setError(errorMessage);
-      } finally {
-        setLoading(false);
+        setError('Invalid data format');
+        log('[FETCH_BADAN_USAHA] Invalid data format:', response.data);
+        return { success: false, error: 'Invalid data format' };
       }
-    };
-    
-    fetchBadanUsaha();
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to fetch badan usaha';
+      setBadanUsaha([]);
+      setError(errorMessage);
+      log('[FETCH_BADAN_USAHA] error:', errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
   }, [token]);
 
   // Fetch divisions dengan parameter badan_usaha_id
-  const fetchDivisions = async (badanUsahaId?: string): Promise<ApiResult<ReferenceItem[]>> => {
+  const fetchDivisions = useCallback(async (badanUsahaId?: string): Promise<ApiResult<ReferenceItem[]>> => {
     if (!token) {
       return { success: false, error: 'Token tidak tersedia' };
     }
@@ -106,7 +134,7 @@ export function useReference() {
         ? `${BASE_URL}/references/division?badan_usaha_id=${badanUsahaId}`
         : `${BASE_URL}/references/division`;
         
-      const json: DivisionsResponse = await apiRequest({
+      const response: DivisionsResponse = await apiRequest({
         url,
         method: 'GET',
         body: null,
@@ -114,36 +142,28 @@ export function useReference() {
         token
       });
       
-      if (json.data && Array.isArray(json.data)) {
-        setDivisions(json.data);
-        return { success: true, data: json.data };
+      if (response.data && Array.isArray(response.data)) {
+        setDivisions(response.data);
+        return { success: true, data: response.data };
       } else {
-        log('[useReference] Invalid divisions data format:', json.data);
         setDivisions([]);
+        setError('Invalid data format');
+        log('[FETCH_DIVISIONS] Invalid data format:', response.data);
         return { success: false, error: 'Invalid data format' };
       }
     } catch (err: any) {
-      // Parse error sesuai StandardResponse format
-      let errorMessage = 'Failed to fetch divisions';
-      if (err?.response?.data?.meta?.message) {
-        errorMessage = err.response.data.meta.message;
-      } else if (err?.meta?.message) {
-        errorMessage = err.meta.message;
-      } else if (err?.code === 'NETWORK_ERROR' || err?.message?.includes('Network')) {
-        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
-      }
-      
-      log('[useReference] Failed to fetch divisions:', err);
+      const errorMessage = err.message || 'Failed to fetch divisions';
       setDivisions([]);
       setError(errorMessage);
+      log('[FETCH_DIVISIONS] error:', errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   // Fetch regions dengan parameter division_id
-  const fetchRegions = async (divisionId?: string): Promise<ApiResult<ReferenceItem[]>> => {
+  const fetchRegions = useCallback(async (divisionId?: string): Promise<ApiResult<ReferenceItem[]>> => {
     if (!token) {
       return { success: false, error: 'Token tidak tersedia' };
     }
@@ -156,7 +176,7 @@ export function useReference() {
         ? `${BASE_URL}/references/region?division_id=${divisionId}`
         : `${BASE_URL}/references/region`;
         
-      const json: RegionsResponse = await apiRequest({
+      const response: RegionsResponse = await apiRequest({
         url,
         method: 'GET',
         body: null,
@@ -164,36 +184,28 @@ export function useReference() {
         token
       });
       
-      if (json.data && Array.isArray(json.data)) {
-        setRegions(json.data);
-        return { success: true, data: json.data };
+      if (response.data && Array.isArray(response.data)) {
+        setRegions(response.data);
+        return { success: true, data: response.data };
       } else {
-        log('[useReference] Invalid regions data format:', json.data);
         setRegions([]);
+        setError('Invalid data format');
+        log('[FETCH_REGIONS] Invalid data format:', response.data);
         return { success: false, error: 'Invalid data format' };
       }
     } catch (err: any) {
-      // Parse error sesuai StandardResponse format
-      let errorMessage = 'Failed to fetch regions';
-      if (err?.response?.data?.meta?.message) {
-        errorMessage = err.response.data.meta.message;
-      } else if (err?.meta?.message) {
-        errorMessage = err.meta.message;
-      } else if (err?.code === 'NETWORK_ERROR' || err?.message?.includes('Network')) {
-        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
-      }
-      
-      log('[useReference] Failed to fetch regions:', err);
+      const errorMessage = err.message || 'Failed to fetch regions';
       setRegions([]);
       setError(errorMessage);
+      log('[FETCH_REGIONS] error:', errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   // Fetch clusters dengan parameter region_id
-  const fetchClusters = async (regionId?: string): Promise<ApiResult<ReferenceItem[]>> => {
+  const fetchClusters = useCallback(async (regionId?: string): Promise<ApiResult<ReferenceItem[]>> => {
     if (!token) {
       return { success: false, error: 'Token tidak tersedia' };
     }
@@ -206,7 +218,7 @@ export function useReference() {
         ? `${BASE_URL}/references/cluster?region_id=${regionId}`
         : `${BASE_URL}/references/cluster`;
         
-      const json: ClustersResponse = await apiRequest({
+      const response: ClustersResponse = await apiRequest({
         url,
         method: 'GET',
         body: null,
@@ -214,61 +226,60 @@ export function useReference() {
         token
       });
       
-      if (json.data && Array.isArray(json.data)) {
-        setClusters(json.data);
-        return { success: true, data: json.data };
+      if (response.data && Array.isArray(response.data)) {
+        setClusters(response.data);
+        return { success: true, data: response.data };
       } else {
-        log('[useReference] Invalid clusters data format:', json.data);
         setClusters([]);
+        setError('Invalid data format');
+        log('[FETCH_CLUSTERS] Invalid data format:', response.data);
         return { success: false, error: 'Invalid data format' };
       }
     } catch (err: any) {
-      // Parse error sesuai StandardResponse format
-      let errorMessage = 'Failed to fetch clusters';
-      if (err?.response?.data?.meta?.message) {
-        errorMessage = err.response.data.meta.message;
-      } else if (err?.meta?.message) {
-        errorMessage = err.meta.message;
-      } else if (err?.code === 'NETWORK_ERROR' || err?.message?.includes('Network')) {
-        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
-      }
-      
-      log('[useReference] Failed to fetch clusters:', err);
+      const errorMessage = err.message || 'Failed to fetch clusters';
       setClusters([]);
       setError(errorMessage);
+      log('[FETCH_CLUSTERS] error:', errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
-  const onRoleChange = (roleId: number) => {
-    const role = rolesApi.data.find((r) => r.id === roleId);
+  // Handle role change
+  const onRoleChange = useCallback((roleId: number) => {
+    const role = roles.find((r) => r.id === roleId);
     setRoleScope({
       required: role?.scope_required_fields || [],
       multiple: role?.scope_multiple_fields || [],
     });
-  };
+  }, [roles]);
+
+  // Auto-fetch roles and badan usaha on mount
+  useEffect(() => {
+    if (token) {
+      fetchRoles();
+      fetchBadanUsaha();
+    }
+  }, [token, fetchRoles, fetchBadanUsaha]);
 
   return {
-    // Roles using baseApi (consistent)
-    roles: rolesApi.data,
-    
-    // Reference dropdowns return arrays with id/name structure
+    // State
+    roles,
     badanUsaha,
     divisions,
     regions,
     clusters,
+    loading,
+    error,
+    roleScope,
     
-    // Consistent loading/error states
-    loading: loading || rolesApi.loading,
-    error: error || rolesApi.error,
-    
-    // Standardized operations with ApiResult
+    // Operations
+    fetchRoles,
+    fetchBadanUsaha,
     fetchDivisions,
     fetchRegions,
     fetchClusters,
     onRoleChange,
-    roleScope,
   };
 } 

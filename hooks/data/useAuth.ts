@@ -174,8 +174,9 @@ export function useAuth() {
             // Simpan permissions ke AsyncStorage
             await AsyncStorage.setItem('permissions', JSON.stringify(userPermissions));
             log('[GET_PROFILE] User profile refreshed:', userWithPermissions);
-        } catch (err) {
-            log('[GET_PROFILE] Failed:', err);
+        } catch (err: any) {
+            const errorMessage = err.message || 'Failed to get profile';
+            log('[GET_PROFILE] error:', errorMessage);
             throw err;
         } finally {
             setLoading(false);

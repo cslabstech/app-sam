@@ -268,7 +268,7 @@ export default function OutletEditPage() {
         formData.append('video', { uri, name, type } as any);
       }
       log('[OUTLET][UPDATE][FORMDATA]', formData);
-      const result = await updateOutletWithFile(outlet.id, formData);
+      const result = await updateOutletWithFile(outlet.id.toString(), formData);
       log('[OUTLET][UPDATE][RESULT]', result);
       if (result.success) {
         Alert.alert('Success', 'Outlet updated successfully');
@@ -294,7 +294,7 @@ export default function OutletEditPage() {
       video: form.video,
     };
     log('[OUTLET][UPDATE][PAYLOAD]', payload);
-    const result = await updateOutlet(outlet.id, payload);
+    const result = await updateOutlet(outlet.id.toString(), payload);
     log('[OUTLET][UPDATE][RESULT]', result);
     if (result.success) {
       Alert.alert('Success', 'Outlet updated successfully');
@@ -315,9 +315,11 @@ export default function OutletEditPage() {
   );
 
   if (loading) return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
-      <ActivityIndicator size="large" color={colors.primary} />
-      <Text style={{ color: colors.text, marginTop: 16 }}>Loading outlet data...</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ marginTop: 16, color: colors.textSecondary, fontSize: 16 }}>Memuat...</Text>
+      </View>
     </SafeAreaView>
   );
 

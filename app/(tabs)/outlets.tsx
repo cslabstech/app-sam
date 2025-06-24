@@ -334,7 +334,7 @@ export default function OutletsScreen() {
           title="+ Register Outlet"
           size="medium"
           variant="primary"
-          onPress={() => router.push('/register-outlet')}
+          onPress={() => router.push('/outlet/create')}
           style={styles.actionButton}
         />
       </View>
@@ -382,7 +382,7 @@ export default function OutletsScreen() {
           title="+ New Outlet"
           size="small"
           variant="primary"
-          onPress={() => router.push('/register-outlet')}
+          onPress={() => router.push('/outlet/create')}
         />
       </View>
 
