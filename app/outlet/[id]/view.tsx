@@ -1,16 +1,22 @@
+// Third-party imports
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+// Local component imports
 import { MediaPreview } from '@/components/MediaPreview';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+
+// Constants and utilities
 import { Colors } from '@/constants/Colors';
+
+// Hooks
 import { useNetwork } from '@/context/network-context';
 import { useOutlet } from '@/hooks/data/useOutlet';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useVideoPlayer } from 'expo-video';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 const BASE_URL_STORAGE = process.env.EXPO_PUBLIC_BASE_URL_STORAGE;
 
@@ -50,9 +56,7 @@ export default function OutletViewPage() {
     { label: 'ID Card', uri: getImageUrl(outlet.photos.id_card) || '' },
   ].filter(img => img.uri) : [];
   
-  const [videoLoading, setVideoLoading] = useState(true);
   const videoUrl = outlet?.video ? getImageUrl(outlet.video) : null;
-  const videoPlayer = useVideoPlayer({ uri: videoUrl || '' });
 
   useEffect(() => {
     if (id) fetchOutlet(id as string);
@@ -317,7 +321,6 @@ export default function OutletViewPage() {
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     padding: 16,
@@ -401,3 +404,4 @@ const styles = StyleSheet.create({
     marginVertical: 16,
   },
 });
+

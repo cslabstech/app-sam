@@ -1,7 +1,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { OutletDropdown } from '@/components/OutletDropdown';
@@ -10,52 +10,73 @@ import { useOutlet } from '@/hooks/data/useOutlet';
 import { CreatePlanVisitData, usePlanVisit } from '@/hooks/data/usePlanVisit';
 import { useThemeStyles } from '@/hooks/utils/useThemeStyles';
 
-export default function CreatePlanVisitScreen() {
-  const { createPlanVisit, loading } = usePlanVisit();
-  const { outlets, loading: outletsLoading, fetchOutlets } = useOutlet('');
-  
-  // State dengan better typing
+interface FormErrors {
+  outlet_id?: string[];
+  visit_date?: string[];
+}
+
+interface OutletData {
+  id: string;
+  name: string;
+  code: string;
+}
+
+const useCreatePlanVisitForm = () => {
   const [selectedOutletId, setSelectedOutletId] = useState<string>('');
-  const [showDropdown, setShowDropdown] = useState(false);
   const [planDate, setPlanDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  
-  // Field errors state
-  const [fieldErrors, setFieldErrors] = useState<{
-    outlet_id?: string[];
-    visit_date?: string[];
-  }>({});
-  
-  const { colors, styles } = useThemeStyles();
-  const insets = useSafeAreaInsets();
-
-  // Refs untuk cleanup dan tracking
+  const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
   const mounted = useRef(true);
-  const abortController = useRef<AbortController | null>(null);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       mounted.current = false;
-      if (abortController.current) {
-        abortController.current.abort();
-      }
     };
   }, []);
 
+  const clearFieldError = useCallback((field: keyof FormErrors) => {
+    setFieldErrors(prev => ({ ...prev, [field]: undefined }));
+  }, []);
+
+  const setErrors = useCallback((errors: FormErrors) => {
+    if (mounted.current) {
+      setFieldErrors(errors);
+    }
+  }, []);
+
+  const resetForm = useCallback(() => {
+    setSelectedOutletId('');
+    setPlanDate(new Date());
+    setFieldErrors({});
+  }, []);
+
+  return {
+    selectedOutletId,
+    setSelectedOutletId,
+    planDate,
+    setPlanDate,
+    fieldErrors,
+    clearFieldError,
+    setErrors,
+    resetForm,
+    mounted,
+  };
+};
+
+const useOutletManagement = () => {
+  const { outlets, loading: outletsLoading, fetchOutlets } = useOutlet('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const abortController = useRef<AbortController | null>(null);
+
   const loadOutlets = useCallback(async () => {
-    // Abort previous request if exists
     if (abortController.current) {
       abortController.current.abort();
     }
     
-    // Create new abort controller
     abortController.current = new AbortController();
     
     try {
       await fetchOutlets();
     } catch (error) {
-      // Handle abort errors gracefully
       if (error instanceof Error && error.name === 'AbortError') {
         console.log('Outlet fetch aborted');
         return;
@@ -65,35 +86,39 @@ export default function CreatePlanVisitScreen() {
   }, [fetchOutlets]);
 
   useEffect(() => {
-    if (mounted.current) {
-      loadOutlets();
-    }
+    loadOutlets();
+    return () => {
+      if (abortController.current) {
+        abortController.current.abort();
+      }
+    };
   }, [loadOutlets]);
 
-  const handleDateChange = useCallback((event: any, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
-    }
-    if (selectedDate && mounted.current) {
-      setPlanDate(selectedDate);
-      // Clear date error when user selects a date
-      if (fieldErrors.visit_date) {
-        setFieldErrors(prev => ({ ...prev, visit_date: undefined }));
-      }
-    }
-  }, [fieldErrors.visit_date]);
+  const formattedOutlets: OutletData[] = outlets.map(outlet => ({
+    id: outlet.id.toString(),
+    name: outlet.name,
+    code: outlet.code,
+  }));
 
-  const handleOutletSelect = useCallback((outletId: string) => {
-    if (!mounted.current) return;
-    
-    setSelectedOutletId(outletId);
-    setShowDropdown(false); // Auto close dropdown
-    
-    // Clear outlet error when user selects an outlet
-    if (fieldErrors.outlet_id) {
-      setFieldErrors(prev => ({ ...prev, outlet_id: undefined }));
-    }
-  }, [fieldErrors.outlet_id]);
+  const handleDropdownToggle = useCallback((show: boolean) => {
+    setShowDropdown(show);
+  }, []);
+
+  const closeDropdown = useCallback(() => {
+    setShowDropdown(false);
+  }, []);
+
+  return {
+    outlets: formattedOutlets,
+    outletsLoading,
+    showDropdown,
+    handleDropdownToggle,
+    closeDropdown,
+  };
+};
+
+const useDateManager = () => {
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const formatDate = useCallback((date: Date) => {
     return date.toLocaleDateString('id-ID', {
@@ -104,21 +129,304 @@ export default function CreatePlanVisitScreen() {
     });
   }, []);
 
+  const handleDateChange = useCallback((event: any, selectedDate?: Date, onDateSelect?: (date: Date) => void, onClearError?: () => void) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    if (selectedDate && onDateSelect) {
+      onDateSelect(selectedDate);
+      onClearError?.();
+    }
+  }, []);
+
+  const openDatePicker = useCallback(() => {
+    setShowDatePicker(true);
+  }, []);
+
+  const closeDatePicker = useCallback(() => {
+    setShowDatePicker(false);
+  }, []);
+
+  return {
+    showDatePicker,
+    formatDate,
+    handleDateChange,
+    openDatePicker,
+    closeDatePicker,
+  };
+};
+
+const Header = ({ 
+  colors, 
+  insets, 
+  onBack 
+}: { 
+  colors: any; 
+  insets: any; 
+  onBack: () => void;
+}) => (
+  <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+    <View style={styles.headerContent}>
+      <Pressable onPress={onBack} style={styles.backButton} accessibilityRole="button">
+        <IconSymbol name="chevron.left" size={24} color={colors.textInverse} />
+      </Pressable>
+      <View style={styles.headerTitleContainer}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          Buat Plan Visit
+        </Text>
+      </View>
+      <View style={styles.headerSpacer} />
+    </View>
+  </View>
+);
+
+const OutletSection = ({ 
+  outlets, 
+  selectedOutletId, 
+  onSelect, 
+  showDropdown, 
+  onToggleDropdown, 
+  outletsLoading, 
+  loading, 
+  fieldErrors, 
+  colors 
+}: {
+  outlets: OutletData[];
+  selectedOutletId: string;
+  onSelect: (id: string) => void;
+  showDropdown: boolean;
+  onToggleDropdown: (show: boolean) => void;
+  outletsLoading: boolean;
+  loading: boolean;
+  fieldErrors: FormErrors;
+  colors: any;
+}) => (
+  <View style={styles.section}>
+    <Text style={[styles.sectionLabel, { color: colors.text }]}>
+      Pilih Outlet <Text style={styles.required}>*</Text>
+    </Text>
+    <View style={fieldErrors.outlet_id ? [styles.errorBorder, { borderColor: colors.danger }] : undefined}>
+      <OutletDropdown
+        outlets={outlets}
+        selectedOutletId={selectedOutletId || null}
+        onSelect={onSelect}
+        showDropdown={showDropdown}
+        setShowDropdown={onToggleDropdown}
+        loading={outletsLoading}
+        disabled={loading}
+      />
+    </View>
+    {fieldErrors.outlet_id && (
+      <View style={styles.errorContainer}>
+        {fieldErrors.outlet_id.map((error, index) => (
+          <Text key={index} style={[styles.errorText, { color: colors.danger }]}>
+            {error}
+          </Text>
+        ))}
+      </View>
+    )}
+  </View>
+);
+
+const DateSection = ({ 
+  planDate, 
+  onPress, 
+  fieldErrors, 
+  colors, 
+  formatDate 
+}: {
+  planDate: Date;
+  onPress: () => void;
+  fieldErrors: FormErrors;
+  colors: any;
+  formatDate: (date: Date) => string;
+}) => (
+  <View style={styles.section}>
+    <Text style={[styles.sectionLabel, { color: colors.text }]}>
+      Tanggal Plan Visit <Text style={styles.required}>*</Text>
+    </Text>
+    <Pressable
+      style={[
+        styles.dateSelector,
+        { 
+          borderColor: fieldErrors.visit_date ? colors.danger : colors.border,
+          backgroundColor: colors.card,
+        }
+      ]}
+      onPress={onPress}
+      accessibilityRole="button"
+    >
+      <View style={styles.dateSelectorContent}>
+        <IconSymbol name="calendar" size={20} color={colors.primary} />
+        <Text style={[styles.dateText, { color: colors.text }]}>
+          {formatDate(planDate)}
+        </Text>
+      </View>
+      <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
+    </Pressable>
+    {fieldErrors.visit_date && (
+      <View style={styles.errorContainer}>
+        {fieldErrors.visit_date.map((error, index) => (
+          <Text key={index} style={[styles.errorText, { color: colors.danger }]}>
+            {error}
+          </Text>
+        ))}
+      </View>
+    )}
+  </View>
+);
+
+const DatePickerModal = ({ 
+  show, 
+  date, 
+  onChange, 
+  onClose, 
+  colors 
+}: {
+  show: boolean;
+  date: Date;
+  onChange: (event: any, selectedDate?: Date) => void;
+  onClose: () => void;
+  colors: any;
+}) => {
+  if (!show) return null;
+
+  return (
+    <>
+      <DateTimePicker
+        value={date}
+        mode="date"
+        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+        onChange={onChange}
+        minimumDate={new Date()}
+      />
+      {Platform.OS === 'ios' && (
+        <View style={styles.datePickerActions}>
+          <Pressable
+            style={[styles.datePickerButton, { backgroundColor: colors.secondary }]}
+            onPress={onClose}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.datePickerButtonText, { color: colors.text }]}>
+              Batal
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.datePickerButton, { backgroundColor: colors.primary }]}
+            onPress={onClose}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.datePickerButtonText, { color: colors.textInverse }]}>
+              Selesai
+            </Text>
+          </Pressable>
+        </View>
+      )}
+    </>
+  );
+};
+
+const SubmitButton = ({ 
+  onPress, 
+  loading, 
+  colors 
+}: { 
+  onPress: () => void; 
+  loading: boolean; 
+  colors: any;
+}) => (
+  <Pressable
+    style={[
+      styles.submitButton,
+      { backgroundColor: loading ? colors.disabled : colors.primary }
+    ]}
+    onPress={onPress}
+    disabled={loading}
+    accessibilityRole="button"
+  >
+    <Text style={[styles.submitButtonText, { color: colors.textInverse }]}>
+      {loading ? 'Menyimpan...' : 'Buat Plan Visit'}
+    </Text>
+  </Pressable>
+);
+
+export default function CreatePlanVisitScreen() {
+  const { createPlanVisit, loading } = usePlanVisit();
+  const { colors } = useThemeStyles();
+  const insets = useSafeAreaInsets();
+
+  const {
+    selectedOutletId,
+    setSelectedOutletId,
+    planDate,
+    setPlanDate,
+    fieldErrors,
+    clearFieldError,
+    setErrors,
+    mounted,
+  } = useCreatePlanVisitForm();
+
+  const {
+    outlets,
+    outletsLoading,
+    showDropdown,
+    handleDropdownToggle,
+    closeDropdown,
+  } = useOutletManagement();
+
+  const {
+    showDatePicker,
+    formatDate,
+    handleDateChange,
+    openDatePicker,
+    closeDatePicker,
+  } = useDateManager();
+
+  const handleBack = useCallback(() => {
+    router.back();
+  }, []);
+
+  const handleOutletSelect = useCallback((outletId: string) => {
+    if (!mounted.current) return;
+    
+    setSelectedOutletId(outletId);
+    closeDropdown();
+    
+    if (fieldErrors.outlet_id) {
+      clearFieldError('outlet_id');
+    }
+  }, [mounted, setSelectedOutletId, closeDropdown, fieldErrors.outlet_id, clearFieldError]);
+
+  const handleDateSelect = useCallback((selectedDate: Date) => {
+    if (mounted.current) {
+      setPlanDate(selectedDate);
+      if (fieldErrors.visit_date) {
+        clearFieldError('visit_date');
+      }
+    }
+  }, [mounted, setPlanDate, fieldErrors.visit_date, clearFieldError]);
+
+  const handleDatePickerChange = useCallback((event: any, selectedDate?: Date) => {
+    handleDateChange(event, selectedDate, handleDateSelect, () => clearFieldError('visit_date'));
+  }, [handleDateChange, handleDateSelect, clearFieldError]);
+
+  const handleScreenPress = useCallback(() => {
+    if (showDropdown) {
+      closeDropdown();
+    }
+  }, [showDropdown, closeDropdown]);
+
   const handleSubmit = useCallback(async () => {
     if (!mounted.current) return;
 
-    // Clear previous errors
-    setFieldErrors({});
+    setErrors({});
 
-    // Validation
     if (!selectedOutletId) {
       Alert.alert('Error', 'Mohon pilih outlet');
       return;
     }
 
-    // Convert Date to YYYY-MM-DD format for API
     const dateString = planDate.toISOString().split('T')[0];
-
     const data: CreatePlanVisitData = {
       outlet_id: parseInt(selectedOutletId, 10),
       visit_date: dateString,
@@ -127,7 +435,7 @@ export default function CreatePlanVisitScreen() {
     try {
       const result = await createPlanVisit(data);
       
-      if (!mounted.current) return; // Check if component is still mounted
+      if (!mounted.current) return;
       
       if (result.success) {
         Alert.alert('Berhasil', 'Plan visit berhasil dibuat', [
@@ -143,18 +451,14 @@ export default function CreatePlanVisitScreen() {
       } else {
         const errorMessage = result.error || 'Gagal membuat plan visit';
         
-        // Check if field errors are available directly from result
         if ((result as any).fieldErrors) {
-          setFieldErrors((result as any).fieldErrors);
+          setErrors((result as any).fieldErrors);
           Alert.alert('Error Validasi', 'Silakan periksa dan perbaiki field yang bermasalah');
-        } 
-        // Fallback: Parse field errors from error message for backward compatibility
-        else if (errorMessage.includes('visit_date:') || errorMessage.includes('outlet_id:') || 
-                 errorMessage.includes('Tanggal kunjungan') || errorMessage.includes('Outlet')) {
+        } else if (errorMessage.includes('visit_date:') || errorMessage.includes('outlet_id:') || 
+                   errorMessage.includes('Tanggal kunjungan') || errorMessage.includes('Outlet')) {
           
-          const newFieldErrors: any = {};
+          const newFieldErrors: FormErrors = {};
           
-          // Parse specific field errors from error message
           if (errorMessage.includes('visit_date:') || errorMessage.includes('Tanggal kunjungan')) {
             newFieldErrors.visit_date = ['Tanggal kunjungan wajib diisi.'];
           }
@@ -162,10 +466,9 @@ export default function CreatePlanVisitScreen() {
             newFieldErrors.outlet_id = ['Outlet wajib dipilih.'];
           }
           
-          setFieldErrors(newFieldErrors);
+          setErrors(newFieldErrors);
           Alert.alert('Error Validasi', 'Silakan periksa dan perbaiki field yang bermasalah');
         } else {
-          // General error for non-validation errors
           Alert.alert('Error', errorMessage);
         }
       }
@@ -175,166 +478,151 @@ export default function CreatePlanVisitScreen() {
         Alert.alert('Error', 'Terjadi kesalahan saat menyimpan data');
       }
     }
-  }, [selectedOutletId, planDate, createPlanVisit]);
-
-  // Handle dropdown state dengan better control
-  const handleDropdownToggle = useCallback((show: boolean) => {
-    setShowDropdown(show);
-  }, []);
-
-  // Close dropdown when component loses focus
-  const handleScreenPress = useCallback(() => {
-    if (showDropdown) {
-      setShowDropdown(false);
-    }
-  }, [showDropdown]);
+  }, [mounted, setErrors, selectedOutletId, planDate, createPlanVisit]);
 
   return (
-    <View style={[{ flex: 1 }, styles.background.primary]}>
-      {/* Header */}
-      <View style={[styles.header.primary, { paddingHorizontal: 16, paddingBottom: 16, paddingTop: insets.top + 8 }]}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Pressable onPress={() => router.back()} style={{ padding: 4 }} accessibilityRole="button">
-            <IconSymbol name="chevron.left" size={24} color={colors.textInverse} />
-          </Pressable>
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text style={[{ fontSize: 20, fontWeight: 'bold' }, styles.text.inverse]}>Buat Plan Visit</Text>
-          </View>
-          <View style={{ width: 22, height: 22 }} />
-        </View>
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <Header colors={colors} insets={insets} onBack={handleBack} />
 
-      {/* Content */}
       <ScrollView 
-        style={{ flex: 1, paddingHorizontal: 16, paddingTop: 24 }}
+        style={styles.content}
         onTouchStart={handleScreenPress}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {/* Outlet Selection */}
-        <View style={{ marginBottom: 24 }}>
-          <Text style={[{ fontSize: 16, marginBottom: 12 }, styles.form.label]}>
-            Pilih Outlet <Text style={styles.text.error}>*</Text>
-          </Text>
-          <View style={fieldErrors.outlet_id ? { borderWidth: 1, borderRadius: 8, ...styles.border.error } : {}}>
-            <OutletDropdown
-              outlets={outlets.map(outlet => ({
-                id: outlet.id.toString(), // Ensure string type
-                name: outlet.name,
-                code: outlet.code,
-              }))}
-              selectedOutletId={selectedOutletId || null}
-              onSelect={handleOutletSelect}
-              showDropdown={showDropdown}
-              setShowDropdown={handleDropdownToggle}
-              loading={outletsLoading}
-              disabled={loading}
-            />
-          </View>
-          {fieldErrors.outlet_id && (
-            <View style={{ marginTop: 8 }}>
-              {fieldErrors.outlet_id.map((error, index) => (
-                <Text key={index} style={styles.form.errorText}>
-                  {error}
-                </Text>
-              ))}
-            </View>
-          )}
-        </View>
+        <OutletSection
+          outlets={outlets}
+          selectedOutletId={selectedOutletId}
+          onSelect={handleOutletSelect}
+          showDropdown={showDropdown}
+          onToggleDropdown={handleDropdownToggle}
+          outletsLoading={outletsLoading}
+          loading={loading}
+          fieldErrors={fieldErrors}
+          colors={colors}
+        />
 
-        {/* Plan Date */}
-        <View style={{ marginBottom: 32 }}>
-          <Text style={[{ fontSize: 16, marginBottom: 12 }, styles.form.label]}>
-            Tanggal Plan Visit <Text style={styles.text.error}>*</Text>
-          </Text>
-          
-          <Pressable
-            style={[
-              {
-                borderRadius: 8,
-                borderWidth: 1,
-                padding: 12,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between'
-              },
-              fieldErrors.visit_date ? styles.form.inputError : styles.form.input,
-              { borderColor: fieldErrors.visit_date ? colors.danger : colors.inputBorder }
-            ]}
-            onPress={() => setShowDatePicker(true)}
-            accessibilityRole="button"
-            disabled={loading}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <IconSymbol name="calendar" size={20} color={colors.primary} />
-              <Text style={[{ marginLeft: 12, fontSize: 16 }, styles.text.primary]}>
-                {formatDate(planDate)}
-              </Text>
-            </View>
-            <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
-          </Pressable>
+        <DateSection
+          planDate={planDate}
+          onPress={openDatePicker}
+          fieldErrors={fieldErrors}
+          colors={colors}
+          formatDate={formatDate}
+        />
 
-          {fieldErrors.visit_date && (
-            <View style={{ marginTop: 8 }}>
-              {fieldErrors.visit_date.map((error, index) => (
-                <Text key={index} style={styles.form.errorText}>
-                  {error}
-                </Text>
-              ))}
-            </View>
-          )}
+        <DatePickerModal
+          show={showDatePicker}
+          date={planDate}
+          onChange={handleDatePickerChange}
+          onClose={closeDatePicker}
+          colors={colors}
+        />
 
-          {/* Date Picker */}
-          {showDatePicker && (
-            <DateTimePicker
-              value={planDate}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={handleDateChange}
-              minimumDate={new Date()}
-            />
-          )}
-
-          {Platform.OS === 'ios' && showDatePicker && (
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 12, gap: 12 }}>
-              <Pressable
-                style={[{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }, styles.button.secondary]}
-                onPress={() => setShowDatePicker(false)}
-                accessibilityRole="button"
-              >
-                <Text style={[{ fontWeight: '600' }, styles.text.primary]}>Batal</Text>
-              </Pressable>
-              <Pressable
-                style={[{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }, styles.button.primary]}
-                onPress={() => setShowDatePicker(false)}
-                accessibilityRole="button"
-              >
-                <Text style={[{ fontWeight: '600' }, styles.text.inverse]}>Selesai</Text>
-              </Pressable>
-            </View>
-          )}
-        </View>
-
-        {/* Submit Button */}
-        <Pressable
-          style={[
-            {
-              width: '100%',
-              paddingVertical: 16,
-              borderRadius: 8,
-              alignItems: 'center',
-              justifyContent: 'center'
-            },
-            loading ? styles.button.disabled : styles.button.primary
-          ]}
+        <SubmitButton
           onPress={handleSubmit}
-          disabled={loading}
-          accessibilityRole="button"
-        >
-          <Text style={[{ fontSize: 16, fontWeight: '600' }, styles.text.inverse]}>
-            {loading ? 'Menyimpan...' : 'Buat Plan Visit'}
-          </Text>
-        </Pressable>
+          loading={loading}
+          colors={colors}
+        />
       </ScrollView>
     </View>
   );
-} 
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  backButton: {
+    padding: 4,
+  },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  headerSpacer: {
+    width: 22,
+    height: 22,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 24,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    marginBottom: 12,
+    fontWeight: '500',
+  },
+  required: {
+    color: '#ef4444',
+  },
+  errorBorder: {
+    borderWidth: 1,
+    borderRadius: 8,
+  },
+  errorContainer: {
+    marginTop: 8,
+  },
+  errorText: {
+    fontSize: 12,
+  },
+  dateSelector: {
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dateSelectorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dateText: {
+    marginLeft: 12,
+    fontSize: 16,
+  },
+  datePickerActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 12,
+    gap: 12,
+  },
+  datePickerButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  datePickerButtonText: {
+    fontWeight: '600',
+  },
+  submitButton: {
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 32,
+  },
+  submitButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+}); 

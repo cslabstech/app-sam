@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DateFilter } from '@/components/DateFilter';
@@ -21,29 +21,51 @@ interface FetchState {
   lastParams: string;
 }
 
-export default function PlanVisitListScreen() {
-  const { planVisits, loading, error, meta, fetchPlanVisits, deletePlanVisit } = usePlanVisit();
-  const [refreshing, setRefreshing] = useState(false);
-  const [page, setPage] = useState(1);
-  const [perPage] = useState(20);
+const usePlanVisitFilters = () => {
   const [currentFilters, setCurrentFilters] = useState<FilterParams>({
     filterType: 'all'
   });
+
+  const getApiParams = useCallback((filters: FilterParams, pageNum: number, perPage: number) => {
+    const params: Record<string, any> = {
+      page: pageNum,
+      per_page: perPage,
+      sort_column: 'visit_date',
+      sort_direction: 'desc',
+    };
+
+    if (filters.filterType === 'month' && filters.month && filters.year) {
+      params.month = filters.month;
+      params.year = filters.year;
+    } else if (filters.filterType === 'date' && filters.date) {
+      params.date = filters.date;
+    }
+
+    return params;
+  }, []);
+
+  const updateFilters = useCallback((filters: FilterParams) => {
+    setCurrentFilters(filters);
+  }, []);
+
+  return {
+    currentFilters,
+    updateFilters,
+    getApiParams,
+  };
+};
+
+const usePlanVisitFetch = () => {
   const [fetchState, setFetchState] = useState<FetchState>({
     loading: false,
     error: null,
     lastParams: ''
   });
-  
-  const { colors, styles } = useThemeStyles();
-  const insets = useSafeAreaInsets();
-  
-  // Refs untuk tracking state dan cleanup
+  const [refreshing, setRefreshing] = useState(false);
   const mounted = useRef(true);
   const abortController = useRef<AbortController | null>(null);
   const fetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       mounted.current = false;
@@ -56,52 +78,29 @@ export default function PlanVisitListScreen() {
     };
   }, []);
 
-  // Convert filter params to API params - memoized function
-  const getApiParams = useCallback((filters: FilterParams, pageNum: number) => {
-    const params: Record<string, any> = {
-      page: pageNum,
-      per_page: perPage,
-      sort_column: 'visit_date',
-      sort_direction: 'desc',
-    };
-
-    // Add date filters based on filter type
-    if (filters.filterType === 'month' && filters.month && filters.year) {
-      params.month = filters.month;
-      params.year = filters.year;
-    } else if (filters.filterType === 'date' && filters.date) {
-      params.date = filters.date;
-    }
-
-    return params;
-  }, [perPage]);
-
-  // Robust fetch function dengan abort controller dan debouncing
-  const fetchData = useCallback(async (pageNum: number, filters: FilterParams, forceRefresh = false) => {
+  const executeFetch = useCallback(async (
+    fetchFunction: (params: any) => Promise<any>,
+    apiParams: Record<string, any>,
+    forceRefresh = false
+  ) => {
     if (!mounted.current) return;
 
-    const apiParams = getApiParams(filters, pageNum);
     const paramsString = JSON.stringify(apiParams);
     
-    // Prevent duplicate calls with same parameters unless forced
     if (!forceRefresh && fetchState.lastParams === paramsString) {
       return;
     }
 
-    // Abort previous request
     if (abortController.current) {
       abortController.current.abort();
     }
 
-    // Clear existing timeout
     if (fetchTimeoutRef.current) {
       clearTimeout(fetchTimeoutRef.current);
     }
 
-    // Create new abort controller
     abortController.current = new AbortController();
 
-    // Update fetch state
     setFetchState(prev => ({
       ...prev,
       loading: true,
@@ -110,14 +109,13 @@ export default function PlanVisitListScreen() {
     }));
 
     try {
-           // Add small delay untuk debouncing
-     await new Promise(resolve => {
-       fetchTimeoutRef.current = setTimeout(resolve, 100) as any;
-     });
+      await new Promise(resolve => {
+        fetchTimeoutRef.current = setTimeout(resolve, 100) as any;
+      });
 
       if (!mounted.current) return;
 
-      await fetchPlanVisits(apiParams);
+      await fetchFunction(apiParams);
 
       if (mounted.current) {
         setFetchState(prev => ({
@@ -126,88 +124,46 @@ export default function PlanVisitListScreen() {
           error: null
         }));
       }
-    } catch (fetchError) {
+    } catch (error) {
       if (!mounted.current) return;
 
-      // Handle abort errors gracefully
-      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+      if (error instanceof Error && error.name === 'AbortError') {
         console.log('Fetch aborted');
         return;
       }
 
-      console.error('Fetch error:', fetchError);
+      console.error('Fetch error:', error);
       setFetchState(prev => ({
         ...prev,
         loading: false,
-        error: fetchError instanceof Error ? fetchError.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error'
       }));
     }
-  }, [fetchPlanVisits, getApiParams, fetchState.lastParams]);
+  }, [fetchState.lastParams]);
 
-  // Handle filter changes dengan debouncing
-  const handleFilterChange = useCallback((filters: FilterParams) => {
-    if (!mounted.current) return;
-
-    setCurrentFilters(filters);
-    setPage(1); // Reset to page 1
-    
-    // Debounce filter changes
-    if (fetchTimeoutRef.current) {
-      clearTimeout(fetchTimeoutRef.current);
-    }
-    
-    fetchTimeoutRef.current = setTimeout(() => {
-      if (mounted.current) {
-        fetchData(1, filters, true);
-      }
-    }, 200);
-  }, [fetchData]);
-
-  // Effect for fetching data when page changes (not filters)
-  useEffect(() => {
-    if (mounted.current && page > 1) {
-      fetchData(page, currentFilters);
-    }
-  }, [page, fetchData, currentFilters]);
-
-  // Initial load
-  useEffect(() => {
+  const setRefreshState = useCallback((state: boolean) => {
     if (mounted.current) {
-      fetchData(1, currentFilters, true);
+      setRefreshing(state);
     }
   }, []);
 
-  // Refresh data setiap kali halaman di-focus
-  useFocusEffect(
-    useCallback(() => {
-      if (!mounted.current) {
-        mounted.current = true;
-      }
-      
-      // Always refresh when focusing
-      fetchData(page, currentFilters, true);
-    }, [page, currentFilters, fetchData])
-  );
+  return {
+    fetchState,
+    refreshing,
+    executeFetch,
+    setRefreshState,
+    mounted,
+  };
+};
 
-  // Handle pull-to-refresh
-  const handleRefresh = useCallback(async () => {
-    if (!mounted.current) return;
+const usePlanVisitActions = () => {
+  const { deletePlanVisit } = usePlanVisit();
 
-    setRefreshing(true);
-    try {
-      await fetchData(1, currentFilters, true);
-      if (mounted.current && page !== 1) {
-        setPage(1);
-      }
-    } finally {
-      if (mounted.current) {
-        setRefreshing(false);
-      }
-    }
-  }, [fetchData, currentFilters, page]);
-
-  const handleDelete = useCallback(async (item: PlanVisit) => {
-    if (!mounted.current || !item.id) {
+  const handleDelete = useCallback(async (
+    item: PlanVisit,
+    onSuccess: () => void
+  ) => {
+    if (!item.id) {
       Alert.alert('Error', 'ID plan visit tidak ditemukan');
       return;
     }
@@ -224,145 +180,328 @@ export default function PlanVisitListScreen() {
             try {
               const result = await deletePlanVisit(item.id);
               
-              if (!mounted.current) return;
-              
               if (result.success) {
                 Alert.alert('Berhasil', 'Plan visit berhasil dihapus');
-                // Refresh data after successful delete
-                await fetchData(page, currentFilters, true);
+                onSuccess();
               } else {
                 Alert.alert('Error', result.error || 'Gagal menghapus plan visit');
               }
-            } catch (deleteError) {
-              if (mounted.current) {
-                console.error('Delete error:', deleteError);
-                Alert.alert('Error', 'Terjadi kesalahan saat menghapus data');
-              }
+            } catch (error) {
+              console.error('Delete error:', error);
+              Alert.alert('Error', 'Terjadi kesalahan saat menghapus data');
             }
           },
         },
       ]
     );
-  }, [deletePlanVisit, fetchData, page, currentFilters]);
+  }, [deletePlanVisit]);
 
   const handleCreate = useCallback(() => {
     router.push('/plan-visit/create');
   }, []);
 
-  const renderPlanVisitItem = useCallback(({ item }: { item: PlanVisit }) => (
-    <View style={[
-      {
-        borderRadius: 12,
-        marginBottom: 12,
-        padding: 16,
-        borderWidth: 1,
-      },
-      styles.card.default
-    ]}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <View style={{ flex: 1 }}>
-          <Text style={[{ fontSize: 18, fontWeight: 'bold', marginBottom: 4 }, styles.text.primary]}>
-            {item.outlet?.name || 'Unknown Outlet'}
-          </Text>
-          <Text style={[{ fontSize: 14, marginBottom: 4 }, styles.text.secondary]}>
-            {item.outlet?.code} • {item.outlet?.district || 'No District'}
-          </Text>
-          <Text style={[{ fontSize: 16, marginBottom: 8 }, styles.text.primary]}>
-            📅 {new Date(item.visit_date).toLocaleDateString('id-ID', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })}
-          </Text>
-        </View>
-        <Pressable
-          style={{ padding: 8 }}
-          onPress={() => handleDelete(item)}
-          accessibilityRole="button"
-          accessibilityLabel={`Hapus plan visit ${item.outlet?.name}`}
-        >
-          <IconSymbol name="trash" size={20} color={colors.danger} />
-        </Pressable>
-      </View>
-    </View>
-  ), [styles, colors, handleDelete]);
+  return {
+    handleDelete,
+    handleCreate,
+  };
+};
 
-  // Show loading only on initial load
-  if (loading && !refreshing && planVisits.length === 0 && !fetchState.loading) {
-    return (
-      <View style={[{ flex: 1 }, styles.background.primary]}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={{ marginTop: 16, color: colors.textSecondary, fontSize: 16 }}>Memuat...</Text>
-        </View>
+const Header = ({ 
+  colors, 
+  insets, 
+  onBack, 
+  onCreate 
+}: { 
+  colors: any; 
+  insets: any; 
+  onBack: () => void;
+  onCreate: () => void;
+}) => (
+  <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+    <View style={styles.headerContent}>
+      <Pressable onPress={onBack} style={styles.headerButton} accessibilityRole="button">
+        <IconSymbol name="chevron.left" size={24} color={colors.textInverse} />
+      </Pressable>
+      <View style={styles.headerTitleContainer}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          Plan Visit
+        </Text>
       </View>
-    );
+      <Pressable onPress={onCreate} style={styles.headerButton} accessibilityRole="button">
+        <IconSymbol name="plus" size={24} color={colors.textInverse} />
+      </Pressable>
+    </View>
+  </View>
+);
+
+const LoadingScreen = ({ colors }: { colors: any }) => (
+  <View style={[styles.centerContainer, { backgroundColor: colors.background }]}>
+    <ActivityIndicator size="large" color={colors.primary} />
+    <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+      Memuat...
+    </Text>
+  </View>
+);
+
+const ErrorDisplay = ({ 
+  error, 
+  fetchError, 
+  colors 
+}: { 
+  error: string | null; 
+  fetchError: string | null; 
+  colors: any;
+}) => {
+  if (!error && !fetchError) return null;
+
+  return (
+    <View style={[styles.errorContainer, { backgroundColor: colors.danger + '20', borderColor: colors.danger + '40' }]}>
+      <Text style={[styles.errorText, { color: colors.danger }]}>
+        {error || fetchError}
+      </Text>
+    </View>
+  );
+};
+
+const LoadingIndicator = ({ 
+  visible, 
+  colors 
+}: { 
+  visible: boolean; 
+  colors: any;
+}) => {
+  if (!visible) return null;
+
+  return (
+    <View style={styles.loadingIndicator}>
+      <ActivityIndicator size="small" color={colors.primary} />
+    </View>
+  );
+};
+
+const ListHeader = ({ 
+  planVisits, 
+  meta, 
+  currentFilters, 
+  colors 
+}: {
+  planVisits: PlanVisit[];
+  meta: any;
+  currentFilters: FilterParams;
+  colors: any;
+}) => (
+  <View style={styles.listHeader}>
+    <Text style={[styles.countText, { color: colors.textSecondary }]}>
+      {planVisits.length} dari {meta?.total || planVisits.length} plan visit
+    </Text>
+    {currentFilters.filterType !== 'all' && (
+      <View style={styles.filterIndicator}>
+        <IconSymbol name="line.3.horizontal.decrease.circle" size={16} color={colors.primary} />
+        <Text style={[styles.filterText, { color: colors.primary }]}>
+          Terfilter
+        </Text>
+      </View>
+    )}
+  </View>
+);
+
+const PlanVisitItem = ({ 
+  item, 
+  onDelete, 
+  colors, 
+  styles: themeStyles 
+}: { 
+  item: PlanVisit; 
+  onDelete: (item: PlanVisit) => void; 
+  colors: any;
+  styles: any;
+}) => (
+  <View style={[styles.planVisitItem, themeStyles.card.default]}>
+    <View style={styles.planVisitContent}>
+      <View style={styles.planVisitInfo}>
+        <Text style={[styles.planVisitTitle, themeStyles.text.primary]}>
+          {item.outlet?.name || 'Unknown Outlet'}
+        </Text>
+        <Text style={[styles.planVisitSubtitle, themeStyles.text.secondary]}>
+          {item.outlet?.code} • {item.outlet?.district || 'No District'}
+        </Text>
+        <Text style={[styles.planVisitDate, themeStyles.text.primary]}>
+          📅 {new Date(item.visit_date).toLocaleDateString('id-ID', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          })}
+        </Text>
+      </View>
+      <Pressable
+        style={styles.deleteButton}
+        onPress={() => onDelete(item)}
+        accessibilityRole="button"
+        accessibilityLabel={`Hapus plan visit ${item.outlet?.name}`}
+      >
+        <IconSymbol name="trash" size={20} color={colors.danger} />
+      </Pressable>
+    </View>
+  </View>
+);
+
+const EmptyState = ({ 
+  currentFilters, 
+  colors 
+}: { 
+  currentFilters: FilterParams; 
+  colors: any;
+}) => (
+  <View style={styles.emptyState}>
+    <IconSymbol name="calendar" size={60} color={colors.textSecondary} />
+    <Text style={[styles.emptyTitle, { color: colors.textSecondary }]}>
+      {currentFilters.filterType === 'all' 
+        ? 'Belum ada plan visit'
+        : 'Tidak ada plan visit'
+      }
+    </Text>
+    <Text style={[styles.emptySubtitle, { color: colors.textTertiary }]}>
+      {currentFilters.filterType === 'all' 
+        ? 'Tap tombol + untuk menambah plan visit baru'
+        : 'Tidak ditemukan plan visit untuk filter yang dipilih'
+      }
+    </Text>
+  </View>
+);
+
+/**
+ * Plan Visit List Screen - Daftar rencana kunjungan
+ * Mengikuti best practice: UI-only components, custom hooks untuk logic
+ */
+export default function PlanVisitListScreen() {
+  const { planVisits, loading, error, meta, fetchPlanVisits } = usePlanVisit();
+  const { colors, styles: themeStyles } = useThemeStyles();
+  const insets = useSafeAreaInsets();
+  
+  const [page, setPage] = useState(1);
+  const [perPage] = useState(20);
+
+  // Custom hooks
+  const { currentFilters, updateFilters, getApiParams } = usePlanVisitFilters();
+  const { fetchState, refreshing, executeFetch, setRefreshState, mounted } = usePlanVisitFetch();
+  const { handleDelete, handleCreate } = usePlanVisitActions();
+
+  // Optimized callbacks
+  const handleBack = useCallback(() => {
+    router.back();
+  }, []);
+
+  const fetchData = useCallback(async (pageNum: number, filters: FilterParams, forceRefresh = false) => {
+    const apiParams = getApiParams(filters, pageNum, perPage);
+    await executeFetch(fetchPlanVisits, apiParams, forceRefresh);
+  }, [getApiParams, perPage, executeFetch, fetchPlanVisits]);
+
+  const handleFilterChange = useCallback((filters: FilterParams) => {
+    if (!mounted.current) return;
+
+    updateFilters(filters);
+    setPage(1);
+    
+    setTimeout(() => {
+      if (mounted.current) {
+        fetchData(1, filters, true);
+      }
+    }, 200);
+  }, [mounted, updateFilters, fetchData]);
+
+  const handleRefresh = useCallback(async () => {
+    if (!mounted.current) return;
+
+    setRefreshState(true);
+    try {
+      await fetchData(1, currentFilters, true);
+      if (mounted.current && page !== 1) {
+        setPage(1);
+      }
+    } finally {
+      setRefreshState(false);
+    }
+  }, [mounted, setRefreshState, fetchData, currentFilters, page]);
+
+  const handleDeleteSuccess = useCallback(async () => {
+    await fetchData(page, currentFilters, true);
+  }, [fetchData, page, currentFilters]);
+
+  const handleItemDelete = useCallback((item: PlanVisit) => {
+    handleDelete(item, handleDeleteSuccess);
+  }, [handleDelete, handleDeleteSuccess]);
+
+  const renderPlanVisitItem = useCallback(({ item }: { item: PlanVisit }) => (
+    <PlanVisitItem
+      item={item}
+      onDelete={handleItemDelete}
+      colors={colors}
+      styles={themeStyles}
+    />
+  ), [handleItemDelete, colors, themeStyles]);
+
+  // Effects
+  useEffect(() => {
+    if (mounted.current && page > 1) {
+      fetchData(page, currentFilters);
+    }
+  }, [page, fetchData, currentFilters]);
+
+  useEffect(() => {
+    if (mounted.current) {
+      fetchData(1, currentFilters, true);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!mounted.current) {
+        mounted.current = true;
+      }
+      fetchData(page, currentFilters, true);
+    }, [page, currentFilters, fetchData])
+  );
+
+  // Render loading screen
+  if (loading && !refreshing && planVisits.length === 0 && !fetchState.loading) {
+    return <LoadingScreen colors={colors} />;
   }
 
   return (
-    <View style={[{ flex: 1 }, styles.background.primary]}>
-      {/* Header */}
-      <View style={[styles.header.primary, { paddingHorizontal: 16, paddingBottom: 16, paddingTop: insets.top + 8 }]}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Pressable onPress={() => router.back()} style={{ padding: 4 }} accessibilityRole="button">
-            <IconSymbol name="chevron.left" size={24} color={colors.textInverse} />
-          </Pressable>
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text style={[{ fontSize: 20, fontWeight: 'bold' }, styles.text.inverse]}>Plan Visit</Text>
-          </View>
-          <Pressable onPress={handleCreate} style={{ padding: 4 }} accessibilityRole="button">
-            <IconSymbol name="plus" size={24} color={colors.textInverse} />
-          </Pressable>
-        </View>
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <Header
+        colors={colors}
+        insets={insets}
+        onBack={handleBack}
+        onCreate={handleCreate}
+      />
 
-      {/* Content */}
-      <View style={{ flex: 1, paddingHorizontal: 16, paddingTop: 16 }}>
-        {/* Date Filter */}
+      <View style={styles.content}>
         <DateFilter
           onFilterChange={handleFilterChange}
           initialFilters={currentFilters}
         />
-
-        {/* Error Display */}
-        {(error || fetchState.error) && (
-          <View style={{
-            backgroundColor: colors.danger + '10',
-            borderColor: colors.danger + '30',
-            borderWidth: 1,
-            borderRadius: 8,
-            padding: 12,
-            marginBottom: 16
-          }}>
-            <Text style={[styles.text.error]}>{error || fetchState.error}</Text>
-          </View>
-        )}
-
-        {/* Loading Indicator for subsequent loads */}
-        {fetchState.loading && planVisits.length > 0 && (
-          <View style={{ paddingVertical: 8, alignItems: 'center' }}>
-            <ActivityIndicator size="small" color={colors.primary} />
-          </View>
-        )}
-
+        
+        <ErrorDisplay
+          error={error}
+          fetchError={fetchState.error}
+          colors={colors}
+        />
+        
+        <LoadingIndicator
+          visible={fetchState.loading && planVisits.length > 0}
+          colors={colors}
+        />
+        
         {planVisits && planVisits.length > 0 ? (
           <>
-            {/* Results Count */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <Text style={[{ fontSize: 14 }, styles.text.secondary]}>
-                {planVisits.length} dari {meta?.total || planVisits.length} plan visit
-              </Text>
-              {currentFilters.filterType !== 'all' && (
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <IconSymbol name="line.3.horizontal.decrease.circle" size={16} color={colors.primary} />
-                  <Text style={[{ fontSize: 12, marginLeft: 4, fontWeight: '500' }, { color: colors.primary }]}>
-                    Terfilter
-                  </Text>
-                </View>
-              )}
-            </View>
-
+            <ListHeader
+              planVisits={planVisits}
+              meta={meta}
+              currentFilters={currentFilters}
+              colors={colors}
+            />
             <FlatList
               data={planVisits}
               renderItem={renderPlanVisitItem}
@@ -381,30 +520,132 @@ export default function PlanVisitListScreen() {
               maxToRenderPerBatch={5}
               windowSize={10}
               getItemLayout={(data, index) => ({
-                length: 120, // Approximate item height
+                length: 120,
                 offset: 120 * index,
                 index,
               })}
             />
           </>
         ) : (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <IconSymbol name="calendar" size={60} color={colors.textSecondary} />
-            <Text style={[{ fontSize: 18, fontWeight: '600', marginTop: 16 }, styles.text.secondary]}>
-              {currentFilters.filterType === 'all' 
-                ? 'Belum ada plan visit'
-                : 'Tidak ada plan visit'
-              }
-            </Text>
-            <Text style={[{ fontSize: 16, marginTop: 8, textAlign: 'center' }, styles.text.tertiary]}>
-              {currentFilters.filterType === 'all' 
-                ? 'Tap tombol + untuk menambah plan visit baru'
-                : 'Tidak ditemukan plan visit untuk filter yang dipilih'
-              }
-            </Text>
-          </View>
+          <EmptyState currentFilters={currentFilters} colors={colors} />
         )}
       </View>
     </View>
   );
-} 
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerButton: {
+    padding: 4,
+  },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+  },
+  errorContainer: {
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+  },
+  errorText: {
+    fontSize: 14,
+  },
+  loadingIndicator: {
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  listHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  countText: {
+    fontSize: 14,
+  },
+  filterIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  filterText: {
+    fontSize: 12,
+    marginLeft: 4,
+    fontWeight: '500',
+  },
+  planVisitItem: {
+    borderRadius: 12,
+    marginBottom: 12,
+    padding: 16,
+    borderWidth: 1,
+  },
+  planVisitContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  planVisitInfo: {
+    flex: 1,
+  },
+  planVisitTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  planVisitSubtitle: {
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  planVisitDate: {
+    fontSize: 16,
+    marginBottom: 8,
+  },
+  deleteButton: {
+    padding: 8,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 16,
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+}); 

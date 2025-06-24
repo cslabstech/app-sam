@@ -12,17 +12,30 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function OutletEditPage() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
-  const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { outlet, loading, error, fetchOutlet, updateOutlet, updateOutletWithFile } = useOutlet('');
-  const [form, setForm] = useState({
+interface FormData {
+  code: string;
+  location: string;
+  owner_name: string;
+  owner_phone: string;
+  photo_shop_sign: string;
+  photo_front: string;
+  photo_left: string;
+  photo_right: string;
+  video: string;
+}
+
+interface FormErrors {
+  [key: string]: string;
+}
+
+type PhotoField = 'photo_shop_sign' | 'photo_front' | 'photo_left' | 'photo_right';
+
+const useEditOutletForm = (outlet: any) => {
+  const [form, setForm] = useState<FormData>({
     code: '',
     location: '',
     owner_name: '',
@@ -33,26 +46,13 @@ export default function OutletEditPage() {
     photo_right: '',
     video: '',
   });
-  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
-  const { compress } = useVideoCompressor();
-  const { isConnected } = useNetwork();
-
-  useEffect(() => {
-    if (id) fetchOutlet(id as string);
-  }, [id]);
-
-  // Log hanya jika outlet sudah ada dan bukan null
-  useEffect(() => {
-    if (outlet) {
-      console.log('OutletEditPage outlet:', outlet);
-    }
-  }, [outlet]);
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
 
   useEffect(() => {
     if (outlet) {
-      setForm(f => ({
-        ...f,
+      setForm({
         code: outlet.code || '',
+        location: outlet.location || '',
         owner_name: (outlet as any).owner_name || '',
         owner_phone: (outlet as any).owner_phone || '',
         photo_shop_sign: (outlet as any).photo_shop_sign || '',
@@ -60,40 +60,88 @@ export default function OutletEditPage() {
         photo_left: (outlet as any).photo_left || '',
         photo_right: (outlet as any).photo_right || '',
         video: (outlet as any).video || '',
-      }));
+      });
     }
   }, [outlet]);
 
-  // Ambil lokasi user secara otomatis saat mount
-  useEffect(() => {
-    const getCurrentLocation = async () => {
-      try {
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('Izin lokasi ditolak', 'Aplikasi tidak bisa mengambil lokasi. Silakan ubah manual jika diperlukan.');
-          return;
-        }
-        const loc = await Location.getCurrentPositionAsync({ 
-          accuracy: Location.Accuracy.High,
-        });
-        if (loc && loc.coords) {
-          const latlong = `${loc.coords.latitude},${loc.coords.longitude}`;
-          setForm(f => ({ ...f, location: latlong }));
-        }
-      } catch (error) {
-        console.error('Error getting location:', error);
-        Alert.alert('Gagal Mendapatkan Lokasi', 'Tidak dapat mengambil lokasi otomatis. Silakan ubah manual jika diperlukan.');
-      }
-    };
-    getCurrentLocation();
+  const handleChange = useCallback((field: keyof FormData, value: string) => {
+    setForm(prev => ({ ...prev, [field]: value }));
   }, []);
 
-  const handleChange = (field: string, value: string | number) => {
-    setForm(f => ({ ...f, [field]: value }));
-  };
+  const validateForm = useCallback(() => {
+    const errors: FormErrors = {};
+    if (!form.owner_name.trim()) errors.owner_name = 'Nama pemilik wajib diisi';
+    if (!form.owner_phone.trim()) errors.owner_phone = 'Nomor HP pemilik wajib diisi';
+    if (!form.location.trim()) errors.location = 'Lokasi wajib diisi';
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  }, [form]);
 
-  // Ambil foto dari kamera (bisa untuk field berbeda)
-  const takePhoto = async (field: 'photo_shop_sign' | 'photo_front' | 'photo_left' | 'photo_right') => {
+  return {
+    form,
+    formErrors,
+    handleChange,
+    setForm,
+    validateForm,
+  };
+};
+
+const useLocationManager = () => {
+  const getCurrentLocation = useCallback(async () => {
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Izin lokasi ditolak', 'Aplikasi tidak bisa mengambil lokasi. Silakan ubah manual jika diperlukan.');
+        return null;
+      }
+      const loc = await Location.getCurrentPositionAsync({ 
+        accuracy: Location.Accuracy.High,
+      });
+      if (loc && loc.coords) {
+        return `${loc.coords.latitude},${loc.coords.longitude}`;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting location:', error);
+      Alert.alert('Gagal Mendapatkan Lokasi', 'Tidak dapat mengambil lokasi otomatis. Silakan ubah manual jika diperlukan.');
+      return null;
+    }
+  }, []);
+
+  return { getCurrentLocation };
+};
+
+const useMediaManager = () => {
+  const { compress } = useVideoCompressor();
+
+  const compressImage = useCallback(async (uri: string) => {
+    let compressed = { uri };
+    try {
+      let quality = 0.7;
+      for (let i = 0; i < 5; i++) {
+        compressed = await ImageManipulator.manipulateAsync(
+          uri,
+          [{ resize: { width: 800 } }],
+          { compress: quality, format: ImageManipulator.SaveFormat.JPEG }
+        );
+        const info = await FileSystem.getInfoAsync(compressed.uri);
+        if (info.exists && info.size && info.size < 100 * 1024) break;
+        quality -= 0.15;
+        if (quality < 0.2) break;
+      }
+      const info = await FileSystem.getInfoAsync(compressed.uri);
+      if (!info.exists || !info.size || info.size > 100 * 1024) {
+        Alert.alert('Foto terlalu besar', 'Ukuran foto harus di bawah 100KB. Silakan ulangi dengan pencahayaan lebih baik.');
+        return null;
+      }
+      return compressed.uri;
+    } catch (e) {
+      Alert.alert('Gagal kompres foto', 'Terjadi kesalahan saat kompresi.');
+      return null;
+    }
+  }, []);
+
+  const takePhoto = useCallback(async (field: PhotoField, onSuccess: (uri: string) => void) => {
     const { status } = await Camera.requestCameraPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Izin kamera ditolak', 'Aplikasi membutuhkan izin kamera.');
@@ -105,37 +153,14 @@ export default function OutletEditPage() {
       quality: 0.7,
     });
     if (!result.canceled && result.assets[0]) {
-      let uri = result.assets[0].uri;
-      // Kompres foto agar < 100KB
-      let compressed = { uri };
-      try {
-        let quality = 0.7;
-        for (let i = 0; i < 5; i++) {
-          compressed = await ImageManipulator.manipulateAsync(
-            uri,
-            [{ resize: { width: 800 } }],
-            { compress: quality, format: ImageManipulator.SaveFormat.JPEG }
-          );
-          const info = await FileSystem.getInfoAsync(compressed.uri);
-          if (info.exists && info.size && info.size < 100 * 1024) break;
-          quality -= 0.15;
-          if (quality < 0.2) break;
-        }
-        const info = await FileSystem.getInfoAsync(compressed.uri);
-        if (!info.exists || !info.size || info.size > 100 * 1024) {
-          Alert.alert('Foto terlalu besar', 'Ukuran foto harus di bawah 100KB. Silakan ulangi dengan pencahayaan lebih baik.');
-          return;
-        }
-      } catch (e) {
-        Alert.alert('Gagal kompres foto', 'Terjadi kesalahan saat kompresi.');
-        return;
+      const compressedUri = await compressImage(result.assets[0].uri);
+      if (compressedUri) {
+        onSuccess(compressedUri);
       }
-      setForm(f => ({ ...f, [field]: compressed.uri }));
     }
-  };
+  }, [compressImage]);
 
-  // Ambil video dari kamera dan kompres jika bukan di Expo Go
-  const takeVideo = async () => {
+  const takeVideo = useCallback(async (onSuccess: (uri: string) => void) => {
     const { status } = await Camera.requestCameraPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Izin kamera ditolak', 'Aplikasi membutuhkan izin kamera.');
@@ -144,36 +169,27 @@ export default function OutletEditPage() {
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['videos'],
       allowsEditing: false,
-      videoMaxDuration: 8, // Kurangi durasi maksimal untuk ukuran lebih kecil
-      quality: 0.3, // Kurangi quality untuk ukuran lebih kecil
+      videoMaxDuration: 8,
+      quality: 0.3,
     });
     if (!result.canceled && result.assets[0]) {
       let uri = result.assets[0].uri;
       
-      // Cek ukuran video original terlebih dahulu
       try {
         const originalInfo = await FileSystem.getInfoAsync(uri);
         if (originalInfo.exists && 'size' in originalInfo) {
-          console.log(`Original video size: ${(originalInfo.size / 1024 / 1024).toFixed(2)} MB`);
-          
           if (originalInfo.size > 15 * 1024 * 1024) {
             Alert.alert('Video terlalu besar', 'Video yang direkam terlalu besar. Silakan rekam video yang lebih pendek.');
             return;
           }
         }
-      } catch (e) {
-        console.error('Error checking original video:', e);
-      }
 
-      try {
-        // Kompres video jika di native, jika di Expo Go return uri asli
         const compressedUri = await compress(uri, {
           compressionMethod: 'manual',
           preset: 'H264_640x480',
           quality: 'low',
         });
         
-        // Validasi hasil kompresi
         const info = await FileSystem.getInfoAsync(compressedUri);
         if (!info.exists) {
           Alert.alert('Gagal kompres video', 'File video tidak dapat diakses setelah kompresi. Silakan coba lagi.');
@@ -185,412 +201,397 @@ export default function OutletEditPage() {
           return;
         }
         
-        const sizeInfo = 'size' in info ? `${(info.size / 1024 / 1024).toFixed(2)} MB` : 'unknown';
-        console.log(`Compressed video size: ${sizeInfo}`);
-        setForm(f => ({ ...f, video: compressedUri }));
+        onSuccess(compressedUri);
       } catch (e) {
         console.error('Video compression error:', e);
         Alert.alert('Gagal kompres video', 'Terjadi kesalahan saat kompresi. Silakan coba lagi.');
       }
     }
-  };
+  }, [compress]);
 
-  const handleUpdate = async () => {
-    if (!outlet) return;
-    // Validasi required
-    const errors: { [key: string]: string } = {};
-    if (!form.owner_name.trim()) errors.owner_name = 'Nama pemilik wajib diisi';
-    if (!form.owner_phone.trim()) errors.owner_phone = 'Nomor HP pemilik wajib diisi';
-    if (!form.location.trim()) errors.location = 'Lokasi wajib diisi';
-    setFormErrors(errors);
-    if (Object.keys(errors).length > 0) return;
+  return { takePhoto, takeVideo };
+};
 
-    // Jika ada file (photo/video), gunakan FormData
-    const hasFile = !!form.photo_shop_sign || !!form.photo_front || !!form.photo_left || !!form.photo_right || !!form.video;
+const LoadingScreen = ({ colors, isConnected }: { colors: any; isConnected: boolean }) => (
+  <SafeAreaView style={[styles.centerContainer, { backgroundColor: colors.background }]} edges={isConnected ? ['top','left','right'] : ['left','right']}>
+    <ActivityIndicator size="large" color={colors.primary} />
+    <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Memuat...</Text>
+  </SafeAreaView>
+);
+
+const ErrorScreen = ({ 
+  error, 
+  colors, 
+  isConnected, 
+  onGoBack 
+}: { 
+  error: string; 
+  colors: any; 
+  isConnected: boolean; 
+  onGoBack: () => void; 
+}) => (
+  <SafeAreaView style={[styles.centerContainer, { backgroundColor: colors.background }]} edges={isConnected ? ['top','left','right'] : ['left','right']}>
+    <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
+    <Button title="Go Back" variant="primary" onPress={onGoBack} />
+  </SafeAreaView>
+);
+
+const FormField = ({ 
+  label, 
+  value, 
+  onChangeText, 
+  error, 
+  placeholder, 
+  keyboardType, 
+  editable = true, 
+  colors 
+}: {
+  label: string;
+  value: string;
+  onChangeText?: (text: string) => void;
+  error?: string;
+  placeholder?: string;
+  keyboardType?: any;
+  editable?: boolean;
+  colors: any;
+}) => (
+  <View style={styles.inputGroup}>
+    <Text style={[styles.inputLabel, { color: colors.text }]}>{label}</Text>
+    <TextInput
+      style={[
+        styles.input, 
+        { 
+          color: colors.text, 
+          borderColor: colors.border,
+          backgroundColor: editable ? 'transparent' : colors.card
+        }
+      ]}
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      keyboardType={keyboardType}
+      editable={editable}
+    />
+    {error && (
+      <Text style={[styles.errorMessage, { color: colors.danger }]}>{error}</Text>
+    )}
+  </View>
+);
+
+const MediaField = ({ 
+  label, 
+  hasMedia, 
+  mediaUri, 
+  mediaType, 
+  onTake, 
+  onRemove, 
+  colors 
+}: {
+  label: string;
+  hasMedia: boolean;
+  mediaUri: string;
+  mediaType: 'image' | 'video';
+  onTake: () => void;
+  onRemove: () => void;
+  colors: any;
+}) => (
+  <View style={styles.inputGroup}>
+    <Text style={[styles.inputLabel, { color: colors.text }]}>{label}</Text>
+    <TouchableOpacity
+      style={[styles.pickerButton, { borderColor: colors.border }]}
+      onPress={onTake}
+    >
+      <Text style={{ color: colors.text }}>
+        {hasMedia ? `Change ${mediaType === 'image' ? 'Photo' : 'Video'}` : `Take ${mediaType === 'image' ? 'Photo' : 'Video'}`}
+      </Text>
+    </TouchableOpacity>
+    {hasMedia && (
+      <MediaPreview
+        uri={mediaUri}
+        type={mediaType}
+        label={mediaType === 'video' ? mediaUri.split('/').pop()?.substring(0, 30) + '...' : undefined}
+        onRemove={onRemove}
+      />
+    )}
+  </View>
+);
+
+export default function OutletEditPage() {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+  const router = useRouter();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { outlet, loading, error, fetchOutlet, updateOutlet, updateOutletWithFile } = useOutlet('');
+  const { isConnected } = useNetwork();
+
+  const { form, formErrors, handleChange, setForm, validateForm } = useEditOutletForm(outlet);
+  const { getCurrentLocation } = useLocationManager();
+  const { takePhoto, takeVideo } = useMediaManager();
+
+  useEffect(() => {
+    if (id) fetchOutlet(id as string);
+  }, [id]);
+
+  useEffect(() => {
+    const setLocation = async () => {
+      const location = await getCurrentLocation();
+      if (location) {
+        handleChange('location', location);
+      }
+    };
+    setLocation();
+  }, [getCurrentLocation, handleChange]);
+
+  const handleGoBack = useCallback(() => {
+    router.back();
+  }, [router]);
+
+  const handlePhotoTake = useCallback((field: PhotoField) => {
+    takePhoto(field, (uri) => handleChange(field, uri));
+  }, [takePhoto, handleChange]);
+
+  const handleVideoTake = useCallback(() => {
+    takeVideo((uri) => handleChange('video', uri));
+  }, [takeVideo, handleChange]);
+
+  const handleMediaRemove = useCallback((field: keyof FormData) => {
+    setForm(prev => ({ ...prev, [field]: '' }));
+  }, [setForm]);
+
+  const prepareFormData = useCallback(async () => {
+    const formData = new FormData();
+    formData.append('code', form.code);
+    formData.append('location', form.location);
+    formData.append('owner_name', form.owner_name);
+    formData.append('owner_phone', form.owner_phone);
+
+    const processImage = async (uri: string, fieldName: string) => {
+      if (!uri) return;
+      let processedUri = uri;
+      const name = uri.split('/').pop() || `${fieldName}.jpg`;
+      let type = 'image/jpeg';
+      if (name.endsWith('.png')) type = 'image/png';
+
+      try {
+        const manipulated = await ImageManipulator.manipulateAsync(
+          uri,
+          [{ resize: { width: 900 } }],
+          { compress: 0.7, format: name.endsWith('.png') ? ImageManipulator.SaveFormat.PNG : ImageManipulator.SaveFormat.JPEG }
+        );
+        processedUri = manipulated.uri;
+      } catch (e) {
+        // Use original if compression fails
+      }
+      formData.append(fieldName, { uri: processedUri, name, type } as any);
+    };
+
+    await Promise.all([
+      processImage(form.photo_shop_sign, 'photo_shop_sign'),
+      processImage(form.photo_front, 'photo_front'),
+      processImage(form.photo_left, 'photo_left'),
+      processImage(form.photo_right, 'photo_right'),
+    ]);
+
+    if (form.video) {
+      const uri = form.video;
+      const name = uri.split('/').pop() || 'video.mp4';
+      
+      const supportedFormats = ['.mp4', '.mov', '.avi'];
+      const isValidFormat = supportedFormats.some(format => name.toLowerCase().endsWith(format));
+      if (!isValidFormat) {
+        Alert.alert('Format video tidak didukung', 'Hanya mendukung format MP4, MOV, dan AVI.');
+        return null;
+      }
+
+      let type = 'video/mp4';
+      if (name.endsWith('.mov')) type = 'video/quicktime';
+      if (name.endsWith('.avi')) type = 'video/x-msvideo';
+      
+      try {
+        const info = await FileSystem.getInfoAsync(uri);
+        if (!info.exists) {
+          Alert.alert('File video tidak ditemukan', 'File video tidak dapat diakses. Silakan rekam ulang.');
+          return null;
+        }
+        
+        if ('size' in info && info.size > 5 * 1024 * 1024) {
+          Alert.alert('Video terlalu besar', 'Ukuran video maksimal 5MB. Silakan rekam video yang lebih pendek.');
+          return null;
+        }
+      } catch (e) {
+        console.error('Error checking video file:', e);
+        Alert.alert('Error', 'Tidak dapat memvalidasi file video. Silakan coba lagi.');
+        return null;
+      }
+      
+      formData.append('video', { uri, name, type } as any);
+    }
+
+    return formData;
+  }, [form]);
+
+  const handleUpdate = useCallback(async () => {
+    if (!outlet || !validateForm()) return;
+
+    const hasFile = !!(form.photo_shop_sign || form.photo_front || form.photo_left || form.photo_right || form.video);
+    
     if (hasFile) {
-      const formData = new FormData();
-      formData.append('code', form.code);
-      formData.append('location', form.location);
-      formData.append('owner_name', form.owner_name);
-      formData.append('owner_phone', form.owner_phone);
-      // Kompres gambar jika ada
-      if (form.photo_shop_sign) {
-        let uri = form.photo_shop_sign;
-        let name = uri.split('/').pop() || 'photo.jpg';
-        let type = 'image/jpeg';
-        if (name.endsWith('.png')) type = 'image/png';
-        // Kompres gambar max width 900px, quality 0.7
-        try {
-          const manipulated = await ImageManipulator.manipulateAsync(
-            uri,
-            [{ resize: { width: 900 } }],
-            { compress: 0.7, format: name.endsWith('.png') ? ImageManipulator.SaveFormat.PNG : ImageManipulator.SaveFormat.JPEG }
-          );
-          uri = manipulated.uri;
-        } catch (e) {
-          // Jika gagal kompres, pakai original
-        }
-        formData.append('photo_shop_sign', { uri, name, type } as any);
-      }
-      // Tambahan: upload foto depan, kiri, kanan jika ada
-      if (form.photo_front) {
-        let uri = form.photo_front;
-        let name = uri.split('/').pop() || 'photo_front.jpg';
-        let type = 'image/jpeg';
-        if (name.endsWith('.png')) type = 'image/png';
-        try {
-          const manipulated = await ImageManipulator.manipulateAsync(
-            uri,
-            [{ resize: { width: 900 } }],
-            { compress: 0.7, format: name.endsWith('.png') ? ImageManipulator.SaveFormat.PNG : ImageManipulator.SaveFormat.JPEG }
-          );
-          uri = manipulated.uri;
-        } catch (e) {}
-        formData.append('photo_front', { uri, name, type } as any);
-      }
-      if (form.photo_left) {
-        let uri = form.photo_left;
-        let name = uri.split('/').pop() || 'photo_left.jpg';
-        let type = 'image/jpeg';
-        if (name.endsWith('.png')) type = 'image/png';
-        try {
-          const manipulated = await ImageManipulator.manipulateAsync(
-            uri,
-            [{ resize: { width: 900 } }],
-            { compress: 0.7, format: name.endsWith('.png') ? ImageManipulator.SaveFormat.PNG : ImageManipulator.SaveFormat.JPEG }
-          );
-          uri = manipulated.uri;
-        } catch (e) {}
-        formData.append('photo_left', { uri, name, type } as any);
-      }
-      if (form.photo_right) {
-        let uri = form.photo_right;
-        let name = uri.split('/').pop() || 'photo_right.jpg';
-        let type = 'image/jpeg';
-        if (name.endsWith('.png')) type = 'image/png';
-        try {
-          const manipulated = await ImageManipulator.manipulateAsync(
-            uri,
-            [{ resize: { width: 900 } }],
-            { compress: 0.7, format: name.endsWith('.png') ? ImageManipulator.SaveFormat.PNG : ImageManipulator.SaveFormat.JPEG }
-          );
-          uri = manipulated.uri;
-        } catch (e) {}
-        formData.append('photo_right', { uri, name, type } as any);
-      }
-      // Cek ukuran video jika ada
-      if (form.video) {
-        const uri = form.video;
-        const name = uri.split('/').pop() || 'video.mp4';
-        
-        // Validasi format video yang didukung
-        const supportedFormats = ['.mp4', '.mov', '.avi'];
-        const isValidFormat = supportedFormats.some(format => name.toLowerCase().endsWith(format));
-        if (!isValidFormat) {
-          Alert.alert('Format video tidak didukung', 'Hanya mendukung format MP4, MOV, dan AVI.');
-          return;
-        }
+      const formData = await prepareFormData();
+      if (!formData) return;
 
-        let type = 'video/mp4';
-        if (name.endsWith('.mov')) type = 'video/quicktime';
-        if (name.endsWith('.avi')) type = 'video/x-msvideo';
-        
-        // Cek ukuran file video dan validasi file exists
-        try {
-          const info = await FileSystem.getInfoAsync(uri);
-          if (!info.exists) {
-            Alert.alert('File video tidak ditemukan', 'File video tidak dapat diakses. Silakan rekam ulang.');
-            return;
-          }
-          
-          if ('size' in info) {
-            // Batasi ukuran maksimal 5MB untuk menghindari error upload
-            if (info.size > 5 * 1024 * 1024) {
-              Alert.alert('Video terlalu besar', 'Ukuran video maksimal 5MB. Silakan rekam video yang lebih pendek.');
-              return;
-            }
-            
-            // Log ukuran untuk debugging
-            console.log(`Video size: ${(info.size / 1024 / 1024).toFixed(2)} MB`);
-          }
-        } catch (e) {
-          console.error('Error checking video file:', e);
-          Alert.alert('Error', 'Tidak dapat memvalidasi file video. Silakan coba lagi.');
-          return;
-        }
-        
-        formData.append('video', { uri, name, type } as any);
-      }
       log('[OUTLET][UPDATE][FORMDATA]', formData);
       const result = await updateOutletWithFile(outlet.id.toString(), formData);
       log('[OUTLET][UPDATE][RESULT]', result);
+      
       if (result.success) {
         Alert.alert('Success', 'Outlet updated successfully');
         router.back();
       } else {
-        if (result.error) {
-          log('[OUTLET][UPDATE][ERROR]', result.error);
-        }
-        
-        // Jika error khusus video validation, tawarkan opsi untuk skip video
-        if (result.error && result.error.includes('video') && form.video) {
-          Alert.alert(
-            'Video Upload Failed', 
-            'Upload video gagal. Apakah Anda ingin menyimpan outlet tanpa video?',
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { 
-                text: 'Skip Video', 
-                onPress: async () => {
-                  // Retry tanpa video
-                  const formDataNoVideo = new FormData();
-                  formDataNoVideo.append('code', form.code);
-                  formDataNoVideo.append('location', form.location);
-                  formDataNoVideo.append('owner_name', form.owner_name);
-                  formDataNoVideo.append('owner_phone', form.owner_phone);
-                  
-                  // Tambahkan foto yang ada
-                  if (form.photo_shop_sign) {
-                    let uri = form.photo_shop_sign;
-                    let name = uri.split('/').pop() || 'photo.jpg';
-                    let type = 'image/jpeg';
-                    if (name.endsWith('.png')) type = 'image/png';
-                    formDataNoVideo.append('photo_shop_sign', { uri, name, type } as any);
-                  }
-                  if (form.photo_front) {
-                    let uri = form.photo_front;
-                    let name = uri.split('/').pop() || 'photo_front.jpg';
-                    let type = 'image/jpeg';
-                    if (name.endsWith('.png')) type = 'image/png';
-                    formDataNoVideo.append('photo_front', { uri, name, type } as any);
-                  }
-                  if (form.photo_left) {
-                    let uri = form.photo_left;
-                    let name = uri.split('/').pop() || 'photo_left.jpg';
-                    let type = 'image/jpeg';
-                    if (name.endsWith('.png')) type = 'image/png';
-                    formDataNoVideo.append('photo_left', { uri, name, type } as any);
-                  }
-                  if (form.photo_right) {
-                    let uri = form.photo_right;
-                    let name = uri.split('/').pop() || 'photo_right.jpg';
-                    let type = 'image/jpeg';
-                    if (name.endsWith('.png')) type = 'image/png';
-                    formDataNoVideo.append('photo_right', { uri, name, type } as any);
-                  }
-                  
-                  const retryResult = await updateOutletWithFile(outlet.id.toString(), formDataNoVideo);
-                  if (retryResult.success) {
-                    Alert.alert('Success', 'Outlet updated successfully (without video)');
-                    router.back();
-                  } else {
-                    Alert.alert('Error', retryResult.error || 'Failed to update outlet');
-                  }
-                }
-              }
-            ]
-          );
-        } else {
-          Alert.alert('Error', result.error || 'Failed to update outlet');
-        }
-      }
-      return;
-    }
-    // Jika tidak ada file, tetap pakai updateOutlet biasa
-    const payload = {
-      code: form.code,
-      location: form.location,
-      owner_name: form.owner_name,
-      owner_phone: form.owner_phone,
-      photo_shop_sign: form.photo_shop_sign,
-      photo_front: form.photo_front,
-      photo_left: form.photo_left,
-      photo_right: form.photo_right,
-      video: form.video,
-    };
-    log('[OUTLET][UPDATE][PAYLOAD]', payload);
-    const result = await updateOutlet(outlet.id.toString(), payload);
-    log('[OUTLET][UPDATE][RESULT]', result);
-    if (result.success) {
-      Alert.alert('Success', 'Outlet updated successfully');
-      router.back();
-    } else {
-      if (result.error) {
         log('[OUTLET][UPDATE][ERROR]', result.error);
+        Alert.alert('Error', result.error || 'Failed to update outlet');
       }
-      Alert.alert('Error', result.error || 'Failed to update outlet');
+    } else {
+      const payload = {
+        code: form.code,
+        location: form.location,
+        owner_name: form.owner_name,
+        owner_phone: form.owner_phone,
+        photo_shop_sign: form.photo_shop_sign,
+        photo_front: form.photo_front,
+        photo_left: form.photo_left,
+        photo_right: form.photo_right,
+        video: form.video,
+      };
+      
+      log('[OUTLET][UPDATE][PAYLOAD]', payload);
+      const result = await updateOutlet(outlet.id.toString(), payload);
+      log('[OUTLET][UPDATE][RESULT]', result);
+      
+      if (result.success) {
+        Alert.alert('Success', 'Outlet updated successfully');
+        router.back();
+      } else {
+        log('[OUTLET][UPDATE][ERROR]', result.error);
+        Alert.alert('Error', result.error || 'Failed to update outlet');
+      }
     }
-  };
+  }, [outlet, validateForm, form, prepareFormData, updateOutletWithFile, updateOutlet, router]);
 
-  if (error) return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
-      <Text style={{ color: colors.danger, margin: 20, textAlign: 'center' }}>{error}</Text>
-      <Button title="Go Back" variant="primary" onPress={() => router.back()} />
-    </SafeAreaView>
-  );
+  if (loading) {
+    return <LoadingScreen colors={colors} isConnected={isConnected} />;
+  }
 
-  if (loading) return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={{ marginTop: 16, color: colors.textSecondary, fontSize: 16 }}>Memuat...</Text>
-      </View>
-    </SafeAreaView>
-  );
+  if (error) {
+    return <ErrorScreen error={error} colors={colors} isConnected={isConnected} onGoBack={handleGoBack} />;
+  }
 
-  // Jangan render "Data outlet tidak ditemukan" jika masih loading
-  if (!outlet && !loading) return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
-      <Text style={{ color: colors.danger, margin: 20, textAlign: 'center' }}>Data outlet tidak ditemukan.</Text>
-      <Button title="Go Back" variant="primary" onPress={() => router.back()} />
-    </SafeAreaView>
-  );
+  if (!outlet && !loading) {
+    return <ErrorScreen error="Data outlet tidak ditemukan." colors={colors} isConnected={isConnected} onGoBack={handleGoBack} />;
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.container}>
         <Text style={[styles.formTitle, { color: colors.text }]}>Edit Outlet</Text>
-        <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Kode Outlet</Text>
-          <TextInput
-            style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]}
-            value={form.code}
-            editable={false}
-          />
-        </View>
-        {/* Location field disembunyikan dari user, tapi tetap digunakan untuk payload */}
-        <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Nama Pemilik</Text>
-          <TextInput
-            style={[styles.input, { color: colors.text, borderColor: colors.border }]}
-            value={form.owner_name}
-            onChangeText={v => handleChange('owner_name', v)}
-            placeholder="Nama pemilik outlet"
-          />
-          {!!formErrors.owner_name && (
-            <Text style={{ color: colors.danger, marginTop: 4 }}>{formErrors.owner_name}</Text>
-          )}
-        </View>
-        <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Nomor HP Pemilik</Text>
-          <TextInput
-            style={[styles.input, { color: colors.text, borderColor: colors.border }]}
-            value={form.owner_phone}
-            onChangeText={v => handleChange('owner_phone', v)}
-            placeholder="08xxxxxxxxxx"
-            keyboardType="phone-pad"
-          />
-          {!!formErrors.owner_phone && (
-            <Text style={{ color: colors.danger, marginTop: 4 }}>{formErrors.owner_phone}</Text>
-          )}
-        </View>
-        <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Photo Shop Sign</Text>
-          <TouchableOpacity
-            style={[styles.pickerButton, { borderColor: colors.border }]}
-            onPress={() => takePhoto('photo_shop_sign')}
-          >
-            <Text style={{ color: colors.text }}>
-              {form.photo_shop_sign ? 'Change Photo' : 'Take Photo'}
-            </Text>
-          </TouchableOpacity>
-          {form.photo_shop_sign && (
-            <MediaPreview
-              uri={form.photo_shop_sign}
-              type="image"
-              onRemove={() => setForm(f => ({ ...f, photo_shop_sign: '' }))}
-            />
-          )}
-        </View>
-        {/* Tambahan field foto depan, kiri, kanan */}
-        <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Photo Depan</Text>
-          <TouchableOpacity
-            style={[styles.pickerButton, { borderColor: colors.border }]}
-            onPress={() => takePhoto('photo_front')}
-          >
-            <Text style={{ color: colors.text }}>
-              {form.photo_front ? 'Change Photo' : 'Take Photo'}
-            </Text>
-          </TouchableOpacity>
-          {form.photo_front && (
-            <MediaPreview
-              uri={form.photo_front}
-              type="image"
-              onRemove={() => setForm(f => ({ ...f, photo_front: '' }))}
-            />
-          )}
-        </View>
-        <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Photo Kiri</Text>
-          <TouchableOpacity
-            style={[styles.pickerButton, { borderColor: colors.border }]}
-            onPress={() => takePhoto('photo_left')}
-          >
-            <Text style={{ color: colors.text }}>
-              {form.photo_left ? 'Change Photo' : 'Take Photo'}
-            </Text>
-          </TouchableOpacity>
-          {form.photo_left && (
-            <MediaPreview
-              uri={form.photo_left}
-              type="image"
-              onRemove={() => setForm(f => ({ ...f, photo_left: '' }))}
-            />
-          )}
-        </View>
-        <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Photo Kanan</Text>
-          <TouchableOpacity
-            style={[styles.pickerButton, { borderColor: colors.border }]}
-            onPress={() => takePhoto('photo_right')}
-          >
-            <Text style={{ color: colors.text }}>
-              {form.photo_right ? 'Change Photo' : 'Take Photo'}
-            </Text>
-          </TouchableOpacity>
-          {form.photo_right && (
-            <MediaPreview
-              uri={form.photo_right}
-              type="image"
-              onRemove={() => setForm(f => ({ ...f, photo_right: '' }))}
-            />
-          )}
-        </View>
-        <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Video</Text>
-          <TouchableOpacity
-            style={[styles.pickerButton, { borderColor: colors.border }]}
-            onPress={takeVideo}
-          >
-            <Text style={{ color: colors.text }}>
-              {form.video ? 'Change Video' : 'Take Video'}
-            </Text>
-          </TouchableOpacity>
-          {form.video && (
-            <MediaPreview
-              uri={form.video}
-              type="video"
-              label={form.video.split('/').pop()?.substring(0, 30) + '...'}
-              onRemove={() => setForm(f => ({ ...f, video: '' }))}
-            />
-          )}
-        </View>
+        
+        <FormField
+          label="Kode Outlet"
+          value={form.code}
+          editable={false}
+          colors={colors}
+        />
+        
+        <FormField
+          label="Nama Pemilik"
+          value={form.owner_name}
+          onChangeText={(value) => handleChange('owner_name', value)}
+          placeholder="Nama pemilik outlet"
+          error={formErrors.owner_name}
+          colors={colors}
+        />
+        
+        <FormField
+          label="Nomor HP Pemilik"
+          value={form.owner_phone}
+          onChangeText={(value) => handleChange('owner_phone', value)}
+          placeholder="08xxxxxxxxxx"
+          keyboardType="phone-pad"
+          error={formErrors.owner_phone}
+          colors={colors}
+        />
+        
+        <MediaField
+          label="Photo Shop Sign"
+          hasMedia={!!form.photo_shop_sign}
+          mediaUri={form.photo_shop_sign}
+          mediaType="image"
+          onTake={() => handlePhotoTake('photo_shop_sign')}
+          onRemove={() => handleMediaRemove('photo_shop_sign')}
+          colors={colors}
+        />
+        
+        <MediaField
+          label="Photo Depan"
+          hasMedia={!!form.photo_front}
+          mediaUri={form.photo_front}
+          mediaType="image"
+          onTake={() => handlePhotoTake('photo_front')}
+          onRemove={() => handleMediaRemove('photo_front')}
+          colors={colors}
+        />
+        
+        <MediaField
+          label="Photo Kiri"
+          hasMedia={!!form.photo_left}
+          mediaUri={form.photo_left}
+          mediaType="image"
+          onTake={() => handlePhotoTake('photo_left')}
+          onRemove={() => handleMediaRemove('photo_left')}
+          colors={colors}
+        />
+        
+        <MediaField
+          label="Photo Kanan"
+          hasMedia={!!form.photo_right}
+          mediaUri={form.photo_right}
+          mediaType="image"
+          onTake={() => handlePhotoTake('photo_right')}
+          onRemove={() => handleMediaRemove('photo_right')}
+          colors={colors}
+        />
+        
+        <MediaField
+          label="Video"
+          hasMedia={!!form.video}
+          mediaUri={form.video}
+          mediaType="video"
+          onTake={handleVideoTake}
+          onRemove={() => handleMediaRemove('video')}
+          colors={colors}
+        />
+        
         <Button
           title={loading ? 'Updating...' : 'Update Outlet'}
           onPress={handleUpdate}
           disabled={loading}
-          style={{ marginTop: 24 }}
+          style={styles.updateButton}
         />
       </ScrollView>
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
+  scrollView: {
+    flex: 1,
+  },
   container: {
     padding: 16,
     paddingBottom: 40,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   formTitle: {
     fontSize: 20,
@@ -618,14 +619,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#f8f9fa',
   },
-  previewImage: {
-    width: '100%',
-    height: 120,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
   },
-  removeButton: {
+  errorText: {
+    margin: 20,
+    textAlign: 'center',
+  },
+  errorMessage: {
     marginTop: 4,
-    alignSelf: 'flex-start',
+  },
+  updateButton: {
+    marginTop: 24,
   },
 });
+

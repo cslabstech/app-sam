@@ -1,15 +1,62 @@
+// Third-party imports
+import { router } from 'expo-router';
+import React, { useCallback, useMemo } from 'react';
+import { Pressable, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+// Local component imports
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+
+// Constants and utilities
 import { Colors } from '@/constants/Colors';
+
+// Hooks and contexts
 import { useNetwork } from '@/context/network-context';
 import { useHomeData } from '@/hooks/data/useHomeData';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
-import { router } from 'expo-router';
-import React from 'react';
-import { Pressable, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUserData } from './_layout';
+
+// Custom hooks
+const useDateTime = () => {
+  const formatDate = useCallback(() => {
+    return new Date().toLocaleDateString('id-ID', {
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric'
+    });
+  }, []);
+
+  const getGreeting = useCallback(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Selamat Pagi';
+    if (hour < 15) return 'Selamat Siang';
+    if (hour < 18) return 'Selamat Sore';
+    return 'Selamat Malam';
+  }, []);
+
+  return { formatDate, getGreeting };
+};
+
+const useVisitData = () => {
+  const { todayVisits, loadingVisits, error, refreshData } = useHomeData();
+  
+  const sortedVisits = useMemo(() => {
+    return [...todayVisits].sort((a, b) => {
+      if (!a.outlet?.name || !b.outlet?.name) return 0;
+      return a.outlet.name.localeCompare(b.outlet.name);
+    });
+  }, [todayVisits]);
+
+  return {
+    visits: sortedVisits,
+    loading: loadingVisits,
+    error,
+    refreshData,
+  };
+};
 
 /**
  * Modern Home Screen - Halaman utama aplikasi SAM dengan design yang diperbaiki
@@ -20,27 +67,17 @@ export default function HomeScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const user = useUserData?.() ?? null;
   const displayName = user?.name || user?.username || 'User';
-  const { todayVisits, loadingVisits, error, refreshData } = useHomeData();
   const { isConnected } = useNetwork();
 
-  const formatDate = () => {
-    return new Date().toLocaleDateString('id-ID', {
-      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-    });
-  };
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Selamat Pagi';
-    if (hour < 15) return 'Selamat Siang';
-    if (hour < 18) return 'Selamat Sore';
-    return 'Selamat Malam';
-  };
+  // Custom hooks
+  const { formatDate, getGreeting } = useDateTime();
+  const { visits, loading, error, refreshData } = useVisitData();
 
-  // Urutkan todayVisits secara ascending berdasarkan nama outlet
-  const sortedVisits = [...todayVisits].sort((a, b) => {
-    if (!a.outlet?.name || !b.outlet?.name) return 0;
-    return a.outlet.name.localeCompare(b.outlet.name);
-  });
+  // Memoized values
+  const greeting = useMemo(() => getGreeting(), [getGreeting]);
+  const currentDate = useMemo(() => formatDate(), [formatDate]);
+
+  // Visits are already sorted by the custom hook
 
   return (
     <SafeAreaView className="flex-1 bg-neutral-50 dark:bg-neutral-900" edges={isConnected ? ['top','left','right'] : ['left','right']}>
@@ -48,9 +85,9 @@ export default function HomeScreen() {
       <View className="border-b border-neutral-200 dark:border-neutral-800 px-4 pt-4 pb-4 bg-neutral-50 dark:bg-neutral-900">
         <View className="flex-row justify-between items-center">
           <View>
-            <Text style={{ fontFamily: 'Inter' }} className="text-sm text-slate-500 dark:text-slate-300 mb-0.5">{getGreeting()},</Text>
+            <Text style={{ fontFamily: 'Inter' }} className="text-sm text-slate-500 dark:text-slate-300 mb-0.5">{greeting},</Text>
             <Text style={{ fontFamily: 'Inter' }} className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mb-0.5">{displayName}</Text>
-            <Text style={{ fontFamily: 'Inter' }} className="text-xs text-slate-400 dark:text-slate-500">{formatDate()}</Text>
+            <Text style={{ fontFamily: 'Inter' }} className="text-xs text-slate-400 dark:text-slate-500">{currentDate}</Text>
           </View>
           <TouchableOpacity
             className="w-10 h-10 rounded-full border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 justify-center items-center relative"
@@ -68,7 +105,7 @@ export default function HomeScreen() {
         contentContainerStyle={{ paddingBottom: 32 }}
         refreshControl={
           <RefreshControl
-            refreshing={loadingVisits}
+            refreshing={loading}
             onRefresh={refreshData}
             colors={[colors.primary]}
             tintColor={colors.primary}
@@ -141,14 +178,14 @@ export default function HomeScreen() {
                 </View>
               </CardContent>
             </Card>
-          ) : loadingVisits ? (
+          ) : loading ? (
             <Card className="mb-4">
               <CardContent>
                 <Text style={{ fontFamily: 'Inter' }} className="text-sm text-slate-500 text-center py-4">Memuat kunjungan...</Text>
               </CardContent>
             </Card>
-          ) : todayVisits.length > 0 ? (
-            todayVisits.map(visit => (
+          ) : visits.length > 0 ? (
+            visits.map((visit: any) => (
               <Pressable
                 key={visit.id}
                 className="mb-2 rounded-lg border-2 border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 active:bg-primary-50 dark:active:bg-primary-900"
@@ -233,3 +270,6 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
 }
+
+// Note: StyleSheet removed to fix linter errors. File uses Tailwind classes for now.
+// Full refactor to StyleSheet can be done later when spacing/typography constants are properly imported.

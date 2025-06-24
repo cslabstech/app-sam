@@ -3,33 +3,58 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, TouchableWithoutFeedback, View } from 'react-native';
+import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, TouchableWithoutFeedback, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
+import { spacing } from '@/constants/Spacing';
+import { typography } from '@/constants/Typography';
 import { useVisit } from '@/hooks/data/useVisit';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { useCurrentLocation } from '@/hooks/utils/useCurrentLocation';
 
-// ErrorBoundary sederhana
+interface Visit {
+  id: string | number;
+  outlet: {
+    id: string | number;
+    code: string;
+    name: string;
+    district?: string;
+    owner_name: string;
+    address: string;
+    badan_usaha: { id: string | number; name: string; };
+    division: { id: string | number; name: string; };
+    region: { id: string | number; name: string; };
+    cluster: { id: string | number; name: string; };
+  };
+}
+
+interface CheckOutFormData {
+  notes: string;
+  transaction: 'YES' | 'NO' | null;
+}
+
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
   constructor(props: any) {
     super(props);
     this.state = { hasError: false };
   }
+
   static getDerivedStateFromError() {
     return { hasError: true };
   }
+
   componentDidCatch(error: any, info: any) {
     console.error('ErrorBoundary caught:', error, info);
   }
+
   render() {
     if (this.state.hasError) {
       return (
-        <View className="flex-1 justify-center items-center bg-white">
-          <Text className="text-lg font-bold text-red-600">Terjadi kesalahan pada aplikasi.</Text>
-          <Text className="text-base text-gray-500 mt-2">Silakan tutup dan buka ulang aplikasi.</Text>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorTitle}>Terjadi kesalahan pada aplikasi.</Text>
+          <Text style={styles.errorMessage}>Silakan tutup dan buka ulang aplikasi.</Text>
         </View>
       );
     }
@@ -37,27 +62,321 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
   }
 }
 
-export default function CheckOutScreen() {
-  const { id } = useLocalSearchParams();
-  const visitId = typeof id === 'string' ? id : '';
-  const { checkOutVisit, fetchVisit } = useVisit();
-  const [visit, setVisit] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+const useCheckOutForm = () => {
+  const [formData, setFormData] = useState<CheckOutFormData>({
+    notes: '',
+    transaction: null,
+  });
 
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const updateField = useCallback((field: keyof CheckOutFormData, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
 
-  const [notes, setNotes] = useState<string>('');
-  const [transaksi, setTransaksi] = useState<'YES' | 'NO' | null>(null);
+  const validateForm = useCallback((): boolean => {
+    if (!formData.notes.trim()) {
+      Alert.alert('Catatan Wajib', 'Mohon isi catatan untuk check out.');
+      return false;
+    }
+    if (!formData.transaction) {
+      Alert.alert('Transaksi Wajib', 'Mohon pilih status transaksi.');
+      return false;
+    }
+    return true;
+  }, [formData]);
 
+  const resetForm = useCallback(() => {
+    setFormData({
+      notes: '',
+      transaction: null,
+    });
+  }, []);
+
+  return {
+    formData,
+    updateField,
+    validateForm,
+    resetForm,
+  };
+};
+
+const useCameraManager = () => {
   const [cameraRef, setCameraRef] = useState<any>(null);
   const [hasCameraPermission, requestCameraPermission] = useCameraPermissions();
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [isFlashOn, setIsFlashOn] = useState(false);
   const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
 
-  const { location: currentLocation, getLocation } = useCurrentLocation();
+  const requestPermission = useCallback(async (): Promise<boolean> => {
+    if (!hasCameraPermission || hasCameraPermission.status !== 'granted') {
+      const { status } = await requestCameraPermission();
+      if (status !== 'granted') {
+        Alert.alert('Izin Kamera', 'Akses kamera diperlukan.');
+        return false;
+      }
+    }
+    return true;
+  }, [hasCameraPermission, requestCameraPermission]);
+
+  return {
+    cameraRef,
+    setCameraRef,
+    hasCameraPermission,
+    requestPermission,
+    isCameraReady,
+    setIsCameraReady,
+    isFlashOn,
+    setIsFlashOn,
+    isProcessingPhoto,
+    setIsProcessingPhoto,
+  };
+};
+
+const Header = ({ onBack }: { onBack: () => void }) => {
   const insets = useSafeAreaInsets();
+  
+  return (
+    <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+      <View style={styles.headerContent}>
+        <Pressable onPress={onBack} style={styles.backButton} accessibilityRole="button">
+          <IconSymbol name="chevron.left" size={24} color="#fff" />
+        </Pressable>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>Check Out</Text>
+        </View>
+        <View style={styles.headerPlaceholder} />
+      </View>
+    </View>
+  );
+};
+
+const OutletInfoCard = ({ outlet }: { outlet: Visit['outlet'] }) => (
+  <View style={styles.outletCard}>
+    <Text style={styles.outletCardLabel}>Informasi Outlet</Text>
+    <Text style={styles.outletName}>{outlet.name} ({outlet.code})</Text>
+    <View style={styles.outletLocation}>
+      <IconSymbol name="mappin.and.ellipse" size={18} color="#222B45" style={styles.locationIcon} />
+      <Text style={styles.outletDistrict}>{outlet.district}</Text>
+    </View>
+  </View>
+);
+
+const TransactionSelector = ({ 
+  selectedTransaction, 
+  onTransactionChange 
+}: { 
+  selectedTransaction: 'YES' | 'NO' | null;
+  onTransactionChange: (transaction: 'YES' | 'NO') => void;
+}) => (
+  <View style={styles.sectionContainer}>
+    <Text style={styles.sectionTitle}>Transaksi</Text>
+    <View style={styles.transactionButtons}>
+      <Pressable
+        style={[
+          styles.transactionButton,
+          selectedTransaction === 'YES' && styles.transactionButtonActive
+        ]}
+        onPress={() => onTransactionChange('YES')}
+        accessibilityRole="button"
+      >
+        <IconSymbol 
+          name="checkmark.circle.fill" 
+          size={20} 
+          color={selectedTransaction === 'YES' ? '#fff' : '#FF8800'} 
+        />
+        <Text style={[
+          styles.transactionButtonText,
+          selectedTransaction === 'YES' && styles.transactionButtonTextActive
+        ]}>
+          YES
+        </Text>
+      </Pressable>
+      
+      <Pressable
+        style={[
+          styles.transactionButton,
+          selectedTransaction === 'NO' && styles.transactionButtonActive
+        ]}
+        onPress={() => onTransactionChange('NO')}
+        accessibilityRole="button"
+      >
+        <IconSymbol 
+          name="xmark.circle.fill" 
+          size={20} 
+          color={selectedTransaction === 'NO' ? '#fff' : '#FF8800'} 
+        />
+        <Text style={[
+          styles.transactionButtonText,
+          selectedTransaction === 'NO' && styles.transactionButtonTextActive
+        ]}>
+          NO
+        </Text>
+      </Pressable>
+    </View>
+  </View>
+);
+
+const NotesInput = ({ 
+  notes, 
+  onNotesChange 
+}: { 
+  notes: string;
+  onNotesChange: (notes: string) => void;
+}) => (
+  <View style={styles.sectionContainer}>
+    <Text style={styles.sectionTitle}>Catatan (Opsional)</Text>
+    <TextInput
+      style={styles.notesInput}
+      placeholder="Tambahkan catatan untuk kunjungan ini..."
+      placeholderTextColor="#7B8FA1"
+      multiline
+      value={notes}
+      onChangeText={onNotesChange}
+    />
+  </View>
+);
+
+const CameraOverlay = ({ 
+  hasCameraPermission,
+  requestPermission,
+  cameraRef,
+  setCameraRef,
+  isCameraReady,
+  setIsCameraReady,
+  isFlashOn,
+  setIsFlashOn
+}: {
+  hasCameraPermission: any;
+  requestPermission: () => Promise<boolean>;
+  cameraRef: any;
+  setCameraRef: (ref: any) => void;
+  isCameraReady: boolean;
+  setIsCameraReady: (ready: boolean) => void;
+  isFlashOn: boolean;
+  setIsFlashOn: (flash: boolean) => void;
+}) => (
+  <View style={styles.cameraContainer}>
+    {hasCameraPermission?.status === 'granted' ? (
+      <CameraView
+        ref={(ref) => setCameraRef(ref)}
+        style={styles.camera}
+        onCameraReady={() => setIsCameraReady(true)}
+        flash={isFlashOn ? 'on' : 'off'}
+        facing="front"
+      />
+    ) : (
+      <Pressable 
+        onPress={requestPermission} 
+        style={styles.cameraPermissionContainer} 
+        accessibilityRole="button"
+      >
+        <IconSymbol name="camera.fill" size={60} color="#FF8800" />
+        <Text style={styles.cameraPermissionText}>Izinkan akses kamera</Text>
+      </Pressable>
+    )}
+    
+    {hasCameraPermission?.status === 'granted' && (
+      <Pressable 
+        style={styles.flashButton} 
+        onPress={() => setIsFlashOn(!isFlashOn)} 
+        accessibilityRole="button"
+      >
+        <IconSymbol name={isFlashOn ? 'bolt.fill' : 'bolt.slash'} size={24} color="#FF8800" />
+      </Pressable>
+    )}
+  </View>
+);
+
+const CheckOutForm = ({
+  formData,
+  updateField,
+  onSubmit,
+  isProcessing,
+  isFormValid
+}: {
+  formData: CheckOutFormData;
+  updateField: (field: keyof CheckOutFormData, value: any) => void;
+  onSubmit: () => void;
+  isProcessing: boolean;
+  isFormValid: boolean;
+}) => (
+  <View style={styles.formContainer}>
+    <Text style={styles.formTitle}>Catatan & Transaksi</Text>
+    
+    <TransactionSelector
+      selectedTransaction={formData.transaction}
+      onTransactionChange={(transaction) => updateField('transaction', transaction)}
+    />
+    
+    <NotesInput
+      notes={formData.notes}
+      onNotesChange={(notes) => updateField('notes', notes)}
+    />
+    
+    <Pressable
+      style={[
+        styles.submitButton,
+        (!isFormValid || isProcessing) && styles.submitButtonDisabled
+      ]}
+      onPress={onSubmit}
+      disabled={!isFormValid || isProcessing}
+      accessibilityRole="button"
+    >
+      <Text style={[
+        styles.submitButtonText,
+        (!isFormValid || isProcessing) && styles.submitButtonTextDisabled
+      ]}>
+        {isProcessing ? 'Memproses...' : 'Ambil Foto & Check Out'}
+      </Text>
+    </Pressable>
+  </View>
+);
+
+const LoadingState = () => {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+  
+  return (
+    <View style={[styles.centerContainer, { backgroundColor: colors.background }]}>
+      <ActivityIndicator size="large" color={colors.primary} />
+      <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Memuat...</Text>
+    </View>
+  );
+};
+
+const ErrorState = ({ onBack }: { onBack: () => void }) => {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+  
+  return (
+    <View style={[styles.centerContainer, { backgroundColor: colors.background }]}>
+      <IconSymbol name="exclamationmark.triangle" size={60} color={colors.danger} />
+      <Text style={[styles.errorStateTitle, { color: colors.text }]}>
+        Data kunjungan tidak ditemukan.
+      </Text>
+      <Pressable 
+        onPress={onBack} 
+        style={styles.errorStateButton} 
+        accessibilityRole="button"
+      >
+        <Text style={styles.errorStateButtonText}>Kembali</Text>
+      </Pressable>
+    </View>
+  );
+};
+
+export default function CheckOutScreen() {
+  const { id } = useLocalSearchParams();
+  const visitId = typeof id === 'string' ? id : '';
+  const { checkOutVisit, fetchVisit } = useVisit();
+  const [visit, setVisit] = useState<Visit | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+
+  const formManager = useCheckOutForm();
+  const cameraManager = useCameraManager();
+  const { location: currentLocation } = useCurrentLocation();
 
   useEffect(() => {
     async function fetchVisitDetail() {
@@ -65,74 +384,81 @@ export default function CheckOutScreen() {
       setLoading(true);
       try {
         const res = await fetchVisit(visitId);
-        if (res.success) setVisit(res.data || null);
-        else setVisit(null);
+        if (res.success) {
+          setVisit(res.data || null);
+        } else {
+          setVisit(null);
+        }
+      } catch (error) {
+        console.error('Error fetching visit:', error);
+        setVisit(null);
       } finally {
         setLoading(false);
       }
     }
     fetchVisitDetail();
-  }, [visitId]);
+  }, [visitId, fetchVisit]);
 
-  // Handler baru: Ambil foto lalu langsung submit
   const handleTakePhotoAndCheckOut = useCallback(async () => {
-    if (!hasCameraPermission || hasCameraPermission.status !== 'granted') {
-      const { status } = await requestCameraPermission();
-      if (status !== 'granted') {
-        Alert.alert('Izin Kamera', 'Akses kamera diperlukan.');
-        return;
-      }
-    }
-    if (!cameraRef) {
+    if (!await cameraManager.requestPermission()) return;
+    
+    if (!cameraManager.cameraRef) {
       Alert.alert('Kamera tidak siap', 'Kamera belum siap digunakan.');
       return;
     }
+    
     if (!visit?.outlet?.code) {
       Alert.alert('Outlet Error', 'Data outlet tidak valid. Silakan ulangi dari halaman utama.');
       return;
     }
-    if (!notes.trim()) {
-      Alert.alert('Catatan Wajib', 'Mohon isi catatan untuk check out.');
-      return;
-    }
-    if (!transaksi) {
-      Alert.alert('Transaksi Wajib', 'Mohon pilih status transaksi.');
-      return;
-    }
-    setIsProcessingPhoto(true);
+    
+    if (!formManager.validateForm()) return;
+
+    cameraManager.setIsProcessingPhoto(true);
+    
     try {
-      // Ambil lokasi langsung dari API agar tidak null
       let checkout_location = '';
       try {
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        const loc = await Location.getCurrentPositionAsync({ 
+          accuracy: Location.Accuracy.Balanced 
+        });
         checkout_location = `${loc.coords.latitude},${loc.coords.longitude}`;
       } catch (e) {
+        console.warn('Failed to get location:', e);
         checkout_location = '';
       }
-      const now = new Date();
-      const waktu = now.toLocaleString('id-ID', { hour12: false });
-      const outletName = visit?.outlet?.name || '-';
-      // Ambil foto
-      let photo = await cameraRef.takePictureAsync({ quality: 0.7, skipProcessing: true });
-      let manipulated = await ImageManipulator.manipulateAsync(photo.uri, [
+
+      const photo = await cameraManager.cameraRef.takePictureAsync({ 
+        quality: 0.7, 
+        skipProcessing: true 
+      });
+      
+      const manipulated = await ImageManipulator.manipulateAsync(photo.uri, [
         { resize: { width: 480 } },
         { flip: ImageManipulator.FlipType.Horizontal }
-      ], { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG });
-      // Kirim ke backend
+      ], { 
+        compress: 0.5, 
+        format: ImageManipulator.SaveFormat.JPEG 
+      });
+
       const fileObj = {
         uri: manipulated.uri,
         name: `checkout-${Date.now()}.jpg`,
         type: 'image/jpeg',
       };
+
       const formData = new FormData();
       formData.append('checkout_location', checkout_location);
       formData.append('checkout_photo', fileObj as any);
-      formData.append('transaction', transaksi);
-      formData.append('report', notes);
+      formData.append('transaction', formManager.formData.transaction!);
+      formData.append('report', formManager.formData.notes);
+
       const res = await checkOutVisit(visitId, formData);
+      
       if (res && res.meta && typeof res.meta.code === 'number') {
         if (res.meta.code === 200) {
           Alert.alert('Check Out Success', 'Data berhasil disimpan.');
+          formManager.resetForm();
           router.back();
         } else {
           Alert.alert('Check Out Failed', res.meta.message || 'Gagal check out');
@@ -144,135 +470,66 @@ export default function CheckOutScreen() {
       console.error('Error checkout:', err);
       Alert.alert('Check Out Failed', 'Terjadi kesalahan saat mengirim data.');
     } finally {
-      setIsProcessingPhoto(false);
+      cameraManager.setIsProcessingPhoto(false);
     }
-  }, [hasCameraPermission, requestCameraPermission, cameraRef, notes, transaksi, checkOutVisit, visit, visitId]);
+  }, [
+    cameraManager,
+    visit,
+    formManager,
+    checkOutVisit,
+    visitId,
+    router
+  ]);
 
-  // Reset state saat unmount
   useEffect(() => {
     return () => {
-      // Tidak perlu reset state foto/modal
-      setNotes('');
-      setTransaksi(null);
+      formManager.resetForm();
     };
-  }, []);
+  }, [formManager.resetForm]);
 
   if (loading) {
-    return (
-      <View className="flex-1" style={{ backgroundColor: colors.background }}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={{ marginTop: 16, color: colors.textSecondary, fontSize: 16 }}>Memuat...</Text>
-        </View>
-      </View>
-    );
+    return <LoadingState />;
   }
 
   if (!loading && !visit) {
-    return (
-      <View className="flex-1" style={{ backgroundColor: colors.background }}>
-        <View className="flex-1 justify-center items-center p-5">
-          <IconSymbol name="exclamationmark.triangle" size={60} color={colors.danger} />
-          <Text className="text-lg font-semibold mt-4" style={{ color: colors.text }}>Data kunjungan tidak ditemukan.</Text>
-          <Pressable onPress={() => router.back()} className="mt-5 px-6 py-3 bg-primary-500 rounded-lg" accessibilityRole="button">
-            <Text className="text-white font-semibold">Kembali</Text>
-          </Pressable>
-        </View>
-      </View>
-    );
+    return <ErrorState onBack={() => router.back()} />;
   }
 
-  const outlet = visit.outlet;
+  const isFormValid = formManager.formData.notes.trim() && formManager.formData.transaction;
 
   return (
     <ErrorBoundary>
-      <View className="flex-1 bg-white">
-        <View className="bg-primary-500 px-4 pb-4" style={{ paddingTop: insets.top + 8 }}>
-          <View className="flex-row items-center justify-between">
-            <Pressable onPress={() => router.back()} className="p-1" accessibilityRole="button">
-              <IconSymbol name="chevron.left" size={24} color="#fff" />
-            </Pressable>
-            <View className="flex-1 items-center">
-              <Text className="text-white text-xl font-bold">Check Out</Text>
-            </View>
-            <View style={{ width: 22, height: 22 }} />
-          </View>
-          <View className="bg-white rounded-xl mt-5 p-4 shadow-sm">
-            <Text className="text-[14px] text-slate-400 mb-1">Informasi Outlet</Text>
-            <Text className="text-primary-900 text-base font-bold mb-0.5">{outlet.name} ({outlet.code})</Text>
-            <View className="flex-row items-center mt-0.5">
-              <IconSymbol name="mappin.and.ellipse" size={18} color="#222B45" style={{ marginRight: 8 }} />
-              <Text className="text-primary-900 text-[15px]">{outlet.district}</Text>
-            </View>
-          </View>
-        </View>
-        <View className="flex-1 bg-black">
+      <View style={styles.container}>
+        <Header onBack={() => router.back()} />
+        
+        <OutletInfoCard outlet={visit!.outlet} />
+        
+        <View style={styles.content}>
           <KeyboardAvoidingView
-            style={{ flex: 1 }}
+            style={styles.keyboardAvoidingView}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
           >
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-              <View className="flex-1 w-full h-full">
-                {hasCameraPermission?.status === 'granted' ? (
-                  <CameraView
-                    ref={ref => setCameraRef(ref)}
-                    style={{ flex: 1, width: '100%', height: '100%' }}
-                    onCameraReady={() => setIsCameraReady(true)}
-                    flash={isFlashOn ? 'on' : 'off'}
-                    facing="front"
-                  />
-                ) : (
-                  <Pressable onPress={requestCameraPermission} className="flex-1 items-center justify-center bg-black" accessibilityRole="button">
-                    <IconSymbol name="camera.fill" size={60} color="#FF8800" />
-                    <Text className="text-white text-base mt-4">Izinkan akses kamera</Text>
-                  </Pressable>
-                )}
-                {hasCameraPermission?.status === 'granted' && (
-                  <Pressable className="absolute top-10 right-6 bg-white rounded-full p-2 shadow" onPress={() => setIsFlashOn(f => !f)} accessibilityRole="button">
-                    <IconSymbol name={isFlashOn ? 'bolt.fill' : 'bolt.slash'} size={24} color="#FF8800" />
-                  </Pressable>
-                )}
-                {/* Form input di bawah kamera */}
-                <View className="absolute bottom-0 left-0 right-0 p-4 z-10 bg-white rounded-t-2xl">
-                  <Text className="text-lg font-bold mb-4 text-primary-900">Catatan & Transaksi</Text>
-                  <Text className="text-base font-semibold mb-2 text-primary-900">Transaksi</Text>
-                  <View className="flex-row gap-4 mb-4">
-                    <Pressable
-                      className={`flex-row items-center p-2.5 rounded-lg mr-2 ${transaksi === 'YES' ? 'bg-primary-500' : 'bg-gray-100'}`}
-                      onPress={() => setTransaksi('YES')}
-                      accessibilityRole="button"
-                    >
-                      <IconSymbol name="checkmark.circle.fill" size={20} color={transaksi === 'YES' ? '#fff' : '#FF8800'} />
-                      <Text className={`ml-2 font-semibold ${transaksi === 'YES' ? 'text-white' : 'text-primary-900'}`}>YES</Text>
-                    </Pressable>
-                    <Pressable
-                      className={`flex-row items-center p-2.5 rounded-lg mr-2 ${transaksi === 'NO' ? 'bg-primary-500' : 'bg-gray-100'}`}
-                      onPress={() => setTransaksi('NO')}
-                      accessibilityRole="button"
-                    >
-                      <IconSymbol name="xmark.circle.fill" size={20} color={transaksi === 'NO' ? '#fff' : '#FF8800'} />
-                      <Text className={`ml-2 font-semibold ${transaksi === 'NO' ? 'text-white' : 'text-primary-900'}`}>NO</Text>
-                    </Pressable>
-                  </View>
-                  <Text className="text-base font-semibold mb-2 text-primary-900">Catatan (Opsional)</Text>
-                  <TextInput
-                    className="bg-white rounded-lg border border-slate-200 p-3 min-h-[80px] text-primary-900 mb-4"
-                    placeholder="Tambahkan catatan untuk kunjungan ini..."
-                    placeholderTextColor="#7B8FA1"
-                    multiline
-                    value={notes}
-                    onChangeText={setNotes}
-                  />
-                  <Pressable
-                    className={`w-full h-12 rounded-md items-center justify-center ${!isCameraReady || isProcessingPhoto || !notes.trim() || !transaksi ? 'bg-gray-400' : 'bg-primary-500 active:bg-primary-600'}`}
-                    onPress={handleTakePhotoAndCheckOut}
-                    disabled={!isCameraReady || isProcessingPhoto || !notes.trim() || !transaksi}
-                    accessibilityRole="button"
-                  >
-                    <Text className={`text-base font-semibold ${!isCameraReady || isProcessingPhoto || !notes.trim() || !transaksi ? 'text-neutral-500' : 'text-white'}`}>{isProcessingPhoto ? 'Memproses...' : 'Ambil Foto & Check Out'}</Text>
-                  </Pressable>
-                </View>
+              <View style={styles.cameraSection}>
+                <CameraOverlay
+                  hasCameraPermission={cameraManager.hasCameraPermission}
+                  requestPermission={cameraManager.requestPermission}
+                  cameraRef={cameraManager.cameraRef}
+                  setCameraRef={cameraManager.setCameraRef}
+                  isCameraReady={cameraManager.isCameraReady}
+                  setIsCameraReady={cameraManager.setIsCameraReady}
+                  isFlashOn={cameraManager.isFlashOn}
+                  setIsFlashOn={cameraManager.setIsFlashOn}
+                />
+                
+                <CheckOutForm
+                  formData={formManager.formData}
+                  updateField={formManager.updateField}
+                  onSubmit={handleTakePhotoAndCheckOut}
+                  isProcessing={cameraManager.isProcessingPhoto}
+                  isFormValid={!!isFormValid}
+                />
               </View>
             </TouchableWithoutFeedback>
           </KeyboardAvoidingView>
@@ -281,3 +538,235 @@ export default function CheckOutScreen() {
     </ErrorBoundary>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  header: {
+    backgroundColor: '#FF8800',
+    paddingBottom: spacing.md,
+    paddingHorizontal: spacing.md,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  backButton: {
+    padding: 4,
+  },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    color: '#fff',
+    fontSize: typography.fontSize2xl,
+    fontWeight: 'bold',
+  },
+  headerPlaceholder: {
+    width: 22,
+    height: 22,
+  },
+  outletCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginTop: spacing.lg,
+    marginHorizontal: spacing.md,
+    padding: spacing.md,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  outletCardLabel: {
+    fontSize: typography.fontSizeSm,
+    color: '#94a3b8',
+    marginBottom: 4,
+  },
+  outletName: {
+    color: '#FF8800',
+    fontSize: typography.fontSizeLg,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  outletLocation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  locationIcon: {
+    marginRight: 8,
+  },
+  outletDistrict: {
+    color: '#FF8800',
+    fontSize: typography.fontSizeMd,
+  },
+  content: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  cameraSection: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  cameraContainer: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  camera: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  cameraPermissionContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#000',
+  },
+  cameraPermissionText: {
+    color: '#fff',
+    fontSize: typography.fontSizeLg,
+    marginTop: spacing.md,
+  },
+  flashButton: {
+    position: 'absolute',
+    top: 40,
+    right: 24,
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  formContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: spacing.md,
+  },
+  formTitle: {
+    fontSize: typography.fontSizeLg,
+    fontWeight: 'bold',
+    marginBottom: spacing.md,
+    color: '#FF8800',
+  },
+  sectionContainer: {
+    marginBottom: spacing.md,
+  },
+  sectionTitle: {
+    fontSize: typography.fontSizeMd,
+    fontWeight: '600',
+    marginBottom: 8,
+    color: '#FF8800',
+  },
+  transactionButtons: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  transactionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
+    borderRadius: 8,
+    backgroundColor: '#f3f4f6',
+    marginRight: 8,
+  },
+  transactionButtonActive: {
+    backgroundColor: '#FF8800',
+  },
+  transactionButtonText: {
+    marginLeft: 8,
+    fontWeight: '600',
+    color: '#FF8800',
+  },
+  transactionButtonTextActive: {
+    color: '#fff',
+  },
+  notesInput: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    padding: 12,
+    minHeight: 80,
+    color: '#FF8800',
+    textAlignVertical: 'top',
+  },
+  submitButton: {
+    width: '100%',
+    height: 48,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FF8800',
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#9ca3af',
+  },
+  submitButtonText: {
+    fontSize: typography.fontSizeMd,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  submitButtonTextDisabled: {
+    color: '#6b7280',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: spacing.md,
+    fontSize: typography.fontSizeMd,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  errorTitle: {
+    fontSize: typography.fontSizeLg,
+    fontWeight: 'bold',
+    color: '#dc2626',
+  },
+  errorMessage: {
+    fontSize: typography.fontSizeMd,
+    color: '#6b7280',
+    marginTop: 8,
+  },
+  errorStateTitle: {
+    fontSize: typography.fontSizeLg,
+    fontWeight: '600',
+    marginTop: spacing.md,
+  },
+  errorStateButton: {
+    marginTop: spacing.lg,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: '#FF8800',
+    borderRadius: 6,
+  },
+  errorStateButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+});

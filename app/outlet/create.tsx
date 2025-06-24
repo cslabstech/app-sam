@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IconSymbol } from '@/components/ui/IconSymbol';
@@ -8,13 +8,401 @@ import { Input } from '@/components/ui/Input';
 import { useRegisterOutletForm } from '@/hooks/data/useRegisterOutletForm';
 import { useThemeStyles } from '@/hooks/utils/useThemeStyles';
 
+type FormField = 'name' | 'address' | 'contactName' | 'contactPhone' | 'notes' | 'type';
+
+interface FormData {
+  name: string;
+  address: string;
+  contactName: string;
+  contactPhone: string;
+  notes: string;
+}
+
+interface FormErrors {
+  name?: string;
+  type?: string;
+  address?: string;
+  contactName?: string;
+  contactPhone?: string;
+}
+
+const Header = ({ 
+  onBack, 
+  styles, 
+  colors, 
+  insets 
+}: {
+  onBack: () => void;
+  styles: any;
+  colors: any;
+  insets: any;
+}) => (
+  <View style={[
+    {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingBottom: 16,
+      paddingTop: insets.top + 8,
+      borderBottomWidth: 1,
+    },
+    styles.background.primary,
+    styles.border.default
+  ]}>
+    <TouchableOpacity 
+      style={[
+        {
+          width: 40,
+          height: 40,
+          borderRadius: 8,
+          justifyContent: 'center',
+          alignItems: 'center',
+          borderWidth: 1,
+        },
+        styles.background.surface,
+        styles.border.default
+      ]} 
+      onPress={onBack}
+    >
+      <IconSymbol name="chevron.left" size={20} color={colors.text} />
+    </TouchableOpacity>
+    <Text style={[{ fontSize: 18, fontWeight: 'bold' }, styles.text.primary]}>
+      Register Outlet
+    </Text>
+    <View style={{ width: 40 }} />
+  </View>
+);
+
+const FormSection = ({ 
+  title, 
+  icon, 
+  children, 
+  styles, 
+  colors 
+}: {
+  title: string;
+  icon: string;
+  children: React.ReactNode;
+  styles: any;
+  colors: any;
+}) => (
+  <View style={[
+    {
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 16,
+      borderWidth: 1,
+    },
+    styles.card.default
+  ]}>
+    <Text style={[
+      { 
+        fontSize: 16, 
+        fontWeight: '600', 
+        marginBottom: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+      }, 
+      styles.text.primary
+    ]}>
+      <IconSymbol name={icon} size={18} color={colors.primary} />
+      {'  '}{title}
+    </Text>
+    {children}
+  </View>
+);
+
+const OutletTypeDropdown = ({
+  selectedType,
+  showTypeDropdown,
+  errors,
+  outletTypes,
+  onToggle,
+  onSelect,
+  styles,
+  colors,
+}: {
+  selectedType: string | null;
+  showTypeDropdown: boolean;
+  errors: FormErrors;
+  outletTypes: string[];
+  onToggle: () => void;
+  onSelect: (type: string) => void;
+  styles: any;
+  colors: any;
+}) => (
+  <View style={{ marginBottom: 16, position: 'relative', zIndex: 10 }}>
+    <Text style={[{ fontSize: 14, fontWeight: '500', marginBottom: 6 }, styles.text.primary]}>
+      Tipe Outlet
+    </Text>
+    <TouchableOpacity
+      style={[
+        {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          height: 44,
+          borderRadius: 8,
+          paddingHorizontal: 12,
+          borderWidth: 1,
+        },
+        errors.type ? styles.border.error : styles.form.input,
+        { borderColor: errors.type ? colors.danger : colors.inputBorder }
+      ]}
+      onPress={onToggle}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <IconSymbol name="tag.fill" size={18} color={colors.textSecondary} />
+        <Text style={[
+          { marginLeft: 8, fontSize: 16 },
+          selectedType ? styles.text.primary : styles.text.secondary
+        ]}>
+          {selectedType || 'Pilih tipe outlet'}
+        </Text>
+      </View>
+      <IconSymbol
+        name={showTypeDropdown ? 'chevron.up' : 'chevron.down'}
+        size={18}
+        color={colors.textSecondary}
+      />
+    </TouchableOpacity>
+    
+    {showTypeDropdown && (
+      <View style={[
+        {
+          marginTop: 4,
+          borderRadius: 8,
+          position: 'absolute',
+          top: 72,
+          left: 0,
+          right: 0,
+          zIndex: 20,
+          borderWidth: 1,
+        },
+        styles.card.elevated
+      ]}>
+        {outletTypes.map((type) => (
+          <TouchableOpacity
+            key={type}
+            style={[
+              {
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+                borderBottomWidth: 1,
+              },
+              styles.border.light,
+              selectedType === type && { backgroundColor: colors.primary + '20' }
+            ]}
+            onPress={() => onSelect(type)}
+          >
+            <Text style={[
+              { fontSize: 16 },
+              selectedType === type ? { color: colors.primary, fontWeight: '500' } : styles.text.primary
+            ]}>
+              {type}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    )}
+    {errors.type && (
+      <Text style={[{ fontSize: 12, marginTop: 4 }, styles.text.error]}>
+        {errors.type}
+      </Text>
+    )}
+  </View>
+);
+
+const OutletInformationSection = ({
+  formData,
+  errors,
+  selectedType,
+  showTypeDropdown,
+  outletTypes,
+  onInputChange,
+  onToggleDropdown,
+  onTypeSelect,
+  styles,
+  colors,
+}: {
+  formData: FormData;
+  errors: FormErrors;
+  selectedType: string | null;
+  showTypeDropdown: boolean;
+  outletTypes: string[];
+  onInputChange: (field: keyof FormData, value: string) => void;
+  onToggleDropdown: () => void;
+  onTypeSelect: (type: any) => void;
+  styles: any;
+  colors: any;
+}) => (
+  <FormSection 
+    title="Informasi Outlet" 
+    icon="building.2.fill" 
+    styles={styles} 
+    colors={colors}
+  >
+    <View style={{ marginBottom: 16 }}>
+      <Input
+        label="Nama Outlet"
+        placeholder="Masukkan nama outlet"
+        value={formData.name}
+        onChangeText={(value) => onInputChange('name', value)}
+        error={errors.name}
+        leftIcon={<IconSymbol name="building.2.fill" size={18} color={colors.textSecondary} />}
+      />
+    </View>
+
+    <OutletTypeDropdown
+      selectedType={selectedType}
+      showTypeDropdown={showTypeDropdown}
+      errors={errors}
+      outletTypes={outletTypes}
+      onToggle={onToggleDropdown}
+      onSelect={onTypeSelect}
+      styles={styles}
+      colors={colors}
+    />
+
+    <View style={{ marginBottom: 16 }}>
+      <Input
+        label="Alamat"
+        placeholder="Masukkan alamat outlet"
+        value={formData.address}
+        onChangeText={(value) => onInputChange('address', value)}
+        error={errors.address}
+        multiline
+        numberOfLines={3}
+        style={{ height: 80, textAlignVertical: 'top' }}
+        leftIcon={<IconSymbol name="mappin.and.ellipse" size={18} color={colors.textSecondary} />}
+      />
+    </View>
+  </FormSection>
+);
+
+const ContactInformationSection = ({
+  formData,
+  errors,
+  onInputChange,
+  styles,
+  colors,
+}: {
+  formData: FormData;
+  errors: FormErrors;
+  onInputChange: (field: keyof FormData, value: string) => void;
+  styles: any;
+  colors: any;
+}) => (
+  <FormSection 
+    title="Informasi Kontak" 
+    icon="person.fill" 
+    styles={styles} 
+    colors={colors}
+  >
+    <View style={{ marginBottom: 16 }}>
+      <Input
+        label="Nama Contact Person"
+        placeholder="Masukkan nama contact person"
+        value={formData.contactName}
+        onChangeText={(value) => onInputChange('contactName', value)}
+        error={errors.contactName}
+        leftIcon={<IconSymbol name="person.fill" size={18} color={colors.textSecondary} />}
+      />
+    </View>
+
+    <View style={{ marginBottom: 16 }}>
+      <Input
+        label="Nomor Telepon"
+        placeholder="Masukkan nomor telepon"
+        value={formData.contactPhone}
+        onChangeText={(value) => onInputChange('contactPhone', value)}
+        error={errors.contactPhone}
+        keyboardType="phone-pad"
+        leftIcon={<IconSymbol name="phone.fill" size={18} color={colors.textSecondary} />}
+      />
+    </View>
+
+    <View>
+      <Input
+        label="Catatan (Opsional)"
+        placeholder="Masukkan catatan tambahan"
+        value={formData.notes}
+        onChangeText={(value) => onInputChange('notes', value)}
+        multiline
+        numberOfLines={3}
+        style={{ height: 80, textAlignVertical: 'top' }}
+        leftIcon={<IconSymbol name="text.alignleft" size={18} color={colors.textSecondary} />}
+      />
+    </View>
+  </FormSection>
+);
+
+const ActionButtons = ({
+  isSubmitting,
+  onLocationSet,
+  onSubmit,
+  styles,
+  colors,
+}: {
+  isSubmitting: boolean;
+  onLocationSet: () => void;
+  onSubmit: () => void;
+  styles: any;
+  colors: any;
+}) => (
+  <View style={localStyles.actionButtons}>
+    <TouchableOpacity
+      style={[
+        {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingVertical: 12,
+          borderRadius: 8,
+          borderWidth: 1,
+        },
+        styles.button.secondary
+      ]}
+      onPress={onLocationSet}
+    >
+      <IconSymbol name="mappin.and.ellipse" size={20} color={colors.primary} />
+      <Text style={[{ marginLeft: 8, fontSize: 16, fontWeight: '500' }, { color: colors.primary }]}>
+        Set Lokasi
+      </Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={[
+        {
+          paddingVertical: 16,
+          borderRadius: 8,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        isSubmitting ? styles.button.disabled : styles.button.primary
+      ]}
+      onPress={onSubmit}
+      disabled={isSubmitting}
+    >
+      <Text style={[{ fontSize: 16, fontWeight: '600' }, styles.text.inverse]}>
+        {isSubmitting ? 'Menyimpan...' : 'Submit Outlet'}
+      </Text>
+    </TouchableOpacity>
+  </View>
+);
+
+/**
+ * Register Outlet Screen - Form untuk mendaftarkan outlet baru
+ * Mengikuti best practice: UI-only components, custom hooks untuk logic
+ */
 export default function RegisterOutletScreen() {
   const { colors, styles } = useThemeStyles();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  
   const {
     formData,
-    setFormData,
     errors,
     isSubmitting,
     selectedType,
@@ -27,292 +415,82 @@ export default function RegisterOutletScreen() {
     handleSubmit,
   } = useRegisterOutletForm();
 
-  const handleLocationSet = () => {
+  // Optimized callbacks
+  const handleBack = useCallback(() => {
+    router.back();
+  }, [router]);
+
+  const handleLocationSet = useCallback(() => {
     Alert.alert(
       'Set Location',
       'Location picker akan diimplementasikan di versi selanjutnya',
       [{ text: 'OK' }]
     );
-  };
+  }, []);
+
+  const handleToggleDropdown = useCallback(() => {
+    setShowTypeDropdown(!showTypeDropdown);
+  }, [showTypeDropdown, setShowTypeDropdown]);
 
   return (
-    <View style={[{ flex: 1 }, styles.background.primary]}>
-      {/* Header */}
-      <View style={[
-        {
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          paddingHorizontal: 16,
-          paddingBottom: 16,
-          paddingTop: insets.top + 8,
-          borderBottomWidth: 1,
-        },
-        styles.background.primary,
-        styles.border.default
-      ]}>
-        <TouchableOpacity 
-          style={[
-            {
-              width: 40,
-              height: 40,
-              borderRadius: 8,
-              justifyContent: 'center',
-              alignItems: 'center',
-              borderWidth: 1,
-            },
-            styles.background.surface,
-            styles.border.default
-          ]} 
-          onPress={() => router.back()}
-        >
-          <IconSymbol name="chevron.left" size={20} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[{ fontSize: 18, fontWeight: 'bold' }, styles.text.primary]}>
-          Register Outlet
-        </Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <View style={[localStyles.container, styles.background.primary]}>
+      <Header 
+        onBack={handleBack}
+        styles={styles}
+        colors={colors}
+        insets={insets}
+      />
 
       <ScrollView 
-        style={{ flex: 1 }} 
-        contentContainerStyle={{ padding: 16 }}
+        style={localStyles.scrollView}
+        contentContainerStyle={localStyles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Outlet Information Section */}
-        <View style={[
-          {
-            borderRadius: 12,
-            padding: 16,
-            marginBottom: 16,
-            borderWidth: 1,
-          },
-          styles.card.default
-        ]}>
-          <Text style={[
-            { 
-              fontSize: 16, 
-              fontWeight: '600', 
-              marginBottom: 16,
-              flexDirection: 'row',
-              alignItems: 'center',
-            }, 
-            styles.text.primary
-          ]}>
-            <IconSymbol name="building.2.fill" size={18} color={colors.primary} />
-            {'  '}Informasi Outlet
-          </Text>
-          
-          <View style={{ marginBottom: 16 }}>
-            <Input
-              label="Nama Outlet"
-              placeholder="Masukkan nama outlet"
-              value={formData.name}
-              onChangeText={(value) => handleInputChange('name', value)}
-              error={errors.name}
-              leftIcon={<IconSymbol name="building.2.fill" size={18} color={colors.textSecondary} />}
-            />
-          </View>
+        <OutletInformationSection
+          formData={formData}
+          errors={errors}
+          selectedType={selectedType}
+          showTypeDropdown={showTypeDropdown}
+          outletTypes={outletTypes}
+          onInputChange={handleInputChange}
+          onToggleDropdown={handleToggleDropdown}
+          onTypeSelect={handleTypeSelect}
+          styles={styles}
+          colors={colors}
+        />
 
-          {/* Outlet Type Dropdown */}
-          <View style={{ marginBottom: 16, position: 'relative', zIndex: 10 }}>
-            <Text style={[{ fontSize: 14, fontWeight: '500', marginBottom: 6 }, styles.text.primary]}>
-              Tipe Outlet
-            </Text>
-            <TouchableOpacity
-              style={[
-                {
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  height: 44,
-                  borderRadius: 8,
-                  paddingHorizontal: 12,
-                  borderWidth: 1,
-                },
-                errors.type ? styles.border.error : styles.form.input,
-                { borderColor: errors.type ? colors.danger : colors.inputBorder }
-              ]}
-              onPress={() => setShowTypeDropdown(!showTypeDropdown)}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <IconSymbol name="tag.fill" size={18} color={colors.textSecondary} />
-                <Text style={[
-                  { marginLeft: 8, fontSize: 16 },
-                  selectedType ? styles.text.primary : styles.text.secondary
-                ]}>
-                  {selectedType || 'Pilih tipe outlet'}
-                </Text>
-              </View>
-              <IconSymbol
-                name={showTypeDropdown ? 'chevron.up' : 'chevron.down'}
-                size={18}
-                color={colors.textSecondary}
-              />
-            </TouchableOpacity>
-            
-            {showTypeDropdown && (
-              <View style={[
-                {
-                  marginTop: 4,
-                  borderRadius: 8,
-                  position: 'absolute',
-                  top: 72,
-                  left: 0,
-                  right: 0,
-                  zIndex: 20,
-                  borderWidth: 1,
-                },
-                styles.card.elevated
-              ]}>
-                {outletTypes.map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    style={[
-                      {
-                        paddingVertical: 12,
-                        paddingHorizontal: 16,
-                        borderBottomWidth: 1,
-                      },
-                      styles.border.light,
-                      selectedType === type && { backgroundColor: colors.primary + '20' }
-                    ]}
-                    onPress={() => handleTypeSelect(type)}
-                  >
-                    <Text style={[
-                      { fontSize: 16 },
-                      selectedType === type ? { color: colors.primary, fontWeight: '500' } : styles.text.primary
-                    ]}>
-                      {type}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-            {errors.type && (
-              <Text style={[{ fontSize: 12, marginTop: 4 }, styles.text.error]}>
-                {errors.type}
-              </Text>
-            )}
-          </View>
+        <ContactInformationSection
+          formData={formData}
+          errors={errors}
+          onInputChange={handleInputChange}
+          styles={styles}
+          colors={colors}
+        />
 
-          <View style={{ marginBottom: 16 }}>
-            <Input
-              label="Alamat"
-              placeholder="Masukkan alamat outlet"
-              value={formData.address}
-              onChangeText={(value) => handleInputChange('address', value)}
-              error={errors.address}
-              multiline
-              numberOfLines={3}
-              style={{ height: 80, textAlignVertical: 'top' }}
-              leftIcon={<IconSymbol name="mappin.and.ellipse" size={18} color={colors.textSecondary} />}
-            />
-          </View>
-        </View>
-
-        {/* Contact Information Section */}
-        <View style={[
-          {
-            borderRadius: 12,
-            padding: 16,
-            marginBottom: 16,
-            borderWidth: 1,
-          },
-          styles.card.default
-        ]}>
-          <Text style={[
-            { 
-              fontSize: 16, 
-              fontWeight: '600', 
-              marginBottom: 16,
-              flexDirection: 'row',
-              alignItems: 'center',
-            }, 
-            styles.text.primary
-          ]}>
-            <IconSymbol name="person.fill" size={18} color={colors.primary} />
-            {'  '}Informasi Kontak
-          </Text>
-          
-          <View style={{ marginBottom: 16 }}>
-            <Input
-              label="Nama Contact Person"
-              placeholder="Masukkan nama contact person"
-              value={formData.contactName}
-              onChangeText={(value) => handleInputChange('contactName', value)}
-              error={errors.contactName}
-              leftIcon={<IconSymbol name="person.fill" size={18} color={colors.textSecondary} />}
-            />
-          </View>
-
-          <View style={{ marginBottom: 16 }}>
-            <Input
-              label="Nomor Telepon"
-              placeholder="Masukkan nomor telepon"
-              value={formData.contactPhone}
-              onChangeText={(value) => handleInputChange('contactPhone', value)}
-              error={errors.contactPhone}
-              keyboardType="phone-pad"
-              leftIcon={<IconSymbol name="phone.fill" size={18} color={colors.textSecondary} />}
-            />
-          </View>
-
-          <View>
-            <Input
-              label="Catatan (Opsional)"
-              placeholder="Masukkan catatan tambahan"
-              value={formData.notes}
-              onChangeText={(value) => handleInputChange('notes', value)}
-              multiline
-              numberOfLines={3}
-              style={{ height: 80, textAlignVertical: 'top' }}
-              leftIcon={<IconSymbol name="text.alignleft" size={18} color={colors.textSecondary} />}
-            />
-          </View>
-        </View>
-
-        {/* Action Buttons */}
-        <View style={{ gap: 12, marginTop: 8, marginBottom: 24 }}>
-          <TouchableOpacity
-            style={[
-              {
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingVertical: 12,
-                borderRadius: 8,
-                borderWidth: 1,
-              },
-              styles.button.secondary
-            ]}
-            onPress={handleLocationSet}
-          >
-            <IconSymbol name="mappin.and.ellipse" size={20} color={colors.primary} />
-            <Text style={[{ marginLeft: 8, fontSize: 16, fontWeight: '500' }, { color: colors.primary }]}>
-              Set Lokasi
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              {
-                paddingVertical: 16,
-                borderRadius: 8,
-                alignItems: 'center',
-                justifyContent: 'center',
-              },
-              isSubmitting ? styles.button.disabled : styles.button.primary
-            ]}
-            onPress={handleSubmit}
-            disabled={isSubmitting}
-          >
-            <Text style={[{ fontSize: 16, fontWeight: '600' }, styles.text.inverse]}>
-              {isSubmitting ? 'Menyimpan...' : 'Submit Outlet'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <ActionButtons
+          isSubmitting={isSubmitting}
+          onLocationSet={handleLocationSet}
+          onSubmit={handleSubmit}
+          styles={styles}
+          colors={colors}
+        />
       </ScrollView>
     </View>
   );
-}
+}const localStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 16,
+  },
+  actionButtons: {
+    gap: 12,
+    marginTop: 8,
+    marginBottom: 24,
+  },
+});
+
