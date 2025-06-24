@@ -1,5 +1,5 @@
 import { useAuth } from '@/context/auth-context';
-import { BaseResponse, apiRequest } from '@/utils/api';
+import { apiRequest } from '@/utils/api';
 import { log } from '@/utils/logger';
 import { useCallback, useState } from 'react';
 
@@ -26,12 +26,30 @@ export interface ApiHookState<T> {
   meta: any;
 }
 
-// Standard pagination interface
+// Standard pagination interface sesuai foundation.md
 export interface PaginationMeta {
+  code: number;
+  status: 'success' | 'error';
+  message: string;
   current_page: number;
   last_page: number;
   total: number;
   per_page: number;
+}
+
+// Standard response format sesuai foundation.md
+export interface StandardResponse<T> {
+  meta: {
+    code: number;
+    status: 'success' | 'error';
+    message: string;
+    current_page?: number;
+    last_page?: number;
+    total?: number;
+    per_page?: number;
+  };
+  data: T;
+  errors?: Record<string, string[]>;
 }
 
 // ========================================================================
@@ -40,7 +58,7 @@ export interface PaginationMeta {
 
 export function useBaseApi<T extends { id: string | number }>(
   entityName: string, // 'user', 'outlet', 'visit', etc.
-  entityPath: string  // '/user', '/outlet', '/visit', etc.
+  entityPath: string  // '/user', '/outlets', '/visit', etc.
 ) {
   const { token } = useAuth();
   
@@ -53,18 +71,31 @@ export function useBaseApi<T extends { id: string | number }>(
 
   // Standardized error handling
   const handleApiCall = useCallback(async <R>(
-    operation: () => Promise<R>,
+    operation: () => Promise<StandardResponse<R>>,
     operationName: string,
-    onSuccess?: (result: R) => void
+    onSuccess?: (result: StandardResponse<R>) => void
   ): Promise<ApiResult<R>> => {
     setLoading(true);
     setError(null);
     
     try {
-      const result = await operation();
-      onSuccess?.(result);
-      log(`[${entityName.toUpperCase()}_${operationName}] Success`);
-      return { success: true, data: result };
+      const response = await operation();
+      
+      // Check response status dari meta
+      if (response.meta.status === 'error') {
+        const errorMessage = response.meta.message || `Failed to ${operationName.toLowerCase()}`;
+        setError(errorMessage);
+        log(`[${entityName.toUpperCase()}_${operationName}] API Error:`, errorMessage);
+        return { success: false, error: errorMessage, meta: response.meta };
+      }
+      
+      onSuccess?.(response);
+      log(`[${entityName.toUpperCase()}_${operationName}] Success:`, response.meta.message);
+      return { 
+        success: true, 
+        data: response.data, 
+        meta: response.meta 
+      };
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : `Failed to ${operationName.toLowerCase()}`;
       log(`[${entityName.toUpperCase()}_${operationName}] Error:`, errorMessage);
@@ -91,7 +122,7 @@ export function useBaseApi<T extends { id: string | number }>(
       }
       
       const url = `${BASE_URL}${entityPath}${queryParams.toString() ? `?${queryParams}` : ''}`;
-      const response: BaseResponse<T[]> = await apiRequest({
+      const response: StandardResponse<T[]> = await apiRequest({
         url,
         method: 'GET',
         body: null,
@@ -101,13 +132,16 @@ export function useBaseApi<T extends { id: string | number }>(
       
       setData(response.data || []);
       setMeta(response.meta as PaginationMeta);
-      return response.data || [];
-    }, 'FETCH_LIST');
+      return response;
+    }, 'FETCH_LIST', (response) => {
+      setData(response.data || []);
+      setMeta(response.meta as PaginationMeta);
+    });
   }, [entityName, entityPath, handleApiCall, token]);
 
   const fetchItem = useCallback(async (id: string | number): Promise<ApiResult<T>> => {
     return handleApiCall(async () => {
-      const response: BaseResponse<T> = await apiRequest({
+      const response: StandardResponse<T> = await apiRequest({
         url: `${BASE_URL}${entityPath}/${encodeURIComponent(id)}`,
         method: 'GET',
         body: null,
@@ -116,13 +150,15 @@ export function useBaseApi<T extends { id: string | number }>(
       });
       
       setItem(response.data);
-      return response.data;
-    }, 'FETCH_ITEM');
+      return response;
+    }, 'FETCH_ITEM', (response) => {
+      setItem(response.data);
+    });
   }, [entityName, entityPath, handleApiCall, token]);
 
   const createItem = useCallback(async (data: Partial<T>): Promise<ApiResult<T>> => {
     return handleApiCall(async () => {
-      const response: BaseResponse<T> = await apiRequest({
+      const response: StandardResponse<T> = await apiRequest({
         url: `${BASE_URL}${entityPath}`,
         method: 'POST',
         body: data,
@@ -132,13 +168,15 @@ export function useBaseApi<T extends { id: string | number }>(
       
       // Refresh list after creation
       await fetchList();
-      return response.data;
-    }, 'CREATE');
+      return response;
+    }, 'CREATE', (response) => {
+      // List akan di-refresh lewat fetchList()
+    });
   }, [entityName, entityPath, handleApiCall, token, fetchList]);
 
   const updateItem = useCallback(async (id: string | number, data: Partial<T>): Promise<ApiResult<T>> => {
     return handleApiCall(async () => {
-      const response: BaseResponse<T> = await apiRequest({
+      const response: StandardResponse<T> = await apiRequest({
         url: `${BASE_URL}${entityPath}/${encodeURIComponent(id)}`,
         method: 'PUT',
         body: data,
@@ -149,13 +187,15 @@ export function useBaseApi<T extends { id: string | number }>(
       // Refresh list after update
       await fetchList();
       setItem(response.data);
-      return response.data;
-    }, 'UPDATE');
+      return response;
+    }, 'UPDATE', (response) => {
+      setItem(response.data);
+    });
   }, [entityName, entityPath, handleApiCall, token, fetchList]);
 
   const deleteItem = useCallback(async (id: string | number): Promise<ApiResult<void>> => {
     return handleApiCall(async () => {
-      await apiRequest({
+      const response: StandardResponse<void> = await apiRequest({
         url: `${BASE_URL}${entityPath}/${encodeURIComponent(id)}`,
         method: 'DELETE',
         body: null,
@@ -168,10 +208,11 @@ export function useBaseApi<T extends { id: string | number }>(
       if (item?.id === id) {
         setItem(null);
       }
+      return response;
     }, 'DELETE');
   }, [entityName, entityPath, handleApiCall, token, fetchList, item]);
 
-  // File upload operation
+  // File upload operation - menggunakan POST untuk multipart
   const uploadFile = useCallback(async (
     id: string | number | null, 
     formData: FormData, 
@@ -182,9 +223,9 @@ export function useBaseApi<T extends { id: string | number }>(
         ? `${BASE_URL}${entityPath}/${encodeURIComponent(id)}`
         : `${BASE_URL}${entityPath}`;
       
-      const response: BaseResponse<T> = await apiRequest({
+      const response: StandardResponse<T> = await apiRequest({
         url,
-        method: 'POST',
+        method: 'POST', // Selalu POST untuk file upload
         body: formData,
         logLabel: `${operation.toUpperCase()}_${entityName.toUpperCase()}_FILE`,
         token
@@ -195,8 +236,12 @@ export function useBaseApi<T extends { id: string | number }>(
       if (operation === 'update' && id) {
         setItem(response.data);
       }
-      return response.data;
-    }, `${operation.toUpperCase()}_FILE`);
+      return response;
+    }, `${operation.toUpperCase()}_FILE`, (response) => {
+      if (operation === 'update' && id) {
+        setItem(response.data);
+      }
+    });
   }, [entityName, entityPath, handleApiCall, token, fetchList]);
 
   return {
@@ -230,13 +275,21 @@ export function useAuthApi() {
   const { token } = useAuth();
   
   const handleAuthCall = useCallback(async <T>(
-    operation: () => Promise<T>,
+    operation: () => Promise<StandardResponse<T>>,
     operationName: string
   ): Promise<ApiResult<T>> => {
     try {
-      const result = await operation();
-      log(`[AUTH_${operationName}] Success`);
-      return { success: true, data: result };
+      const response = await operation();
+      
+      // Check response status dari meta
+      if (response.meta.status === 'error') {
+        const errorMessage = response.meta.message || `Failed to ${operationName}`;
+        log(`[AUTH_${operationName}] API Error:`, errorMessage);
+        return { success: false, error: errorMessage, meta: response.meta };
+      }
+      
+      log(`[AUTH_${operationName}] Success:`, response.meta.message);
+      return { success: true, data: response.data, meta: response.meta };
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : `Failed to ${operationName}`;
       log(`[AUTH_${operationName}] Error:`, errorMessage);
@@ -247,9 +300,9 @@ export function useAuthApi() {
   const login = useCallback(async (username: string, password: string, notifId: string): Promise<ApiResult<any>> => {
     return handleAuthCall(async () => {
       return await apiRequest({
-        url: `${BASE_URL}/user/login`,
+        url: `${BASE_URL}/login`,
         method: 'POST',
-        body: { version: '1.0.3', username, password, notif_id: notifId },
+        body: { version: '2.0.0', username, password, notif_id: notifId },
         logLabel: 'LOGIN',
         token: null
       });
@@ -259,7 +312,7 @@ export function useAuthApi() {
   const verifyOtp = useCallback(async (phone: string, otp: string, notifId: string): Promise<ApiResult<any>> => {
     return handleAuthCall(async () => {
       return await apiRequest({
-        url: `${BASE_URL}/user/verify-otp`,
+        url: `${BASE_URL}/verify-otp`,
         method: 'POST',
         body: { phone, otp, notif_id: notifId },
         logLabel: 'VERIFY_OTP',
@@ -271,7 +324,7 @@ export function useAuthApi() {
   const requestOtp = useCallback(async (phone: string): Promise<ApiResult<any>> => {
     return handleAuthCall(async () => {
       return await apiRequest({
-        url: `${BASE_URL}/user/send-otp`,
+        url: `${BASE_URL}/send-otp`,
         method: 'POST',
         body: { phone },
         logLabel: 'REQUEST_OTP',
@@ -280,9 +333,35 @@ export function useAuthApi() {
     }, 'REQUEST_OTP');
   }, [handleAuthCall]);
 
+  const getProfile = useCallback(async (): Promise<ApiResult<any>> => {
+    return handleAuthCall(async () => {
+      return await apiRequest({
+        url: `${BASE_URL}/profile`,
+        method: 'GET',
+        body: null,
+        logLabel: 'GET_PROFILE',
+        token
+      });
+    }, 'GET_PROFILE');
+  }, [handleAuthCall, token]);
+
+  const logout = useCallback(async (): Promise<ApiResult<void>> => {
+    return handleAuthCall(async () => {
+      return await apiRequest({
+        url: `${BASE_URL}/logout`,
+        method: 'POST',
+        body: null,
+        logLabel: 'LOGOUT',
+        token
+      });
+    }, 'LOGOUT');
+  }, [handleAuthCall, token]);
+
   return {
     login,
     verifyOtp,
     requestOtp,
+    getProfile,
+    logout,
   };
 } 

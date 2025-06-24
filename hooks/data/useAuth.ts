@@ -23,29 +23,31 @@ export interface SendOtpResponse extends BaseResponse<any> {}
 export interface UserResponse extends BaseResponse<User> {}
 
 export interface User {
-    id: string;
+    id: string | number;
     username: string;
     name: string;
+    email?: string;
     phone?: string | null;
-    role_id: number;
+    role_id: string | number;
     tm_id?: string | null;
     notif_id: string;
     role: {
-        id: number;
+        id: string | number;
         name: string;
         scope_required_fields?: any;
         permissions: Array<{
+            id: string | number;
             name: string;
         }>;
     };
-    user_scopes: Array<{
-        user_id: number;
+    user_scopes: {
+        id?: number;
         badan_usaha_id?: number | null;
         division_id?: number | null;
         region_id?: number | null;
         cluster_id?: number | null;
-    }>;
-    permissions?: string[]; // computed field untuk compatibility
+    };
+    permissions?: string[]; // computed field dari role.permissions
     [key: string]: any;
 }
 
@@ -92,13 +94,13 @@ export function useAuth() {
         }
         
         const data: LoginResponse = await apiRequest({
-            url: `${BASE_URL}/user/login`,
+            url: `${BASE_URL}/login`,
             method: 'POST',
             body: {
-                version: '1.0.3',
+                version: '2.0.0',
                 username,
                 password,
-                notif_id: notifId || 'fallback-notif-id'
+                notif_id: notifId || 'expo_push_token'
             },
             logLabel: 'LOGIN',
             token: null
@@ -107,7 +109,7 @@ export function useAuth() {
         // Extract permissions from user.role.permissions
         const userPermissions = data.data.user?.role?.permissions?.map((p: any) => p.name) || [];
         
-        // Add computed permissions field to user object for compatibility
+        // Add computed permissions field to user object
         const userWithPermissions = {
             ...data.data.user,
             permissions: userPermissions
@@ -125,9 +127,12 @@ export function useAuth() {
         try {
             const token = await AsyncStorage.getItem('token');
             if (token) {
-                await fetch(`${BASE_URL}/logout`, {
+                await apiRequest({
+                    url: `${BASE_URL}/logout`,
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    body: null,
+                    logLabel: 'LOGOUT',
+                    token
                 });
             }
             await AsyncStorage.removeItem('token');
@@ -142,21 +147,22 @@ export function useAuth() {
         }
     };
 
-    const refreshUser = async () => {
+    const getProfile = async () => {
         if (!token) return;
         setLoading(true);
         try {
             const data: UserResponse = await apiRequest({
-                url: `${BASE_URL}/user`,
+                url: `${BASE_URL}/profile`,
                 method: 'GET',
-                logLabel: 'REFRESH_USER',
+                body: null,
+                logLabel: 'GET_PROFILE',
                 token
             });
             
             // Extract permissions from user.role.permissions
             const userPermissions = data.data?.role?.permissions?.map((p: any) => p.name) || [];
             
-            // Add computed permissions field to user object for compatibility
+            // Add computed permissions field to user object
             const userWithPermissions = {
                 ...data.data,
                 permissions: userPermissions
@@ -167,9 +173,9 @@ export function useAuth() {
             await AsyncStorage.setItem('user', JSON.stringify(userWithPermissions));
             // Simpan permissions ke AsyncStorage
             await AsyncStorage.setItem('permissions', JSON.stringify(userPermissions));
-            log('[REFRESH_USER] User data refreshed:', userWithPermissions);
+            log('[GET_PROFILE] User profile refreshed:', userWithPermissions);
         } catch (err) {
-            log('[REFRESH_USER] Failed:', err);
+            log('[GET_PROFILE] Failed:', err);
             throw err;
         } finally {
             setLoading(false);
@@ -191,9 +197,11 @@ export function useAuth() {
     // Request OTP
     const requestOtp = async (phone: string) => {
         return apiRequest({
-            url: `${BASE_URL}/user/send-otp`,
+            url: `${BASE_URL}/send-otp`,
+            method: 'POST',
             body: { phone },
-            logLabel: 'REQUEST_OTP'
+            logLabel: 'REQUEST_OTP',
+            token: null
         }) as Promise<SendOtpResponse>;
     };
 
@@ -219,12 +227,12 @@ export function useAuth() {
         });
         
         const data: OtpResponse = await apiRequest({
-            url: `${BASE_URL}/user/verify-otp`,
+            url: `${BASE_URL}/verify-otp`,
             method: 'POST',
             body: {
                 phone,
                 otp,
-                notif_id: notif_id || 'fallback-notif-id'
+                notif_id: notif_id || 'expo_push_token'
             },
             logLabel: 'OTP_LOGIN',
             token: null
@@ -233,7 +241,7 @@ export function useAuth() {
         // Extract permissions from user.role.permissions
         const userPermissions = data.data.user?.role?.permissions?.map((p: any) => p.name) || [];
         
-        // Add computed permissions field to user object for compatibility
+        // Add computed permissions field to user object
         const userWithPermissions = {
             ...data.data.user,
             permissions: userPermissions
@@ -250,7 +258,7 @@ export function useAuth() {
         loading,
         login,
         logout,
-        refreshUser,
+        getProfile,
         loginWithToken,
         setUser,
         setToken,

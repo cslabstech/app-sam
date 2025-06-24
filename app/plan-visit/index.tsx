@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,46 +8,61 @@ import { PlanVisit, usePlanVisit } from '@/hooks/data/usePlanVisit';
 import { useThemeStyles } from '@/hooks/utils/useThemeStyles';
 
 export default function PlanVisitListScreen() {
-  const { planVisits, loading, error, fetchPlanVisits, deletePlanVisit } = usePlanVisit();
+  const { planVisits, loading, error, meta, fetchPlanVisits, deletePlanVisit } = usePlanVisit();
   const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(20);
   const { colors, styles } = useThemeStyles();
   const insets = useSafeAreaInsets();
 
-  const loadPlanVisits = useCallback(async () => {
-    const result = await fetchPlanVisits();
-    console.log('Fetch Plan Visits Result:', JSON.stringify(result, null, 2));
-    
-    if (result.success && result.data) {
-      console.log('Plan Visits Data:', JSON.stringify(result.data, null, 2));
-      console.log('First Item:', result.data[0]);
-      console.log('First Item ID:', result.data[0]?.id);
-    }
-    
-    if (!result.success) {
-      Alert.alert('Error', result.error || 'Gagal memuat data plan visit');
-    }
-  }, [fetchPlanVisits]);
+  // Fetch with params - seperti di outlets/visits tabs
+  const fetchPage = useCallback((newPage: number) => {
+    setPage(newPage);
+    fetchPlanVisits({
+      page: newPage,
+      per_page: perPage,
+      sort_column: 'visit_date',
+      sort_direction: 'desc',
+    });
+  }, [fetchPlanVisits, perPage]);
 
-  // Fetch data on mount
+  // Fetch on mount and when params change - pattern dari tabs
   useEffect(() => {
-    loadPlanVisits();
-  }, [loadPlanVisits]);
+    fetchPlanVisits({
+      page,
+      per_page: perPage,
+      sort_column: 'visit_date',
+      sort_direction: 'desc',
+    });
+  }, [page, perPage, fetchPlanVisits]);
 
-  const onRefresh = useCallback(async () => {
+  // Refresh data setiap kali halaman di-focus (ketika kembali dari halaman lain)
+  useFocusEffect(
+    useCallback(() => {
+      // Reset ke page 1 dan fetch ulang saat kembali ke halaman
+      if (page !== 1) {
+        setPage(1);
+      } else {
+        fetchPlanVisits({
+          page: 1,
+          per_page: perPage,
+          sort_column: 'visit_date',
+          sort_direction: 'desc',
+        });
+      }
+    }, [fetchPlanVisits, perPage, page])
+  );
+
+  // Handle pull-to-refresh - pattern dari tabs
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadPlanVisits();
+    fetchPage(1);
     setRefreshing(false);
-  }, [loadPlanVisits]);
+  }, [fetchPage]);
 
-  const handleDelete = async (item: PlanVisit) => {
-    // Debug: Check the item structure and ID
-    console.log('Plan Visit Item untuk delete:', JSON.stringify(item, null, 2));
-    console.log('Item ID:', item.id);
-    console.log('Type of ID:', typeof item.id);
-    
+  const handleDelete = useCallback(async (item: PlanVisit) => {
     if (!item.id) {
       Alert.alert('Error', 'ID plan visit tidak ditemukan');
-      console.log('Error: ID is null/undefined/empty');
       return;
     }
 
@@ -60,14 +75,12 @@ export default function PlanVisitListScreen() {
           text: 'Hapus',
           style: 'destructive',
           onPress: async () => {
-            console.log('Deleting plan visit with ID:', item.id);
-            console.log('Calling deletePlanVisit with:', item.id);
             const result = await deletePlanVisit(item.id);
-            console.log('Delete result:', JSON.stringify(result, null, 2));
             
             if (result.success) {
               Alert.alert('Berhasil', 'Plan visit berhasil dihapus');
-              loadPlanVisits(); // Refresh list
+              // Refresh current page setelah delete
+              fetchPage(page);
             } else {
               Alert.alert('Error', result.error || 'Gagal menghapus plan visit');
             }
@@ -75,13 +88,13 @@ export default function PlanVisitListScreen() {
         },
       ]
     );
-  };
+  }, [deletePlanVisit, fetchPage, page]);
 
   const handleCreate = () => {
     router.push('/plan-visit/create');
   };
 
-  const renderPlanVisitItem = ({ item }: { item: PlanVisit }) => (
+  const renderPlanVisitItem = useCallback(({ item }: { item: PlanVisit }) => (
     <View style={[
       {
         borderRadius: 12,
@@ -100,24 +113,8 @@ export default function PlanVisitListScreen() {
             {item.outlet?.code} • {item.outlet?.district}
           </Text>
           <Text style={[{ fontSize: 16, marginBottom: 8 }, styles.text.primary]}>
-            📅 {new Date(item.plan_date).toLocaleDateString('id-ID')}
+            📅 {new Date(item.visit_date).toLocaleDateString('id-ID')}
           </Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View style={{
-              paddingHorizontal: 8,
-              paddingVertical: 4,
-              borderRadius: 12,
-              backgroundColor: item.type === 'REGULAR' ? colors.info + '20' : colors.success + '20'
-            }}>
-              <Text style={{
-                fontSize: 12,
-                fontWeight: '600',
-                color: item.type === 'REGULAR' ? colors.info : colors.success
-              }}>
-                {item.type}
-              </Text>
-            </View>
-          </View>
         </View>
         <Pressable
           style={{ padding: 8 }}
@@ -128,9 +125,9 @@ export default function PlanVisitListScreen() {
         </Pressable>
       </View>
     </View>
-  );
+  ), [styles, colors, handleDelete]);
 
-  if (loading && !refreshing) {
+  if (loading && !refreshing && planVisits.length === 0) {
     return (
       <View style={[{ flex: 1 }, styles.background.primary]}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -178,15 +175,15 @@ export default function PlanVisitListScreen() {
           <FlatList
             data={planVisits}
             renderItem={renderPlanVisitItem}
-            keyExtractor={(item, index) => {
-              const key = item.id || `plan-visit-${index}`;
-              console.log('Key for item:', key, 'Item ID:', item.id);
-              return String(key);
-            }}
+            keyExtractor={(item, index) => String(item.id || `plan-visit-${index}`)}
             refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
             }
             showsVerticalScrollIndicator={false}
+            removeClippedSubviews={true}
+            initialNumToRender={10}
+            maxToRenderPerBatch={5}
+            windowSize={10}
           />
         ) : (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>

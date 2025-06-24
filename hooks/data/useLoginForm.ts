@@ -45,6 +45,59 @@ export function useLoginForm() {
     return !errors.email && !errors.password;
   };
 
+  // Parse error response sesuai StandardResponse format
+  const parseLoginError = (e: any): string => {
+    // Check for StandardResponse format (response.data.meta)
+    if (e?.response?.data?.meta) {
+      const meta = e.response.data.meta;
+      switch (meta.code) {
+        case 401:
+          return 'Username atau password salah';
+        case 422:
+          return meta.message || 'Data yang dimasukkan tidak valid';
+        case 429:
+          return 'Terlalu banyak percobaan login. Silakan coba lagi nanti.';
+        case 500:
+        case 502:
+        case 503:
+        case 504:
+          return 'Terjadi kesalahan pada server. Silakan coba lagi.';
+        default:
+          return meta.message || 'Login gagal';
+      }
+    }
+
+    // Check for direct meta object (from apiRequest)
+    if (e?.meta) {
+      switch (e.meta.code) {
+        case 401:
+          return 'Username atau password salah';
+        case 422:
+          return e.meta.message || 'Data yang dimasukkan tidak valid';
+        case 429:
+          return 'Terlalu banyak percobaan login. Silakan coba lagi nanti.';
+        case 500:
+        case 502:
+        case 503:
+        case 504:
+          return 'Terjadi kesalahan pada server. Silakan coba lagi.';
+        default:
+          return e.meta.message || 'Login gagal';
+      }
+    }
+
+    // Handle network errors
+    if (e?.code === 'NETWORK_ERROR' || 
+        e?.message?.includes('Network') || 
+        e?.code === 'ECONNABORTED' ||
+        e?.message?.includes('fetch')) {
+      return 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+    }
+
+    // Fallback untuk error yang tidak mengikuti format standard
+    return 'Login gagal. Silakan coba lagi.';
+  };
+
   const handleLogin = async () => {
     setError('');
     setTouched({ email: true, password: true });
@@ -54,23 +107,8 @@ export function useLoginForm() {
       await login(email, password);
       router.replace('/(tabs)');
     } catch (e: any) {
-      if (e.message?.includes('Network') || e.code === 'ECONNABORTED') {
-        setError('Tidak dapat terhubung ke server. Periksa koneksi internet Anda.');
-      } else {
-        let errorMessage = e?.message || 'Login gagal';
-        
-        if (e?.code === 401) {
-          errorMessage = 'Username atau password salah';
-        } else if (e?.code === 422) {
-          errorMessage = e?.message || 'Data yang dimasukkan tidak valid';
-        } else if (e?.code === 429) {
-          errorMessage = 'Terlalu banyak percobaan login. Silakan coba lagi nanti.';
-        } else if (e?.code >= 500) {
-          errorMessage = 'Terjadi kesalahan pada server. Silakan coba lagi.';
-        }
-        
-        setError(errorMessage);
-      }
+      const errorMessage = parseLoginError(e);
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

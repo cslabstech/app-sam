@@ -23,6 +23,58 @@ export function useOtpLoginForm() {
     };
   }, []);
 
+  // Parse error response sesuai StandardResponse format untuk OTP request
+  const parseOtpError = (err: any): string => {
+    // Check for StandardResponse format (response.data.meta)
+    if (err?.response?.data?.meta) {
+      const meta = err.response.data.meta;
+      switch (meta.code) {
+        case 404:
+          return 'Nomor handphone tidak terdaftar';
+        case 422:
+          return meta.message || 'Nomor telepon tidak valid';
+        case 429:
+          return 'Terlalu banyak permintaan OTP. Silakan tunggu beberapa saat.';
+        case 500:
+        case 502:
+        case 503:
+        case 504:
+          return 'Terjadi kesalahan pada server. Silakan coba lagi.';
+        default:
+          return meta.message || 'Gagal mengirim OTP';
+      }
+    }
+
+    // Check for direct meta object (from apiRequest)
+    if (err?.meta) {
+      switch (err.meta.code) {
+        case 404:
+          return 'Nomor handphone tidak terdaftar';
+        case 422:
+          return err.meta.message || 'Nomor telepon tidak valid';
+        case 429:
+          return 'Terlalu banyak permintaan OTP. Silakan tunggu beberapa saat.';
+        case 500:
+        case 502:
+        case 503:
+        case 504:
+          return 'Terjadi kesalahan pada server. Silakan coba lagi.';
+        default:
+          return err.meta.message || 'Gagal mengirim OTP';
+      }
+    }
+
+    // Handle network errors
+    if (err?.code === 'NETWORK_ERROR' || 
+        err?.message?.includes('Network') || 
+        err?.message?.includes('fetch')) {
+      return 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+    }
+
+    // Fallback untuk error yang tidak mengikuti format standard
+    return 'Gagal mengirim OTP. Silakan coba lagi.';
+  };
+
   const handleRequestOtp = async () => {
     setLoading(true);
     setError(null);
@@ -32,21 +84,67 @@ export function useOtpLoginForm() {
       setSuccess(true);
       setShowOtp(true);
     } catch (err: any) {
-      let errorMessage = err?.message || 'Gagal mengirim OTP';
-      
-      // Handle berbagai kode error dari backend
-      if (err?.code === 422) {
-        errorMessage = err?.message || 'Nomor telepon tidak valid';
-      } else if (err?.code === 429) {
-        errorMessage = 'Terlalu banyak permintaan OTP. Silakan tunggu beberapa saat.';
-      } else if (err?.code >= 500) {
-        errorMessage = 'Terjadi kesalahan pada server. Silakan coba lagi.';
-      }
-      
+      const errorMessage = parseOtpError(err);
       setError(errorMessage);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Parse verify OTP error response sesuai StandardResponse format
+  const parseVerifyOtpError = (err: any): string => {
+    // Check for StandardResponse format (response.data.meta)
+    if (err?.response?.data?.meta) {
+      const meta = err.response.data.meta;
+      switch (meta.code) {
+        case 401:
+          return 'OTP salah atau sudah kedaluwarsa';
+        case 404:
+          return 'Nomor handphone tidak terdaftar';
+        case 422:
+          return meta.message || 'OTP tidak valid';
+        case 429:
+          return 'Terlalu banyak percobaan verifikasi OTP. Silakan tunggu beberapa saat.';
+        case 500:
+        case 502:
+        case 503:
+        case 504:
+          return 'Terjadi kesalahan pada server. Silakan coba lagi.';
+        default:
+          return meta.message || 'OTP salah atau login gagal';
+      }
+    }
+
+    // Check for direct meta object (from apiRequest)
+    if (err?.meta) {
+      switch (err.meta.code) {
+        case 401:
+          return 'OTP salah atau sudah kedaluwarsa';
+        case 404:
+          return 'Nomor handphone tidak terdaftar';
+        case 422:
+          return err.meta.message || 'OTP tidak valid';
+        case 429:
+          return 'Terlalu banyak percobaan verifikasi OTP. Silakan tunggu beberapa saat.';
+        case 500:
+        case 502:
+        case 503:
+        case 504:
+          return 'Terjadi kesalahan pada server. Silakan coba lagi.';
+        default:
+          return err.meta.message || 'OTP salah atau login gagal';
+      }
+    }
+
+    // Handle network errors
+    if (err?.code === 'NETWORK_ERROR' || 
+        err?.message?.includes('Network') || 
+        err?.message?.includes('fetch')) {
+      return 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+    }
+
+    // Fallback untuk error yang tidak mengikuti format standard
+    return 'OTP salah atau login gagal. Silakan coba lagi.';
   };
 
   const handleVerifyOtp = async () => {
@@ -59,19 +157,7 @@ export function useOtpLoginForm() {
       // loginWithToken sudah ditangani di dalam verifyOtp method
       router.replace('/(tabs)');
     } catch (err: any) {
-      let errorMessage = err?.message || 'OTP salah atau login gagal';
-      
-      // Handle berbagai kode error dari backend
-      if (err?.code === 401) {
-        errorMessage = 'OTP salah atau sudah kedaluwarsa';
-      } else if (err?.code === 422) {
-        errorMessage = err?.message || 'OTP tidak valid';
-      } else if (err?.code === 429) {
-        errorMessage = 'Terlalu banyak percobaan verifikasi OTP. Silakan tunggu beberapa saat.';
-      } else if (err?.code >= 500) {
-        errorMessage = 'Terjadi kesalahan pada server. Silakan coba lagi.';
-      }
-      
+      const errorMessage = parseVerifyOtpError(err);
       setError(errorMessage);
     } finally {
       setLoading(false);

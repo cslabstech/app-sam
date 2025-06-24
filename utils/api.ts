@@ -18,20 +18,8 @@ export interface BaseResponse<T = any> {
 
 // Production-ready configuration
 const API_CONFIG = {
-    timeout: 30000, // 30 seconds timeout
-    retryAttempts: 3,
-    retryDelay: 1000, // 1 second
-    retryStatusCodes: [408, 429, 500, 502, 503, 504], // Retry on these status codes
+    timeout: 10000, // 10 seconds timeout
 };
-
-// Request deduplication cache
-const requestCache = new Map<string, Promise<any>>();
-
-// Helper function untuk create cache key
-function createCacheKey(url: string, method: string, body: any): string {
-    const bodyKey = body instanceof FormData ? 'FormData' : JSON.stringify(body);
-    return `${method}:${url}:${bodyKey}`;
-}
 
 // Helper function untuk timeout wrapper
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
@@ -43,67 +31,22 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
     ]);
 }
 
-// Helper function untuk retry logic
-async function withRetry<T>(
-    operation: () => Promise<T>,
-    attempts: number = API_CONFIG.retryAttempts,
-    delay: number = API_CONFIG.retryDelay
-): Promise<T> {
-    try {
-        return await operation();
-    } catch (error: any) {
-        if (attempts <= 1) {
-            throw error;
-        }
-
-        // Check if error is retryable
-        const isRetryable = 
-            error?.httpStatus && API_CONFIG.retryStatusCodes.includes(error.httpStatus) ||
-            error?.message?.includes('Network') ||
-            error?.message?.includes('timeout') ||
-            error?.message?.includes('fetch');
-
-        if (!isRetryable) {
-            throw error;
-        }
-
-        log(`[RETRY] Attempt ${API_CONFIG.retryAttempts - attempts + 1}/${API_CONFIG.retryAttempts}:`, error.message);
-        
-        // Exponential backoff
-        const backoffDelay = delay * Math.pow(2, API_CONFIG.retryAttempts - attempts);
-        await new Promise(resolve => setTimeout(resolve, backoffDelay));
-        
-        return withRetry(operation, attempts - 1, delay);
-    }
-}
-
-// Main API client function - PRODUCTION READY with timeout, retry, deduplication
+// Main API client function - PRODUCTION READY with timeout (no retry)
 export async function apiRequest({ 
     url, 
     method = 'POST', 
     body, 
     logLabel,
     token,
-    skipCache = false,
-    timeout = API_CONFIG.timeout,
-    retry = true
+    timeout = API_CONFIG.timeout
 }: { 
     url: string, 
     method?: string, 
     body?: any, 
     logLabel: string,
     token?: string | null,
-    skipCache?: boolean, // Skip request deduplication
-    timeout?: number,    // Custom timeout
-    retry?: boolean      // Enable/disable retry
+    timeout?: number     // Custom timeout
 }): Promise<any> {
-    // Request deduplication untuk GET requests (kecuali di-skip)
-    const cacheKey = createCacheKey(url, method, body);
-    if (!skipCache && method === 'GET' && requestCache.has(cacheKey)) {
-        log(`[${logLabel}] Using cached request:`, cacheKey);
-        return requestCache.get(cacheKey)!;
-    }
-
     const executeRequest = async (): Promise<any> => {
         log(`[${logLabel}] Request:`, { url, method, bodyType: body instanceof FormData ? 'FormData' : typeof body });
         
@@ -186,20 +129,8 @@ export async function apiRequest({
         return data;
     };
 
-    // Execute with retry if enabled
-    const requestPromise = retry ? withRetry(executeRequest) : executeRequest();
-
-    // Cache GET requests
-    if (!skipCache && method === 'GET') {
-        requestCache.set(cacheKey, requestPromise);
-        
-        // Clean up cache after request completes (success or failure)
-        requestPromise.finally(() => {
-            setTimeout(() => requestCache.delete(cacheKey), 60000); // Cache cleanup after 1 minute
-        });
-    }
-
-    return requestPromise;
+    // Execute request directly (no retry)
+    return executeRequest();
 }
 
 // Helper function khusus untuk FormData/file upload
@@ -224,8 +155,6 @@ export async function uploadFile({
         body: formData,
         logLabel,
         token,
-        skipCache: true, // Never cache file uploads
-        timeout,
-        retry: false     // Don't retry file uploads
+        timeout
     });
 } 

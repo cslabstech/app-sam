@@ -7,31 +7,31 @@ import { useEffect, useState } from 'react';
 const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
 
 export interface Role {
-  id: number;
+  id: string | number;
   name: string;
   scope_required_fields: string[];
   scope_multiple_fields: string[];
 }
 
 export interface ReferenceItem {
-  id: number;
+  id: string | number;
   name: string;
 }
 
-// ✅ Updated: Interface untuk ResponseFormatter format (array, bukan key-value)
+// Interface untuk ResponseFormatter format sesuai foundation.md
 export interface RolesResponse extends BaseResponse<Role[]> {}
 export interface BadanUsahaResponse extends BaseResponse<ReferenceItem[]> {}
 export interface DivisionsResponse extends BaseResponse<ReferenceItem[]> {}
 export interface RegionsResponse extends BaseResponse<ReferenceItem[]> {}
 export interface ClustersResponse extends BaseResponse<ReferenceItem[]> {}
 
-export function useReferenceDropdowns() {
+export function useReference() {
   const { token } = useAuth();
   
-  // ✅ Use baseApi for roles (simple list)
-  const rolesApi = useBaseApi<Role>('role', '/role');
+  // Use baseApi for roles
+  const rolesApi = useBaseApi<Role>('role', '/references/role');
   
-  // ✅ Updated: Changed from key-value objects to arrays
+  // Reference dropdowns state
   const [badanUsaha, setBadanUsaha] = useState<ReferenceItem[]>([]);
   const [divisions, setDivisions] = useState<ReferenceItem[]>([]);
   const [regions, setRegions] = useState<ReferenceItem[]>([]);
@@ -47,7 +47,7 @@ export function useReferenceDropdowns() {
     }
   }, [token]);
 
-  // ✅ Updated: Fetch badan usaha with new ResponseFormatter format
+  // Fetch badan usaha with new ResponseFormatter format
   useEffect(() => {
     if (!token) return;
     
@@ -57,7 +57,7 @@ export function useReferenceDropdowns() {
 
       try {
         const json: BadanUsahaResponse = await apiRequest({
-          url: `${BASE_URL}/badanusaha`,
+          url: `${BASE_URL}/references/badan-usaha`,
           method: 'GET',
           body: null,
           logLabel: 'FETCH_BADAN_USAHA',
@@ -67,13 +67,23 @@ export function useReferenceDropdowns() {
         if (json.data && Array.isArray(json.data)) {
           setBadanUsaha(json.data);
         } else {
-          log('[useReferenceDropdowns] Invalid badan usaha data format:', json.data);
+          log('[useReference] Invalid badan usaha data format:', json.data);
           setBadanUsaha([]);
         }
-      } catch (err) {
-        log('[useReferenceDropdowns] Failed to fetch badanusaha:', err);
+      } catch (err: any) {
+        // Parse error sesuai StandardResponse format
+        let errorMessage = 'Failed to fetch badan usaha';
+        if (err?.response?.data?.meta?.message) {
+          errorMessage = err.response.data.meta.message;
+        } else if (err?.meta?.message) {
+          errorMessage = err.meta.message;
+        } else if (err?.code === 'NETWORK_ERROR' || err?.message?.includes('Network')) {
+          errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+        }
+        
+        log('[useReference] Failed to fetch badan usaha:', err);
         setBadanUsaha([]);
-        setError(err instanceof Error ? err.message : 'Failed to fetch badan usaha');
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -82,8 +92,8 @@ export function useReferenceDropdowns() {
     fetchBadanUsaha();
   }, [token]);
 
-  // ✅ Updated: Returns ApiResult format with array data
-  const fetchDivisions = async (badanUsahaId: string): Promise<ApiResult<ReferenceItem[]>> => {
+  // Fetch divisions dengan parameter badan_usaha_id
+  const fetchDivisions = async (badanUsahaId?: string): Promise<ApiResult<ReferenceItem[]>> => {
     if (!token) {
       return { success: false, error: 'Token tidak tersedia' };
     }
@@ -92,8 +102,12 @@ export function useReferenceDropdowns() {
     setError(null);
 
     try {
+      const url = badanUsahaId 
+        ? `${BASE_URL}/references/division?badan_usaha_id=${badanUsahaId}`
+        : `${BASE_URL}/references/division`;
+        
       const json: DivisionsResponse = await apiRequest({
-        url: `${BASE_URL}/division?badan_usaha_id=${badanUsahaId}`,
+        url,
         method: 'GET',
         body: null,
         logLabel: 'FETCH_DIVISIONS',
@@ -104,13 +118,22 @@ export function useReferenceDropdowns() {
         setDivisions(json.data);
         return { success: true, data: json.data };
       } else {
-        log('[useReferenceDropdowns] Invalid divisions data format:', json.data);
+        log('[useReference] Invalid divisions data format:', json.data);
         setDivisions([]);
         return { success: false, error: 'Invalid data format' };
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch divisions';
-      log('[useReferenceDropdowns] Failed to fetch divisions:', err);
+    } catch (err: any) {
+      // Parse error sesuai StandardResponse format
+      let errorMessage = 'Failed to fetch divisions';
+      if (err?.response?.data?.meta?.message) {
+        errorMessage = err.response.data.meta.message;
+      } else if (err?.meta?.message) {
+        errorMessage = err.meta.message;
+      } else if (err?.code === 'NETWORK_ERROR' || err?.message?.includes('Network')) {
+        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+      }
+      
+      log('[useReference] Failed to fetch divisions:', err);
       setDivisions([]);
       setError(errorMessage);
       return { success: false, error: errorMessage };
@@ -119,7 +142,8 @@ export function useReferenceDropdowns() {
     }
   };
 
-  const fetchRegions = async (divisionId: string): Promise<ApiResult<ReferenceItem[]>> => {
+  // Fetch regions dengan parameter division_id
+  const fetchRegions = async (divisionId?: string): Promise<ApiResult<ReferenceItem[]>> => {
     if (!token) {
       return { success: false, error: 'Token tidak tersedia' };
     }
@@ -128,8 +152,12 @@ export function useReferenceDropdowns() {
     setError(null);
 
     try {
+      const url = divisionId 
+        ? `${BASE_URL}/references/region?division_id=${divisionId}`
+        : `${BASE_URL}/references/region`;
+        
       const json: RegionsResponse = await apiRequest({
-        url: `${BASE_URL}/region?division_id=${divisionId}`,
+        url,
         method: 'GET',
         body: null,
         logLabel: 'FETCH_REGIONS',
@@ -140,13 +168,22 @@ export function useReferenceDropdowns() {
         setRegions(json.data);
         return { success: true, data: json.data };
       } else {
-        log('[useReferenceDropdowns] Invalid regions data format:', json.data);
+        log('[useReference] Invalid regions data format:', json.data);
         setRegions([]);
         return { success: false, error: 'Invalid data format' };
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch regions';
-      log('[useReferenceDropdowns] Failed to fetch regions:', err);
+    } catch (err: any) {
+      // Parse error sesuai StandardResponse format
+      let errorMessage = 'Failed to fetch regions';
+      if (err?.response?.data?.meta?.message) {
+        errorMessage = err.response.data.meta.message;
+      } else if (err?.meta?.message) {
+        errorMessage = err.meta.message;
+      } else if (err?.code === 'NETWORK_ERROR' || err?.message?.includes('Network')) {
+        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+      }
+      
+      log('[useReference] Failed to fetch regions:', err);
       setRegions([]);
       setError(errorMessage);
       return { success: false, error: errorMessage };
@@ -155,7 +192,8 @@ export function useReferenceDropdowns() {
     }
   };
 
-  const fetchClusters = async (regionId: string): Promise<ApiResult<ReferenceItem[]>> => {
+  // Fetch clusters dengan parameter region_id
+  const fetchClusters = async (regionId?: string): Promise<ApiResult<ReferenceItem[]>> => {
     if (!token) {
       return { success: false, error: 'Token tidak tersedia' };
     }
@@ -164,8 +202,12 @@ export function useReferenceDropdowns() {
     setError(null);
 
     try {
+      const url = regionId 
+        ? `${BASE_URL}/references/cluster?region_id=${regionId}`
+        : `${BASE_URL}/references/cluster`;
+        
       const json: ClustersResponse = await apiRequest({
-        url: `${BASE_URL}/cluster?region_id=${regionId}`,
+        url,
         method: 'GET',
         body: null,
         logLabel: 'FETCH_CLUSTERS',
@@ -176,13 +218,22 @@ export function useReferenceDropdowns() {
         setClusters(json.data);
         return { success: true, data: json.data };
       } else {
-        log('[useReferenceDropdowns] Invalid clusters data format:', json.data);
+        log('[useReference] Invalid clusters data format:', json.data);
         setClusters([]);
         return { success: false, error: 'Invalid data format' };
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch clusters';
-      log('[useReferenceDropdowns] Failed to fetch clusters:', err);
+    } catch (err: any) {
+      // Parse error sesuai StandardResponse format
+      let errorMessage = 'Failed to fetch clusters';
+      if (err?.response?.data?.meta?.message) {
+        errorMessage = err.response.data.meta.message;
+      } else if (err?.meta?.message) {
+        errorMessage = err.meta.message;
+      } else if (err?.code === 'NETWORK_ERROR' || err?.message?.includes('Network')) {
+        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+      }
+      
+      log('[useReference] Failed to fetch clusters:', err);
       setClusters([]);
       setError(errorMessage);
       return { success: false, error: errorMessage };
@@ -200,24 +251,24 @@ export function useReferenceDropdowns() {
   };
 
   return {
-    // ✅ Roles using baseApi (consistent)
+    // Roles using baseApi (consistent)
     roles: rolesApi.data,
     
-    // ✅ Updated: Reference dropdowns now return arrays with id/name structure
+    // Reference dropdowns return arrays with id/name structure
     badanUsaha,
     divisions,
     regions,
     clusters,
     
-    // ✅ Consistent loading/error states
+    // Consistent loading/error states
     loading: loading || rolesApi.loading,
     error: error || rolesApi.error,
     
-    // ✅ Standardized operations with ApiResult
+    // Standardized operations with ApiResult
     fetchDivisions,
     fetchRegions,
     fetchClusters,
     onRoleChange,
     roleScope,
   };
-}
+} 

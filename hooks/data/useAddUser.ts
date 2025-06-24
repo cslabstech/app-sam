@@ -13,7 +13,7 @@ export interface NewUserPayload {
 
 // User interface - extend base pattern
 export interface User {
-  id: string;
+  id: string | number;
   name: string;
   username: string;
   phone: string;

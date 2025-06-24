@@ -13,7 +13,7 @@ export interface OutletPhotos {
 
 // Interface untuk outlet API sesuai backend baru
 export interface OutletAPI {
-  id: string;
+  id: string | number;
   code: string;
   name: string;
   owner_name: string | null;
@@ -22,29 +22,29 @@ export interface OutletAPI {
   location: string;
   district: string;
   status: string;
-  badan_usaha_id: number;
-  division_id: number;
-  region_id: number;
-  cluster_id: number;
+  badan_usaha_id: string | number;
+  division_id: string | number;
+  region_id: string | number;
+  cluster_id: string | number;
   badan_usaha: {
-    id: number;
+    id: string | number;
     name: string;
   };
   division: {
-    id: number;
+    id: string | number;
     name: string;
   };
   region: {
-    id: number;
+    id: string | number;
     name: string;
   };
   cluster: {
-    id: number;
+    id: string | number;
     name: string;
   };
   photos: OutletPhotos;
   video: string | null;
-  radius?: number; // Optional untuk backward compatibility
+  radius?: number; // Optional field
 }
 
 // Interface untuk response paginated outlets
@@ -111,14 +111,14 @@ export function useOutlet(searchQuery: string) {
         name: item.cluster?.name || '',
       },
       photos: {
-        shop_sign: item.photos?.shop_sign || null,
-        front: item.photos?.front || null,
-        left: item.photos?.left || null,
-        right: item.photos?.right || null,
-        id_card: item.photos?.id_card || null,
+        shop_sign: item.photo_shop_sign || null,
+        front: item.photo_front || null,
+        left: item.photo_left || null,
+        right: item.photo_right || null,
+        id_card: item.photo_id_card || null,
       },
       video: item.video || null,
-      radius: item.radius || 0, // Default untuk backward compatibility
+      radius: item.radius || 0, // Default value
     }));
   }, []);
 
@@ -155,11 +155,11 @@ export function useOutlet(searchQuery: string) {
         name: item.cluster?.name || '',
       },
       photos: {
-        shop_sign: item.photos?.shop_sign || null,
-        front: item.photos?.front || null,
-        left: item.photos?.left || null,
-        right: item.photos?.right || null,
-        id_card: item.photos?.id_card || null,
+        shop_sign: item.photo_shop_sign || null,
+        front: item.photo_front || null,
+        left: item.photo_left || null,
+        right: item.photo_right || null,
+        id_card: item.photo_id_card || null,
       },
       video: item.video || null,
       radius: item.radius || 0,
@@ -172,7 +172,7 @@ export function useOutlet(searchQuery: string) {
     setError(null);
     try {
       const json: OutletsResponse = await apiRequest({
-        url: `${BASE_URL}/outlet`,
+        url: `${BASE_URL}/outlets`,
         method: 'GET',
         body: null,
         logLabel: 'FETCH_OUTLETS',
@@ -188,8 +188,17 @@ export function useOutlet(searchQuery: string) {
         setMeta(null);
         setError('Invalid data format in response');
       }
-    } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'Failed to fetch outlets';
+    } catch (e: any) {
+      // Parse error sesuai StandardResponse format
+      let errorMessage = 'Failed to fetch outlets';
+      if (e?.response?.data?.meta?.message) {
+        errorMessage = e.response.data.meta.message;
+      } else if (e?.meta?.message) {
+        errorMessage = e.meta.message;
+      } else if (e?.code === 'NETWORK_ERROR' || e?.message?.includes('Network')) {
+        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+      }
+      
       setOutlets([]);
       setMeta(null);
       setError(errorMessage);
@@ -204,7 +213,7 @@ export function useOutlet(searchQuery: string) {
     setError(null);
     try {
       const json: OutletResponse = await apiRequest({
-        url: `${BASE_URL}/outlet/${encodeURIComponent(id)}`,
+        url: `${BASE_URL}/outlets/${encodeURIComponent(id)}`,
         method: 'GET',
         body: null,
         logLabel: 'FETCH_OUTLET',
@@ -218,8 +227,17 @@ export function useOutlet(searchQuery: string) {
         setError('Outlet not found');
         setOutlet(null);
       }
-    } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'Failed to fetch outlet';
+    } catch (e: any) {
+      // Parse error sesuai StandardResponse format
+      let errorMessage = 'Failed to fetch outlet';
+      if (e?.response?.data?.meta?.message) {
+        errorMessage = e.response.data.meta.message;
+      } else if (e?.meta?.message) {
+        errorMessage = e.meta.message;
+      } else if (e?.code === 'NETWORK_ERROR' || e?.message?.includes('Network')) {
+        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+      }
+      
       setError(errorMessage);
       setOutlet(null);
       console.error('[fetchOutlet] Error:', e);
@@ -233,7 +251,7 @@ export function useOutlet(searchQuery: string) {
     setError(null);
     try {
       await apiRequest({
-        url: `${BASE_URL}/outlet`,
+        url: `${BASE_URL}/outlets`,
         method: 'POST',
         body: data,
         logLabel: 'CREATE_OUTLET',
@@ -242,8 +260,17 @@ export function useOutlet(searchQuery: string) {
       
       await fetchOutlets(); // refresh list
       return { success: true };
-    } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'Failed to create outlet';
+    } catch (e: any) {
+      // Parse error sesuai StandardResponse format
+      let errorMessage = 'Failed to create outlet';
+      if (e?.response?.data?.meta?.message) {
+        errorMessage = e.response.data.meta.message;
+      } else if (e?.meta?.message) {
+        errorMessage = e.meta.message;
+      } else if (e?.code === 'NETWORK_ERROR' || e?.message?.includes('Network')) {
+        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+      }
+      
       setError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
@@ -251,14 +278,14 @@ export function useOutlet(searchQuery: string) {
     }
   }, [token, fetchOutlets]);
 
-  // Update outlet
+  // Update outlet (sesuai API dokumentasi menggunakan PUT)
   const updateOutlet = useCallback(async (id: string, data: Partial<OutletAPI>) => {
     setLoading(true);
     setError(null);
     try {
       await apiRequest({
-        url: `${BASE_URL}/outlet/${encodeURIComponent(id)}`,
-        method: 'POST',
+        url: `${BASE_URL}/outlets/${encodeURIComponent(id)}`,
+        method: 'PUT',
         body: data,
         logLabel: 'UPDATE_OUTLET',
         token
@@ -266,8 +293,17 @@ export function useOutlet(searchQuery: string) {
       
       await fetchOutlets(); // refresh list
       return { success: true };
-    } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'Failed to update outlet';
+    } catch (e: any) {
+      // Parse error sesuai StandardResponse format
+      let errorMessage = 'Failed to update outlet';
+      if (e?.response?.data?.meta?.message) {
+        errorMessage = e.response.data.meta.message;
+      } else if (e?.meta?.message) {
+        errorMessage = e.meta.message;
+      } else if (e?.code === 'NETWORK_ERROR' || e?.message?.includes('Network')) {
+        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+      }
+      
       setError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
@@ -275,13 +311,13 @@ export function useOutlet(searchQuery: string) {
     }
   }, [token, fetchOutlets]);
 
-  // Update outlet with FormData (for file upload)
+  // Update outlet with FormData (for file upload) - tetap menggunakan POST untuk multipart
   const updateOutletWithFile = useCallback(async (id: string, formData: FormData) => {
     setLoading(true);
     setError(null);
     try {
       await apiRequest({
-        url: `${BASE_URL}/outlet/${encodeURIComponent(id)}`,
+        url: `${BASE_URL}/outlets/${encodeURIComponent(id)}`,
         method: 'POST',
         body: formData,
         logLabel: 'UPDATE_OUTLET_WITH_FILE',
@@ -290,8 +326,17 @@ export function useOutlet(searchQuery: string) {
       
       await fetchOutlets(); // refresh list
       return { success: true };
-    } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'Failed to update outlet';
+    } catch (e: any) {
+      // Parse error sesuai StandardResponse format
+      let errorMessage = 'Failed to update outlet';
+      if (e?.response?.data?.meta?.message) {
+        errorMessage = e.response.data.meta.message;
+      } else if (e?.meta?.message) {
+        errorMessage = e.meta.message;
+      } else if (e?.code === 'NETWORK_ERROR' || e?.message?.includes('Network')) {
+        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+      }
+      
       setError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
@@ -326,7 +371,7 @@ export function useOutlet(searchQuery: string) {
       }
       
       const json: OutletsResponse = await apiRequest({
-        url: `${BASE_URL}/outlet?${query.toString()}`,
+        url: `${BASE_URL}/outlets?${query.toString()}`,
         method: 'GET',
         body: null,
         logLabel: 'FETCH_OUTLETS_ADVANCED',
@@ -341,8 +386,17 @@ export function useOutlet(searchQuery: string) {
         setMeta(null);
         setError('Invalid data format in response');
       }
-    } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'Failed to fetch outlets';
+    } catch (e: any) {
+      // Parse error sesuai StandardResponse format
+      let errorMessage = 'Failed to fetch outlets';
+      if (e?.response?.data?.meta?.message) {
+        errorMessage = e.response.data.meta.message;
+      } else if (e?.meta?.message) {
+        errorMessage = e.meta.message;
+      } else if (e?.code === 'NETWORK_ERROR' || e?.message?.includes('Network')) {
+        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+      }
+      
       setOutlets([]);
       setMeta(null);
       setError(errorMessage);

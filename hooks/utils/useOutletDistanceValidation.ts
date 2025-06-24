@@ -6,7 +6,7 @@ interface LocationCoords {
 }
 
 interface Outlet {
-  id: string;
+  id: string | number;
   name: string;
   location: string;
   radius: number;

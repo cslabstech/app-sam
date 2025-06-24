@@ -2,7 +2,7 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Select } from '@/components/ui/Select';
 import { useNetwork } from '@/context/network-context';
 import { useAddUser } from '@/hooks/data/useAddUser';
-import { useReferenceDropdowns } from '@/hooks/data/useReferenceDropdowns';
+import { useReference } from '@/hooks/data/useReference';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -32,7 +32,7 @@ export default function AddUserScreen() {
     fetchClusters,
     onRoleChange,
     roleScope,
-  } = useReferenceDropdowns();
+  } = useReference();
 
   React.useEffect(() => {
     if (error) {

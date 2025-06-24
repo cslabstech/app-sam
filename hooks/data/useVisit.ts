@@ -7,28 +7,49 @@ const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
 
 // Types for Visit API
 export interface Visit {
-  id: string;
+  id: string | number;
   visit_date: string;
-  user_id: number;
-  outlet_id: number;
-  type: string;
   checkin_time: string | null;
   checkout_time: string | null;
+  checkin_location: string | null;
+  checkout_location: string | null;
+  checkin_photo: string | null;
+  checkout_photo: string | null;
+  type: string;
+  transaction: string | null;
+  report: string | null;
+  duration: number | null;
   outlet: {
-    id: number;
+    id: string | number;
     code: string;
     name: string;
-    district: string;
-    status: string;
-    radius: number;
-    location: string;
+    owner_name: string;
+    address: string;
+    badan_usaha: {
+      id: string | number;
+      name: string;
+    };
+    division: {
+      id: string | number;
+      name: string;
+    };
+    region: {
+      id: string | number;
+      name: string;
+    };
+    cluster: {
+      id: string | number;
+      name: string;
+    };
   };
   user: {
-    id: number;
+    id: string | number;
     name: string;
     username: string;
-    tm_id?: string;
-    role?: string;
+    role?: {
+      id: string | number;
+      name: string;
+    };
   };
 }
 
@@ -40,7 +61,7 @@ export interface VisitResponse extends BaseResponse<Visit> {}
 
 // Interface untuk response check visit status
 export interface VisitStatus {
-  outlet_id: string;
+  outlet_id: string | number;
   has_active_visit: boolean;
   today_visit_count: number;
   last_visit_date?: string;
@@ -95,7 +116,7 @@ export function useVisit() {
       log('[VISIT] fetchVisits query', query.toString());
       
       const queryString = query.toString();
-      const url = `${BASE_URL}/visit${queryString ? `?${queryString}` : ''}`;
+      const url = `${BASE_URL}/visits${queryString ? `?${queryString}` : ''}`;
 
       const json: VisitListResponse = await apiRequest({
         url,
@@ -113,8 +134,17 @@ export function useVisit() {
         setError('Invalid data format in response');
         return { success: false, error: 'Invalid data format in response' };
       }
-    } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'Failed to fetch visits';
+    } catch (e: any) {
+      // Parse error sesuai StandardResponse format
+      let errorMessage = 'Failed to fetch visits';
+      if (e?.response?.data?.meta?.message) {
+        errorMessage = e.response.data.meta.message;
+      } else if (e?.meta?.message) {
+        errorMessage = e.meta.message;
+      } else if (e?.code === 'NETWORK_ERROR' || e?.message?.includes('Network')) {
+        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+      }
+      
       setError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
@@ -129,7 +159,7 @@ export function useVisit() {
     log('[VISIT] fetchVisit visitId', visitId);
     try {
       const json: VisitResponse = await apiRequest({
-        url: `${BASE_URL}/visit/${visitId}`,
+        url: `${BASE_URL}/visits/${visitId}`,
         method: 'GET',
         body: null,
         logLabel: 'FETCH_VISIT',
@@ -137,8 +167,17 @@ export function useVisit() {
       });
       
       return { success: true, data: json.data, meta: json.meta };
-    } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'Failed to fetch visit detail';
+    } catch (e: any) {
+      // Parse error sesuai StandardResponse format
+      let errorMessage = 'Failed to fetch visit detail';
+      if (e?.response?.data?.meta?.message) {
+        errorMessage = e.response.data.meta.message;
+      } else if (e?.meta?.message) {
+        errorMessage = e.meta.message;
+      } else if (e?.code === 'NETWORK_ERROR' || e?.message?.includes('Network')) {
+        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+      }
+      
       setError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
@@ -151,7 +190,7 @@ export function useVisit() {
     log('[USER VISIT] Check-in', formData);
     try {
       const json = await apiRequest({
-        url: `${BASE_URL}/visit`,
+        url: `${BASE_URL}/visits`,
         method: 'POST',
         body: formData,
         logLabel: 'CHECK_IN_VISIT',
@@ -165,13 +204,13 @@ export function useVisit() {
     }
   };
 
-  // Check-out Visit (update) - using FormData for file uploads
+  // Check-out Visit (update) - using PUT method with FormData for file uploads
   const checkOutVisit = async (visitId: string, formData: FormData) => {
     log('[USER VISIT] Check-out', { visitId, formData });
     try {
       const json = await apiRequest({
-        url: `${BASE_URL}/visit/${visitId}`,
-        method: 'POST',
+        url: `${BASE_URL}/visits/${visitId}`,
+        method: 'PUT',
         body: formData,
         logLabel: 'CHECK_OUT_VISIT',
         token
@@ -184,6 +223,46 @@ export function useVisit() {
     }
   };
 
+  // Parse error untuk visit status check sesuai StandardResponse format
+  const parseVisitStatusError = (e: any) => {
+    // Check for StandardResponse format (response.data.meta)
+    if (e?.response?.data?.meta) {
+      const meta = e.response.data.meta;
+      return { 
+        success: false, 
+        error: meta.message || 'Gagal memeriksa status kunjungan',
+        meta: meta
+      };
+    }
+
+    // Check for direct meta object (from apiRequest)
+    if (e?.meta) {
+      return { 
+        success: false, 
+        error: e.meta.message || 'Gagal memeriksa status kunjungan',
+        meta: e.meta
+      };
+    }
+
+    // Handle network errors
+    if (e?.code === 'NETWORK_ERROR' || 
+        e?.message?.includes('Network') || 
+        e?.message?.includes('fetch')) {
+      return { 
+        success: false, 
+        error: 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
+        meta: { code: 0, status: 'network_error', message: 'Network error' }
+      };
+    }
+
+    // Fallback untuk error yang tidak mengikuti format standard
+    return { 
+      success: false, 
+      error: 'Gagal memeriksa status kunjungan. Silakan coba lagi.',
+      meta: { code: 500, status: 'unknown_error', message: 'Unknown error format' }
+    };
+  };
+
   // Cek status visit/check-in/check-out outlet
   const checkVisitStatus = async (outletId: string) => {
     log('[VISIT] checkVisitStatus outletId', outletId);
@@ -194,7 +273,7 @@ export function useVisit() {
 
     try {
       const json: VisitStatusResponse = await apiRequest({
-        url: `${BASE_URL}/visit/check?outlet_id=${encodeURIComponent(outletId)}`,
+        url: `${BASE_URL}/visits/check?outlet_id=${encodeURIComponent(outletId)}`,
         method: 'GET',
         body: null,
         logLabel: 'GET_VISIT_STATUS',
@@ -204,36 +283,54 @@ export function useVisit() {
       return { success: true, data: json.data, meta: json.meta };
       
     } catch (e: any) {
-      log(`[VISIT] checkVisitStatus failed:`, { 
-        httpStatus: e?.httpStatus, 
-        code: e?.code, 
-        message: e?.message 
-      });
-      
-      // Handle different error types
-      if (e?.code === 400) {
-        // This is expected for business logic errors (already visited, etc.)
-        return { 
-          success: false, 
-          error: e?.message || 'Gagal memeriksa status kunjungan',
-          meta: { code: e?.code, status: e?.status, message: e?.message }
-        };
-      } else if (e?.httpStatus === 404) {
-        return { 
-          success: false, 
-          error: 'Endpoint tidak ditemukan',
-          meta: { code: 404, status: 'error', message: 'Endpoint tidak ditemukan' }
-        };
-      } else {
-        const errorMessage = e instanceof Error ? e.message : 'Failed to check visit status';
-        return { 
-          success: false, 
-          error: errorMessage,
-          meta: { code: e?.code || 500, status: 'error', message: errorMessage }
-        };
-      }
+      log(`[VISIT] checkVisitStatus failed:`, e);
+      return parseVisitStatusError(e);
     }
   };
 
-  return { visits, meta, loading, error, fetchVisits, fetchVisit, checkInVisit, checkOutVisit, checkVisitStatus };
+  // Delete visit
+  const deleteVisit = useCallback(async (visitId: string) => {
+    setLoading(true);
+    setError(null);
+    log('[VISIT] deleteVisit visitId', visitId);
+    try {
+      const json = await apiRequest({
+        url: `${BASE_URL}/visits/${visitId}`,
+        method: 'DELETE',
+        body: null,
+        logLabel: 'DELETE_VISIT',
+        token
+      });
+      
+      return { success: true, data: json.data, meta: json.meta };
+    } catch (e: any) {
+      // Parse error sesuai StandardResponse format
+      let errorMessage = 'Failed to delete visit';
+      if (e?.response?.data?.meta?.message) {
+        errorMessage = e.response.data.meta.message;
+      } else if (e?.meta?.message) {
+        errorMessage = e.meta.message;
+      } else if (e?.code === 'NETWORK_ERROR' || e?.message?.includes('Network')) {
+        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+      }
+      
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  return { 
+    visits, 
+    meta, 
+    loading, 
+    error, 
+    fetchVisits, 
+    fetchVisit, 
+    checkInVisit, 
+    checkOutVisit, 
+    checkVisitStatus,
+    deleteVisit
+  };
 }

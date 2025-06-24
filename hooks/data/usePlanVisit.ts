@@ -2,82 +2,91 @@ import { ApiResult, useBaseApi } from '@/hooks/utils/useBaseApi';
 
 export interface PlanVisit {
   id: string | number;
-  user_id: number;
-  outlet_id: number;
   visit_date: string;
-  type: string;
-  created_at?: string;
-  updated_at?: string;
-  outlet?: {
-    id: number;
+  outlet_id: string | number;
+  user_id: string | number;
+  outlet: {
+    id: string | number;
     code: string;
     name: string;
+    owner_name: string;
+    address: string;
+    location: string;
     district: string;
     status: string;
-    radius: number;
-    location: string;
+    badan_usaha_id: string | number;
+    division_id: string | number;
+    region_id: string | number;
+    cluster_id: string | number;
+    badan_usaha: {
+      id: string | number;
+      name: string;
+    };
+    division: {
+      id: string | number;
+      name: string;
+    };
+    region: {
+      id: string | number;
+      name: string;
+    };
+    cluster: {
+      id: string | number;
+      name: string;
+    };
   };
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface CreatePlanVisitData {
-  outlet_id: number;
+  outlet_id: string | number;
+  visit_date: string;
+}
+
+export interface UpdatePlanVisitData {
+  outlet_id: string | number;
   visit_date: string;
 }
 
 export function usePlanVisit() {
-  const baseApi = useBaseApi<PlanVisit>('planvisit', '/planvisit');
+  const baseApi = useBaseApi<PlanVisit>('planvisit', '/plan-visits');
 
-  // ✅ STANDARDIZED: Returns ApiResult format with enhanced field error handling
-  const createPlanVisit = async (data: CreatePlanVisitData): Promise<ApiResult<PlanVisit> & { fieldErrors?: any }> => {
-    try {
-      const result = await baseApi.createItem(data);
-      return result;
-    } catch (error: any) {
-      // Enhanced error handling for validation errors (422)
-      const errorMessage = error.message || 'Gagal membuat plan visit';
-      
-      // Check if this is a validation error with field errors
-      if (error.code === 422 && error.errors) {
-        return {
-          success: false,
-          error: errorMessage,
-          fieldErrors: error.errors // Field errors from API response errors property
-        };
-      }
-      
-      // Return standard error for non-validation errors
-      return {
-        success: false,
-        error: errorMessage
-      };
-    }
+  // Create plan visit - menggunakan baseApi yang sudah di-standardkan
+  const createPlanVisit = async (data: CreatePlanVisitData): Promise<ApiResult<PlanVisit>> => {
+    return baseApi.createItem(data);
+  };
+
+  // Update plan visit - menggunakan baseApi yang sudah di-standardkan
+  const updatePlanVisit = async (id: string | number, data: UpdatePlanVisitData): Promise<ApiResult<PlanVisit>> => {
+    return baseApi.updateItem(id, data);
   };
 
   const deletePlanVisit = async (id: string | number): Promise<ApiResult<void>> => {
-    console.log('usePlanVisit.deletePlanVisit called with ID:', id);
-    console.log('ID type:', typeof id);
-    console.log('ID length:', String(id)?.length);
-    console.log('ID is truthy:', !!id);
-    
-    const result = await baseApi.deleteItem(id);
-    console.log('deletePlanVisit result:', JSON.stringify(result, null, 2));
-    return result;
+    return await baseApi.deleteItem(id);
   };
 
   const fetchPlanVisits = async (params?: Record<string, any>): Promise<ApiResult<PlanVisit[]>> => {
     return baseApi.fetchList(params);
   };
 
+  const fetchPlanVisit = async (id: string | number): Promise<ApiResult<PlanVisit>> => {
+    return baseApi.fetchItem(id);
+  };
+
   return {
-    // ✅ Consistent state from base hook
+    // Consistent state from base hook
     planVisits: baseApi.data,
+    planVisit: baseApi.item,
     loading: baseApi.loading,
     error: baseApi.error,
     meta: baseApi.meta,
     
-    // ✅ Standardized operations with ApiResult
+    // Standardized operations with ApiResult
     fetchPlanVisits,
+    fetchPlanVisit,
     createPlanVisit,
+    updatePlanVisit,
     deletePlanVisit,
   };
 }

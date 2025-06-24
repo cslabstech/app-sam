@@ -4,7 +4,7 @@ import React from 'react';
 import { Animated, Text, TouchableOpacity, View } from 'react-native';
 
 interface Outlet {
-  id: string;
+  id: string | number;
   name: string;
   code: string;
 }

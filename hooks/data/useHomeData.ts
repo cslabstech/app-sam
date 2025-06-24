@@ -44,7 +44,16 @@ export function useHomeData() {
         log('[useHomeData] Failed to fetch today visits:', result.error);
       }
     } catch (err: any) {
-      const errorMessage = err?.message || 'Unexpected error occurred';
+      // Parse error sesuai StandardResponse format
+      let errorMessage = 'Unexpected error occurred';
+      if (err?.response?.data?.meta?.message) {
+        errorMessage = err.response.data.meta.message;
+      } else if (err?.meta?.message) {
+        errorMessage = err.meta.message;
+      } else if (err?.code === 'NETWORK_ERROR' || err?.message?.includes('Network')) {
+        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+      }
+      
       setError(errorMessage);
       log('[useHomeData] Exception while fetching today visits:', err);
     } finally {
