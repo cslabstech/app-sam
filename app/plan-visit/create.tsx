@@ -1,7 +1,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { OutletDropdown } from '@/components/OutletDropdown';
@@ -156,7 +156,7 @@ const useDateManager = () => {
   };
 };
 
-const Header = ({ 
+const Header = React.memo(function Header({ 
   colors, 
   insets, 
   onBack 
@@ -164,23 +164,28 @@ const Header = ({
   colors: any; 
   insets: any; 
   onBack: () => void;
-}) => (
-  <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-    <View style={styles.headerContent}>
-      <Pressable onPress={onBack} style={styles.backButton} accessibilityRole="button">
-        <IconSymbol name="chevron.left" size={24} color={colors.textInverse} />
-      </Pressable>
-      <View style={styles.headerTitleContainer}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Buat Plan Visit
-        </Text>
+}) {
+  return (
+    <View 
+      className="px-4 pb-4"
+      style={{ paddingTop: insets.top + 8 }}
+    >
+      <View className="flex-row items-center justify-between">
+        <Pressable onPress={onBack} className="p-1" accessibilityRole="button">
+          <IconSymbol name="chevron.left" size={24} color={colors.textInverse} />
+        </Pressable>
+        <View className="flex-1 items-center">
+          <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-xl font-bold">
+            Buat Plan Visit
+          </Text>
+        </View>
+        <View className="w-6 h-6" />
       </View>
-      <View style={styles.headerSpacer} />
     </View>
-  </View>
-);
+  );
+});
 
-const OutletSection = ({ 
+const OutletSection = React.memo(function OutletSection({ 
   outlets, 
   selectedOutletId, 
   onSelect, 
@@ -200,35 +205,37 @@ const OutletSection = ({
   loading: boolean;
   fieldErrors: FormErrors;
   colors: any;
-}) => (
-  <View style={styles.section}>
-    <Text style={[styles.sectionLabel, { color: colors.text }]}>
-      Pilih Outlet <Text style={styles.required}>*</Text>
-    </Text>
-    <View style={fieldErrors.outlet_id ? [styles.errorBorder, { borderColor: colors.danger }] : undefined}>
-      <OutletDropdown
-        outlets={outlets}
-        selectedOutletId={selectedOutletId || null}
-        onSelect={onSelect}
-        showDropdown={showDropdown}
-        setShowDropdown={onToggleDropdown}
-        loading={outletsLoading}
-        disabled={loading}
-      />
-    </View>
-    {fieldErrors.outlet_id && (
-      <View style={styles.errorContainer}>
-        {fieldErrors.outlet_id.map((error, index) => (
-          <Text key={index} style={[styles.errorText, { color: colors.danger }]}>
-            {error}
-          </Text>
-        ))}
+}) {
+  return (
+    <View className="mb-6">
+      <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base mb-3 font-medium">
+        Pilih Outlet <Text className="text-red-500">*</Text>
+      </Text>
+      <View className={fieldErrors.outlet_id ? 'border border-red-500 rounded-lg' : ''}>
+        <OutletDropdown
+          outlets={outlets}
+          selectedOutletId={selectedOutletId || null}
+          onSelect={onSelect}
+          showDropdown={showDropdown}
+          setShowDropdown={onToggleDropdown}
+          loading={outletsLoading}
+          disabled={loading}
+        />
       </View>
-    )}
-  </View>
-);
+      {fieldErrors.outlet_id && (
+        <View className="mt-2">
+          {fieldErrors.outlet_id.map((error, index) => (
+            <Text key={index} style={{ fontFamily: 'Inter', color: colors.danger }} className="text-xs">
+              {error}
+            </Text>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+});
 
-const DateSection = ({ 
+const DateSection = React.memo(function DateSection({ 
   planDate, 
   onPress, 
   fieldErrors, 
@@ -240,43 +247,45 @@ const DateSection = ({
   fieldErrors: FormErrors;
   colors: any;
   formatDate: (date: Date) => string;
-}) => (
-  <View style={styles.section}>
-    <Text style={[styles.sectionLabel, { color: colors.text }]}>
-      Tanggal Plan Visit <Text style={styles.required}>*</Text>
-    </Text>
-    <Pressable
-      style={[
-        styles.dateSelector,
-        { 
+}) {
+  return (
+    <View className="mb-6">
+      <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base mb-3 font-medium">
+        Tanggal Plan Visit <Text className="text-red-500">*</Text>
+      </Text>
+      <Pressable
+        className={`rounded-lg border px-3 py-3 flex-row items-center justify-between ${
+          fieldErrors.visit_date ? 'border-red-500' : 'border-neutral-300 dark:border-neutral-600'
+        }`}
+        style={{ 
           borderColor: fieldErrors.visit_date ? colors.danger : colors.border,
           backgroundColor: colors.card,
-        }
-      ]}
-      onPress={onPress}
-      accessibilityRole="button"
-    >
-      <View style={styles.dateSelectorContent}>
-        <IconSymbol name="calendar" size={20} color={colors.primary} />
-        <Text style={[styles.dateText, { color: colors.text }]}>
-          {formatDate(planDate)}
-        </Text>
-      </View>
-      <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
-    </Pressable>
-    {fieldErrors.visit_date && (
-      <View style={styles.errorContainer}>
-        {fieldErrors.visit_date.map((error, index) => (
-          <Text key={index} style={[styles.errorText, { color: colors.danger }]}>
-            {error}
+        }}
+        onPress={onPress}
+        accessibilityRole="button"
+      >
+        <View className="flex-row items-center">
+          <IconSymbol name="calendar" size={20} color={colors.primary} />
+          <Text style={{ fontFamily: 'Inter', color: colors.text }} className="ml-3 text-base">
+            {formatDate(planDate)}
           </Text>
-        ))}
-      </View>
-    )}
-  </View>
-);
+        </View>
+        <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
+      </Pressable>
+      {fieldErrors.visit_date && (
+        <View className="mt-2">
+          {fieldErrors.visit_date.map((error, index) => (
+            <Text key={index} style={{ fontFamily: 'Inter', color: colors.danger }} className="text-xs">
+              {error}
+            </Text>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+});
 
-const DatePickerModal = ({ 
+const DatePickerModal = React.memo(function DatePickerModal({ 
   show, 
   date, 
   onChange, 
@@ -288,7 +297,7 @@ const DatePickerModal = ({
   onChange: (event: any, selectedDate?: Date) => void;
   onClose: () => void;
   colors: any;
-}) => {
+}) {
   if (!show) return null;
 
   return (
@@ -301,22 +310,24 @@ const DatePickerModal = ({
         minimumDate={new Date()}
       />
       {Platform.OS === 'ios' && (
-        <View style={styles.datePickerActions}>
+        <View className="flex-row justify-end mt-3 gap-3">
           <Pressable
-            style={[styles.datePickerButton, { backgroundColor: colors.secondary }]}
+            className="px-4 py-2 rounded-lg"
+            style={{ backgroundColor: colors.secondary }}
             onPress={onClose}
             accessibilityRole="button"
           >
-            <Text style={[styles.datePickerButtonText, { color: colors.text }]}>
+            <Text style={{ fontFamily: 'Inter', color: colors.text }} className="font-semibold">
               Batal
             </Text>
           </Pressable>
           <Pressable
-            style={[styles.datePickerButton, { backgroundColor: colors.primary }]}
+            className="px-4 py-2 rounded-lg"
+            style={{ backgroundColor: colors.primary }}
             onPress={onClose}
             accessibilityRole="button"
           >
-            <Text style={[styles.datePickerButtonText, { color: colors.textInverse }]}>
+            <Text style={{ fontFamily: 'Inter', color: colors.textInverse }} className="font-semibold">
               Selesai
             </Text>
           </Pressable>
@@ -324,9 +335,9 @@ const DatePickerModal = ({
       )}
     </>
   );
-};
+});
 
-const SubmitButton = ({ 
+const SubmitButton = React.memo(function SubmitButton({ 
   onPress, 
   loading, 
   colors 
@@ -334,21 +345,21 @@ const SubmitButton = ({
   onPress: () => void; 
   loading: boolean; 
   colors: any;
-}) => (
-  <Pressable
-    style={[
-      styles.submitButton,
-      { backgroundColor: loading ? colors.disabled : colors.primary }
-    ]}
-    onPress={onPress}
-    disabled={loading}
-    accessibilityRole="button"
-  >
-    <Text style={[styles.submitButtonText, { color: colors.textInverse }]}>
-      {loading ? 'Menyimpan...' : 'Buat Plan Visit'}
-    </Text>
-  </Pressable>
-);
+}) {
+  return (
+    <Pressable
+      className="w-full py-4 rounded-lg items-center justify-center mb-8"
+      style={{ backgroundColor: loading ? colors.disabled : colors.primary }}
+      onPress={onPress}
+      disabled={loading}
+      accessibilityRole="button"
+    >
+      <Text style={{ fontFamily: 'Inter', color: colors.textInverse }} className="text-base font-semibold">
+        {loading ? 'Menyimpan...' : 'Buat Plan Visit'}
+      </Text>
+    </Pressable>
+  );
+});
 
 export default function CreatePlanVisitScreen() {
   const { createPlanVisit, loading } = usePlanVisit();
@@ -481,11 +492,11 @@ export default function CreatePlanVisitScreen() {
   }, [mounted, setErrors, selectedOutletId, planDate, createPlanVisit]);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View className="flex-1 bg-neutral-50 dark:bg-neutral-900" style={{ backgroundColor: colors.background }}>
       <Header colors={colors} insets={insets} onBack={handleBack} />
 
       <ScrollView 
-        style={styles.content}
+        className="flex-1 px-4 pt-6"
         onTouchStart={handleScreenPress}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -526,103 +537,4 @@ export default function CreatePlanVisitScreen() {
       </ScrollView>
     </View>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  headerSpacer: {
-    width: 22,
-    height: 22,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 24,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionLabel: {
-    fontSize: 16,
-    marginBottom: 12,
-    fontWeight: '500',
-  },
-  required: {
-    color: '#ef4444',
-  },
-  errorBorder: {
-    borderWidth: 1,
-    borderRadius: 8,
-  },
-  errorContainer: {
-    marginTop: 8,
-  },
-  errorText: {
-    fontSize: 12,
-  },
-  dateSelector: {
-    borderRadius: 8,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  dateSelectorContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  dateText: {
-    marginLeft: 12,
-    fontSize: 16,
-  },
-  datePickerActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 12,
-    gap: 12,
-  },
-  datePickerButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  datePickerButtonText: {
-    fontWeight: '600',
-  },
-  submitButton: {
-    width: '100%',
-    paddingVertical: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 32,
-  },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-}); 
+} 

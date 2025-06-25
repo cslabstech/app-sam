@@ -15,6 +15,21 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const ONESIGNAL_APP_ID = process.env.EXPO_PUBLIC_ONESIGNAL_APP_ID;
 
+// Memoized loading screen component
+const LoadingScreen = React.memo(function LoadingScreen() {
+  return (
+    <View className="flex-1 justify-center items-center bg-neutral-50">
+      <ActivityIndicator size="large" color="#f97316" />
+      <Text 
+        className="mt-3 text-base text-neutral-500"
+        style={{ fontFamily: 'Inter' }}
+      >
+        Loading font...
+      </Text>
+    </View>
+  );
+});
+
 function NotifIdInitializer({ children }: { children: React.ReactNode }) {
   const { setNotifId, setNotificationPermission, setNotifIdLoading } = useNotifId();
   const OneSignal = useOneSignal();
@@ -138,16 +153,11 @@ export default function RootLayout() {
   });
 
   if (!loaded) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
-        <Text style={{ marginTop: 12, color: '#888' }}>Loading font...</Text>
-      </View>
-    );
+    return <LoadingScreen />;
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView className="flex-1">
       <NetworkProvider>
         <NotifIdProvider>
           <NotifIdInitializer>

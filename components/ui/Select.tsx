@@ -1,11 +1,10 @@
-import { Colors } from '@/constants/Colors';
-import { spacing } from '@/constants/Spacing';
-import { typography } from '@/constants/Typography';
-import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useState } from 'react';
-import { FlatList, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { FlatList, Modal, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
+import { useColorScheme } from '@/hooks/utils/useColorScheme';
+
+// 1. Types first
 interface Option {
   label: string;
   value: string;
@@ -22,38 +21,39 @@ interface SelectProps {
   searchable?: boolean;
 }
 
-/**
- * Select Component - Versi yang robust tanpa animasi kompleks
- * Menghindari useInsertionEffect errors dan lebih stabil
- */
-export const Select: React.FC<SelectProps> = React.memo(({
-  label,
-  value,
-  options,
-  onValueChange,
-  placeholder = 'Pilih',
-  disabled = false,
-  error,
-  searchable = options.length > 8,
+// 2. Custom hook for component logic
+const useSelectLogic = ({ 
+  options, 
+  value, 
+  onValueChange, 
+  disabled,
+  searchable 
+}: {
+  options: Option[];
+  value: string;
+  onValueChange: (value: string) => void;
+  disabled: boolean;
+  searchable?: boolean;
 }) => {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
-  
   const [modalVisible, setModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Memoized values
-  const selectedLabel = React.useMemo(() => {
+  const selectedLabel = useMemo(() => {
     return options.find(opt => opt.value === value)?.label || '';
   }, [options, value]);
 
-  const filteredOptions = React.useMemo(() => {
+  const filteredOptions = useMemo(() => {
     if (!searchQuery.trim()) return options;
     const query = searchQuery.toLowerCase();
     return options.filter(option => 
       option.label.toLowerCase().includes(query)
     );
   }, [options, searchQuery]);
+
+  const shouldShowSearch = useMemo(() => {
+    return searchable && options.length > 5;
+  }, [searchable, options.length]);
 
   // Handlers
   const handleOpenModal = useCallback(() => {
@@ -77,42 +77,131 @@ export const Select: React.FC<SelectProps> = React.memo(({
     setSearchQuery(text);
   }, []);
 
-  // Styles
-  const containerStyle = {
-    backgroundColor: disabled ? colors.backgroundAlt : colors.input,
-    borderColor: disabled ? colors.border : error ? colors.danger : colors.inputBorder,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    height: 50,
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+  return {
+    modalVisible,
+    searchQuery,
+    selectedLabel,
+    filteredOptions,
+    shouldShowSearch,
+    handleOpenModal,
+    handleCloseModal,
+    handleSelectOption,
+    handleSearchChange,
+  };
+};
+
+// 3. Main component
+export const Select = React.memo(function Select({
+  label,
+  value,
+  options,
+  onValueChange,
+  placeholder = 'Pilih',
+  disabled = false,
+  error,
+  searchable = options.length > 8,
+}: SelectProps) {
+  const colorScheme = useColorScheme();
+  const {
+    modalVisible,
+    searchQuery,
+    selectedLabel,
+    filteredOptions,
+    shouldShowSearch,
+    handleOpenModal,
+    handleCloseModal,
+    handleSelectOption,
+    handleSearchChange,
+  } = useSelectLogic({ options, value, onValueChange, disabled, searchable });
+
+  // ✅ PRIMARY - NativeWind classes
+  const getContainerClasses = () => {
+    return error ? 'mb-4' : 'mb-0';
+  };
+
+  const getLabelClasses = () => {
+    return 'text-sm font-medium font-sans mb-1.5 text-neutral-700 dark:text-neutral-200';
+  };
+
+  const getSelectButtonClasses = () => {
+    const baseClasses = [
+      'flex-row items-center h-12 px-4 rounded-lg border',
+      'active:opacity-70',
+    ];
+
+    const stateClasses = (() => {
+      if (disabled) return 'bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 opacity-60';
+      if (error) return 'bg-white dark:bg-neutral-900 border-danger-500';
+      return 'bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-600';
+    })();
+
+    return [...baseClasses, stateClasses].join(' ');
+  };
+
+  const getSelectTextClasses = () => {
+    const baseClasses = 'flex-1 text-base font-sans';
+    const colorClasses = value 
+      ? 'text-neutral-900 dark:text-white' 
+      : 'text-neutral-500 dark:text-neutral-400';
+    
+    return `${baseClasses} ${colorClasses}`;
+  };
+
+  const getErrorTextClasses = () => {
+    return 'text-xs font-sans mt-1 ml-1 text-danger-600 dark:text-danger-400';
+  };
+
+  const getModalContentClasses = () => {
+    return 'bg-white dark:bg-neutral-900 rounded-t-xl max-h-[80%]';
+  };
+
+  const getModalHeaderClasses = () => {
+    return 'flex-row items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-700';
+  };
+
+  const getSearchContainerClasses = () => {
+    return 'flex-row items-center border border-neutral-200 dark:border-neutral-600 rounded-lg m-4 px-3 h-11 bg-neutral-50 dark:bg-neutral-800';
+  };
+
+  const getSearchInputClasses = () => {
+    return 'flex-1 text-base font-sans ml-2 h-11 text-neutral-900 dark:text-white';
+  };
+
+  const getOptionItemClasses = (isSelected: boolean) => {
+    const baseClasses = 'flex-row items-center py-4 px-3 rounded-lg my-0.5';
+    const selectedClasses = isSelected 
+      ? 'bg-primary-50 dark:bg-primary-950 border-l-2 border-l-primary-500' 
+      : '';
+    
+    return `${baseClasses} ${selectedClasses}`.trim();
+  };
+
+  const getOptionTextClasses = (isSelected: boolean) => {
+    const baseClasses = 'flex-1 text-base font-sans';
+    const styleClasses = isSelected 
+      ? 'font-semibold text-neutral-900 dark:text-white' 
+      : 'font-normal text-neutral-900 dark:text-white';
+    
+    return `${baseClasses} ${styleClasses}`;
   };
 
   return (
-    <View style={{ marginBottom: error ? spacing.lg : 0 }}>
+    <View className={getContainerClasses()}>
       {label && (
-        <Text style={styles.label}>
+        <Text className={getLabelClasses()}>
           {label}
         </Text>
       )}
       
       <TouchableOpacity
-        style={containerStyle}
+        className={getSelectButtonClasses()}
         onPress={handleOpenModal}
-        activeOpacity={0.7}
         disabled={disabled}
         accessibilityRole="button"
         accessibilityLabel={label}
       >
         <Text
-          style={[
-            styles.selectText,
-            { 
-              color: value ? colors.text : colors.textSecondary,
-              flex: 1 
-            }
-          ]}
+          className={getSelectTextClasses()}
           numberOfLines={1}
         >
           {selectedLabel || placeholder}
@@ -120,12 +209,12 @@ export const Select: React.FC<SelectProps> = React.memo(({
         <Ionicons 
           name="chevron-down" 
           size={20} 
-          color={colors.textSecondary} 
+          color={colorScheme === 'dark' ? '#a3a3a3' : '#737373'} 
         />
       </TouchableOpacity>
       
       {error && (
-        <Text style={[styles.errorText, { color: colors.danger }]}>
+        <Text className={getErrorTextClasses()}>
           {error}
         </Text>
       )}
@@ -137,35 +226,59 @@ export const Select: React.FC<SelectProps> = React.memo(({
         onRequestClose={handleCloseModal}
         presentationStyle="overFullScreen"
       >
-        <View style={styles.modalOverlay}>
+        <View className="flex-1 justify-end">
           <TouchableOpacity 
-            style={styles.modalBackdrop}
+            className="flex-1 bg-black/50"
             onPress={handleCloseModal}
             activeOpacity={1}
           />
           
-          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+          <View 
+            className={getModalContentClasses()}
+            style={{
+              // ⚠️ SECONDARY - Complex shadow for modal
+              ...Platform.select({
+                ios: {
+                  shadowColor: '#000',
+                  shadowOpacity: 0.25,
+                  shadowOffset: { width: 0, height: -2 },
+                  shadowRadius: 10,
+                },
+                android: {
+                  elevation: 16,
+                },
+              }),
+            }}
+          >
             {/* Header */}
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
+            <View className={getModalHeaderClasses()}>
+              <Text className="text-lg font-semibold font-sans text-neutral-900 dark:text-white">
                 {label || 'Pilih Opsi'}
               </Text>
-              <TouchableOpacity onPress={handleCloseModal} style={styles.closeButton}>
-                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              <TouchableOpacity 
+                onPress={handleCloseModal} 
+                className="p-1"
+              >
+                <Ionicons 
+                  name="close" 
+                  size={24} 
+                  color={colorScheme === 'dark' ? '#a3a3a3' : '#737373'} 
+                />
               </TouchableOpacity>
             </View>
             
             {/* Search */}
-            {searchable && options.length > 5 && (
-              <View style={[styles.searchContainer, { 
-                borderColor: colors.border,
-                backgroundColor: colors.background 
-              }]}>
-                <Ionicons name="search" size={20} color={colors.textSecondary} />
+            {shouldShowSearch && (
+              <View className={getSearchContainerClasses()}>
+                <Ionicons 
+                  name="search" 
+                  size={20} 
+                  color={colorScheme === 'dark' ? '#a3a3a3' : '#737373'} 
+                />
                 <TextInput
-                  style={[styles.searchInput, { color: colors.text }]}
+                  className={getSearchInputClasses()}
                   placeholder="Cari..."
-                  placeholderTextColor={colors.textSecondary}
+                  placeholderTextColor={colorScheme === 'dark' ? '#a3a3a3' : '#737373'}
                   value={searchQuery}
                   onChangeText={handleSearchChange}
                   autoCorrect={false}
@@ -177,9 +290,13 @@ export const Select: React.FC<SelectProps> = React.memo(({
             
             {/* Options List */}
             {filteredOptions.length === 0 ? (
-              <View style={styles.noResults}>
-                <Ionicons name="alert-circle-outline" size={22} color={colors.textSecondary} />
-                <Text style={[styles.noResultsText, { color: colors.textSecondary }]}>
+              <View className="p-8 items-center justify-center flex-row">
+                <Ionicons 
+                  name="alert-circle-outline" 
+                  size={22} 
+                  color={colorScheme === 'dark' ? '#a3a3a3' : '#737373'} 
+                />
+                <Text className="ml-2 text-base font-sans text-neutral-600 dark:text-neutral-400">
                   Tidak ada pilihan yang sesuai
                 </Text>
               </View>
@@ -189,33 +306,24 @@ export const Select: React.FC<SelectProps> = React.memo(({
                 keyExtractor={(item) => `${item.value}-${item.label}`}
                 renderItem={({ item }) => (
                   <TouchableOpacity
-                    style={[
-                      styles.optionItem,
-                      item.value === value && { 
-                        backgroundColor: `${colors.primary}15`,
-                        borderLeftWidth: 3,
-                        borderLeftColor: colors.primary
-                      }
-                    ]}
+                    className={getOptionItemClasses(item.value === value)}
                     onPress={() => handleSelectOption(item.value)}
                     accessibilityRole="button"
                     accessibilityLabel={item.label}
                   >
-                    <Text style={[
-                      styles.optionText, 
-                      { 
-                        color: colors.text,
-                        fontWeight: item.value === value ? '600' : '400'
-                      }
-                    ]}>
+                    <Text className={getOptionTextClasses(item.value === value)}>
                       {item.label}
                     </Text>
                     {item.value === value && (
-                      <Ionicons name="checkmark" size={20} color={colors.primary} />
+                      <Ionicons 
+                        name="checkmark" 
+                        size={20} 
+                        color="#FF6B35" 
+                      />
                     )}
                   </TouchableOpacity>
                 )}
-                style={styles.optionsList}
+                className="px-4 pb-4"
                 showsVerticalScrollIndicator={true}
                 keyboardShouldPersistTaps="handled"
                 removeClippedSubviews={true}
@@ -231,106 +339,5 @@ export const Select: React.FC<SelectProps> = React.memo(({
   );
 });
 
-Select.displayName = 'Select';
-
-const styles = StyleSheet.create({
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    fontFamily: typography.fontFamily,
-    marginBottom: 6,
-  },
-  selectText: {
-    fontSize: typography.fontSizeMd,
-    fontFamily: typography.fontFamily,
-  },
-  errorText: {
-    fontSize: 12,
-    fontFamily: typography.fontFamily,
-    marginTop: spacing.xs,
-    marginLeft: spacing.xs,
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOpacity: 0.25,
-        shadowOffset: { width: 0, height: -2 },
-        shadowRadius: 10,
-      },
-      android: {
-        elevation: 16,
-      },
-    }),
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.lg,
-    borderBottomWidth: 1,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    fontFamily: typography.fontFamily,
-  },
-  closeButton: {
-    padding: 4,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 8,
-    margin: spacing.lg,
-    paddingHorizontal: 12,
-    height: 44,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: typography.fontSizeMd,
-    fontFamily: typography.fontFamily,
-    marginLeft: spacing.sm,
-    height: 44,
-  },
-  noResults: {
-    padding: spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  noResultsText: {
-    marginLeft: spacing.sm,
-    fontSize: typography.fontSizeMd,
-    fontFamily: typography.fontFamily,
-  },
-  optionsList: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
-  },
-  optionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginVertical: 2,
-  },
-  optionText: {
-    fontSize: typography.fontSizeMd,
-    fontFamily: typography.fontFamily,
-    flex: 1,
-  },
-}); 
+// 4. Export types for reuse
+export type { Option, SelectProps };

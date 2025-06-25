@@ -1,7 +1,8 @@
-import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { router, useFocusEffect } from 'expo-router';
 
 import { DateFilter } from '@/components/DateFilter';
 import { IconSymbol } from '@/components/ui/IconSymbol';
@@ -206,7 +207,7 @@ const usePlanVisitActions = () => {
   };
 };
 
-const Header = ({ 
+const Header = React.memo(function Header({ 
   colors, 
   insets, 
   onBack, 
@@ -216,34 +217,41 @@ const Header = ({
   insets: any; 
   onBack: () => void;
   onCreate: () => void;
-}) => (
-  <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-    <View style={styles.headerContent}>
-      <Pressable onPress={onBack} style={styles.headerButton} accessibilityRole="button">
-        <IconSymbol name="chevron.left" size={24} color={colors.textInverse} />
-      </Pressable>
-      <View style={styles.headerTitleContainer}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Plan Visit
-        </Text>
+}) {
+  return (
+    <View 
+      className="px-4 pb-4"
+      style={{ paddingTop: insets.top + 8 }}
+    >
+      <View className="flex-row items-center justify-between">
+        <Pressable onPress={onBack} className="p-1" accessibilityRole="button">
+          <IconSymbol name="chevron.left" size={24} color={colors.textInverse} />
+        </Pressable>
+        <View className="flex-1 items-center">
+          <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-xl font-bold">
+            Plan Visit
+          </Text>
+        </View>
+        <Pressable onPress={onCreate} className="p-1" accessibilityRole="button">
+          <IconSymbol name="plus" size={24} color={colors.textInverse} />
+        </Pressable>
       </View>
-      <Pressable onPress={onCreate} style={styles.headerButton} accessibilityRole="button">
-        <IconSymbol name="plus" size={24} color={colors.textInverse} />
-      </Pressable>
     </View>
-  </View>
-);
+  );
+});
 
-const LoadingScreen = ({ colors }: { colors: any }) => (
-  <View style={[styles.centerContainer, { backgroundColor: colors.background }]}>
-    <ActivityIndicator size="large" color={colors.primary} />
-    <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-      Memuat...
-    </Text>
-  </View>
-);
+const LoadingScreen = React.memo(function LoadingScreen({ colors }: { colors: any }) {
+  return (
+    <View className="flex-1 justify-center items-center" style={{ backgroundColor: colors.background }}>
+      <ActivityIndicator size="large" color={colors.primary} />
+      <Text style={{ fontFamily: 'Inter', color: colors.textSecondary }} className="mt-4 text-base">
+        Memuat...
+      </Text>
+    </View>
+  );
+});
 
-const ErrorDisplay = ({ 
+const ErrorDisplay = React.memo(function ErrorDisplay({ 
   error, 
   fetchError, 
   colors 
@@ -251,35 +259,41 @@ const ErrorDisplay = ({
   error: string | null; 
   fetchError: string | null; 
   colors: any;
-}) => {
+}) {
   if (!error && !fetchError) return null;
 
   return (
-    <View style={[styles.errorContainer, { backgroundColor: colors.danger + '20', borderColor: colors.danger + '40' }]}>
-      <Text style={[styles.errorText, { color: colors.danger }]}>
+    <View 
+      className="rounded-lg p-3 mb-4 border"
+      style={{ 
+        backgroundColor: colors.danger + '20', 
+        borderColor: colors.danger + '40' 
+      }}
+    >
+      <Text style={{ fontFamily: 'Inter', color: colors.danger }} className="text-sm">
         {error || fetchError}
       </Text>
     </View>
   );
-};
+});
 
-const LoadingIndicator = ({ 
+const LoadingIndicator = React.memo(function LoadingIndicator({ 
   visible, 
   colors 
 }: { 
   visible: boolean; 
   colors: any;
-}) => {
+}) {
   if (!visible) return null;
 
   return (
-    <View style={styles.loadingIndicator}>
+    <View className="py-2 items-center">
       <ActivityIndicator size="small" color={colors.primary} />
     </View>
   );
-};
+});
 
-const ListHeader = ({ 
+const ListHeader = React.memo(function ListHeader({ 
   planVisits, 
   meta, 
   currentFilters, 
@@ -289,23 +303,25 @@ const ListHeader = ({
   meta: any;
   currentFilters: FilterParams;
   colors: any;
-}) => (
-  <View style={styles.listHeader}>
-    <Text style={[styles.countText, { color: colors.textSecondary }]}>
-      {planVisits.length} dari {meta?.total || planVisits.length} plan visit
-    </Text>
-    {currentFilters.filterType !== 'all' && (
-      <View style={styles.filterIndicator}>
-        <IconSymbol name="line.3.horizontal.decrease.circle" size={16} color={colors.primary} />
-        <Text style={[styles.filterText, { color: colors.primary }]}>
-          Terfilter
-        </Text>
-      </View>
-    )}
-  </View>
-);
+}) {
+  return (
+    <View className="flex-row items-center justify-between mb-4">
+      <Text style={{ fontFamily: 'Inter', color: colors.textSecondary }} className="text-sm">
+        {planVisits.length} dari {meta?.total || planVisits.length} plan visit
+      </Text>
+      {currentFilters.filterType !== 'all' && (
+        <View className="flex-row items-center">
+          <IconSymbol name="line.3.horizontal.decrease.circle" size={16} color={colors.primary} />
+          <Text style={{ fontFamily: 'Inter', color: colors.primary }} className="text-xs ml-1 font-medium">
+            Terfilter
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+});
 
-const PlanVisitItem = ({ 
+const PlanVisitItem = React.memo(function PlanVisitItem({ 
   item, 
   onDelete, 
   colors, 
@@ -315,60 +331,67 @@ const PlanVisitItem = ({
   onDelete: (item: PlanVisit) => void; 
   colors: any;
   styles: any;
-}) => (
-  <View style={[styles.planVisitItem, themeStyles.card.default]}>
-    <View style={styles.planVisitContent}>
-      <View style={styles.planVisitInfo}>
-        <Text style={[styles.planVisitTitle, themeStyles.text.primary]}>
-          {item.outlet?.name || 'Unknown Outlet'}
-        </Text>
-        <Text style={[styles.planVisitSubtitle, themeStyles.text.secondary]}>
-          {item.outlet?.code} • {item.outlet?.district || 'No District'}
-        </Text>
-        <Text style={[styles.planVisitDate, themeStyles.text.primary]}>
-          📅 {new Date(item.visit_date).toLocaleDateString('id-ID', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          })}
-        </Text>
+}) {
+  return (
+    <View 
+      className="rounded-xl mb-3 p-4 border"
+      style={[themeStyles.card.default]}
+    >
+      <View className="flex-row justify-between items-start">
+        <View className="flex-1">
+          <Text style={[{ fontFamily: 'Inter' }, themeStyles.text.primary]} className="text-lg font-bold mb-1">
+            {item.outlet?.name || 'Unknown Outlet'}
+          </Text>
+          <Text style={[{ fontFamily: 'Inter' }, themeStyles.text.secondary]} className="text-sm mb-1">
+            {item.outlet?.code} • {item.outlet?.district || 'No District'}
+          </Text>
+          <Text style={[{ fontFamily: 'Inter' }, themeStyles.text.primary]} className="text-base mb-2">
+            📅 {new Date(item.visit_date).toLocaleDateString('id-ID', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            })}
+          </Text>
+        </View>
+        <Pressable
+          className="p-2"
+          onPress={() => onDelete(item)}
+          accessibilityRole="button"
+          accessibilityLabel={`Hapus plan visit ${item.outlet?.name}`}
+        >
+          <IconSymbol name="trash" size={20} color={colors.danger} />
+        </Pressable>
       </View>
-      <Pressable
-        style={styles.deleteButton}
-        onPress={() => onDelete(item)}
-        accessibilityRole="button"
-        accessibilityLabel={`Hapus plan visit ${item.outlet?.name}`}
-      >
-        <IconSymbol name="trash" size={20} color={colors.danger} />
-      </Pressable>
     </View>
-  </View>
-);
+  );
+});
 
-const EmptyState = ({ 
+const EmptyState = React.memo(function EmptyState({ 
   currentFilters, 
   colors 
 }: { 
   currentFilters: FilterParams; 
   colors: any;
-}) => (
-  <View style={styles.emptyState}>
-    <IconSymbol name="calendar" size={60} color={colors.textSecondary} />
-    <Text style={[styles.emptyTitle, { color: colors.textSecondary }]}>
-      {currentFilters.filterType === 'all' 
-        ? 'Belum ada plan visit'
-        : 'Tidak ada plan visit'
-      }
-    </Text>
-    <Text style={[styles.emptySubtitle, { color: colors.textTertiary }]}>
-      {currentFilters.filterType === 'all' 
-        ? 'Tap tombol + untuk menambah plan visit baru'
-        : 'Tidak ditemukan plan visit untuk filter yang dipilih'
-      }
-    </Text>
-  </View>
-);
+}) {
+  return (
+    <View className="flex-1 justify-center items-center">
+      <IconSymbol name="calendar" size={60} color={colors.textSecondary} />
+      <Text style={{ fontFamily: 'Inter', color: colors.textSecondary }} className="text-lg font-semibold mt-4">
+        {currentFilters.filterType === 'all' 
+          ? 'Belum ada plan visit'
+          : 'Tidak ada plan visit'
+        }
+      </Text>
+      <Text style={{ fontFamily: 'Inter', color: colors.textTertiary }} className="text-base mt-2 text-center">
+        {currentFilters.filterType === 'all' 
+          ? 'Tap tombol + untuk menambah plan visit baru'
+          : 'Tidak ditemukan plan visit untuk filter yang dipilih'
+        }
+      </Text>
+    </View>
+  );
+});
 
 /**
  * Plan Visit List Screen - Daftar rencana kunjungan
@@ -469,7 +492,7 @@ export default function PlanVisitListScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View className="flex-1 bg-neutral-50 dark:bg-neutral-900" style={{ backgroundColor: colors.background }}>
       <Header
         colors={colors}
         insets={insets}
@@ -477,7 +500,7 @@ export default function PlanVisitListScreen() {
         onCreate={handleCreate}
       />
 
-      <View style={styles.content}>
+      <View className="flex-1 px-4 pt-4">
         <DateFilter
           onFilterChange={handleFilterChange}
           initialFilters={currentFilters}
@@ -532,120 +555,4 @@ export default function PlanVisitListScreen() {
       </View>
     </View>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerButton: {
-    padding: 4,
-  },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-  },
-  errorContainer: {
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-  },
-  errorText: {
-    fontSize: 14,
-  },
-  loadingIndicator: {
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  listHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  countText: {
-    fontSize: 14,
-  },
-  filterIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  filterText: {
-    fontSize: 12,
-    marginLeft: 4,
-    fontWeight: '500',
-  },
-  planVisitItem: {
-    borderRadius: 12,
-    marginBottom: 12,
-    padding: 16,
-    borderWidth: 1,
-  },
-  planVisitContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  planVisitInfo: {
-    flex: 1,
-  },
-  planVisitTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  planVisitSubtitle: {
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  planVisitDate: {
-    fontSize: 16,
-    marginBottom: 8,
-  },
-  deleteButton: {
-    padding: 8,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 16,
-  },
-  emptySubtitle: {
-    fontSize: 16,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-}); 
+} 

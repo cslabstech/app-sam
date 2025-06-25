@@ -6,7 +6,7 @@ import { useReference } from '@/hooks/data/useReference';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface FormData {
@@ -133,39 +133,69 @@ const useFieldDependencies = (
   };
 };
 
-const Header = ({ 
+const getColors = () => ({
+  background: '#fafafa',
+  text: '#171717',
+  textSecondary: '#737373',
+  textTertiary: '#a3a3a3',
+  textInverse: '#ffffff',
+  primary: '#f97316',
+  danger: '#ef4444',
+  disabled: '#d4d4d4',
+  inputBackground: '#fafafa',
+  inputBorder: '#d4d4d4',
+  shadow: '#000000',
+});
+
+const Header = React.memo(function Header({ 
   onBack, 
   colors 
 }: { 
   onBack: () => void; 
   colors: any;
-}) => (
-  <View style={[styles.header, { backgroundColor: colors.background, shadowColor: colors.shadow }]}>
-    <TouchableOpacity
-      onPress={onBack}
-      style={styles.backButton}
-      accessibilityLabel="Kembali"
-      accessibilityHint="Kembali ke halaman sebelumnya"
-      accessibilityRole="button"
+}) {
+  return (
+    <View 
+      className="flex-row items-center h-14 px-4 shadow-sm z-10"
+      style={{ backgroundColor: colors.background, shadowColor: colors.shadow }}
     >
-      <IconSymbol name="chevron.left" size={26} color={colors.text} />
-    </TouchableOpacity>
-    <Text style={[styles.headerTitle, { color: colors.text }]}>
-      Tambah User
-    </Text>
-  </View>
-);
+      <TouchableOpacity
+        onPress={onBack}
+        className="mr-4 min-w-9 items-center justify-center"
+        accessibilityLabel="Kembali"
+        accessibilityHint="Kembali ke halaman sebelumnya"
+        accessibilityRole="button"
+      >
+        <IconSymbol name="chevron.left" size={26} color={colors.text} />
+      </TouchableOpacity>
+      <Text 
+        className="text-xl font-bold"
+        style={{ fontFamily: 'Inter', color: colors.text }}
+      >
+        Tambah User
+      </Text>
+    </View>
+  );
+});
 
-const LoadingScreen = ({ colors }: { colors: any }) => (
-  <SafeAreaView style={[styles.centerContainer, { backgroundColor: colors.background }]}>
-    <ActivityIndicator size="large" color={colors.primary} />
-    <Text style={[styles.loadingText, { color: colors.text }]}>
-      Menyimpan user...
-    </Text>
-  </SafeAreaView>
-);
+const LoadingScreen = React.memo(function LoadingScreen({ colors }: { colors: any }) {
+  return (
+    <SafeAreaView 
+      className="flex-1 justify-center items-center"
+      style={{ backgroundColor: colors.background }}
+    >
+      <ActivityIndicator size="large" color={colors.primary} />
+      <Text 
+        className="text-base mt-4"
+        style={{ fontFamily: 'Inter', color: colors.text }}
+      >
+        Menyimpan user...
+      </Text>
+    </SafeAreaView>
+  );
+});
 
-const ErrorScreen = ({ 
+const ErrorScreen = React.memo(function ErrorScreen({ 
   error, 
   onBack, 
   colors 
@@ -173,24 +203,36 @@ const ErrorScreen = ({
   error: string; 
   onBack: () => void; 
   colors: any;
-}) => (
-  <SafeAreaView style={[styles.centerContainer, { backgroundColor: colors.background }]}>
-    <Ionicons name="alert-circle" size={24} color={colors.danger} style={styles.errorIcon} />
-    <Text style={[styles.errorText, { color: colors.danger }]}>
-      {error}
-    </Text>
-    <Pressable
-      style={[styles.errorButton, { backgroundColor: colors.primary }]}
-      onPress={onBack}
+}) {
+  return (
+    <SafeAreaView 
+      className="flex-1 justify-center items-center"
+      style={{ backgroundColor: colors.background }}
     >
-      <Text style={[styles.errorButtonText, { color: colors.textInverse }]}>
-        Kembali
+      <Ionicons name="alert-circle" size={24} color={colors.danger} className="mb-2" />
+      <Text 
+        className="text-center mb-4"
+        style={{ fontFamily: 'Inter', color: colors.danger }}
+      >
+        {error}
       </Text>
-    </Pressable>
-  </SafeAreaView>
-);
+      <Pressable
+        className="h-12 rounded-lg items-center justify-center mb-8 px-8"
+        style={{ backgroundColor: colors.primary }}
+        onPress={onBack}
+      >
+        <Text 
+          className="text-base font-semibold"
+          style={{ fontFamily: 'Inter', color: colors.textInverse }}
+        >
+          Kembali
+        </Text>
+      </Pressable>
+    </SafeAreaView>
+  );
+});
 
-const FormField = ({ 
+const FormField = React.memo(function FormField({ 
   label, 
   value, 
   onChangeText, 
@@ -206,32 +248,36 @@ const FormField = ({
   keyboardType?: any;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   colors: any;
-}) => (
-  <View style={styles.fieldContainer}>
-    <Text style={[styles.fieldLabel, { color: colors.text }]}>
-      {label}
-    </Text>
-    <TextInput
-      style={[
-        styles.textInput,
-        {
+}) {
+  return (
+    <View className="w-full">
+      <Text 
+        className="mb-2 text-sm font-medium"
+        style={{ fontFamily: 'Inter', color: colors.text }}
+      >
+        {label}
+      </Text>
+      <TextInput
+        className="h-12 px-4 border rounded-lg text-base"
+        style={{
+          fontFamily: 'Inter',
           backgroundColor: colors.inputBackground,
           color: colors.text,
           borderColor: colors.inputBorder,
-        }
-      ]}
-      placeholder={placeholder}
-      placeholderTextColor={colors.textTertiary}
-      value={value}
-      onChangeText={onChangeText}
-      textAlignVertical="center"
-      keyboardType={keyboardType}
-      autoCapitalize={autoCapitalize}
-    />
-  </View>
-);
+        }}
+        placeholder={placeholder}
+        placeholderTextColor={colors.textTertiary}
+        value={value}
+        onChangeText={onChangeText}
+        textAlignVertical="center"
+        keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize}
+      />
+    </View>
+  );
+});
 
-const SelectField = ({ 
+const SelectField = React.memo(function SelectField({ 
   label, 
   value, 
   onValueChange, 
@@ -245,21 +291,26 @@ const SelectField = ({
   options: SelectOption[];
   placeholder: string;
   colors: any;
-}) => (
-  <View style={styles.fieldContainer}>
-    <Text style={[styles.fieldLabel, { color: colors.text }]}>
-      {label}
-    </Text>
-    <Select
-      value={value}
-      onValueChange={onValueChange}
-      options={options}
-      placeholder={placeholder}
-    />
-  </View>
-);
+}) {
+  return (
+    <View className="w-full">
+      <Text 
+        className="mb-2 text-sm font-medium"
+        style={{ fontFamily: 'Inter', color: colors.text }}
+      >
+        {label}
+      </Text>
+      <Select
+        value={value}
+        onValueChange={onValueChange}
+        options={options}
+        placeholder={placeholder}
+      />
+    </View>
+  );
+});
 
-const SubmitButton = ({ 
+const SubmitButton = React.memo(function SubmitButton({ 
   onPress, 
   loading, 
   colors 
@@ -267,46 +318,35 @@ const SubmitButton = ({
   onPress: () => void; 
   loading: boolean; 
   colors: any;
-}) => (
-  <Pressable
-    style={[
-      styles.submitButton,
-      { backgroundColor: loading ? colors.disabled : colors.primary }
-    ]}
-    onPress={onPress}
-    disabled={loading}
-    accessibilityLabel="Simpan User"
-    accessibilityHint="Menambahkan user baru ke sistem"
-  >
-    <Text 
-      style={[
-        styles.submitButtonText, 
-        { color: loading ? colors.textSecondary : colors.textInverse }
-      ]}
+}) {
+  return (
+    <Pressable
+      className="h-12 rounded-lg items-center justify-center mb-8"
+      style={{ backgroundColor: loading ? colors.disabled : colors.primary }}
+      onPress={onPress}
+      disabled={loading}
+      accessibilityLabel="Simpan User"
+      accessibilityHint="Menambahkan user baru ke sistem"
     >
-      {loading ? 'Menyimpan...' : 'Simpan User'}
-    </Text>
-  </Pressable>
-);
+      <Text 
+        className="text-base font-semibold"
+        style={{ 
+          fontFamily: 'Inter',
+          color: loading ? colors.textSecondary : colors.textInverse 
+        }}
+      >
+        {loading ? 'Menyimpan...' : 'Simpan User'}
+      </Text>
+    </Pressable>
+  );
+});
 
 export default function AddUserScreen() {
   const router = useRouter();
   const { isConnected } = useNetwork();
   const { loading, error, addUser } = useAddUser();
   
-  const colors = {
-    background: '#fafafa',
-    text: '#171717',
-    textSecondary: '#737373',
-    textTertiary: '#a3a3a3',
-    textInverse: '#ffffff',
-    primary: '#f97316',
-    danger: '#ef4444',
-    disabled: '#d4d4d4',
-    inputBackground: '#fafafa',
-    inputBorder: '#d4d4d4',
-    shadow: '#000000',
-  };
+  const colors = getColors();
 
   const { formData, updateField, resetDependentFields, resetForm } = useAddUserForm();
   const {
@@ -368,24 +408,25 @@ export default function AddUserScreen() {
 
   return (
     <SafeAreaView 
-      style={[styles.container, { backgroundColor: colors.background }]} 
+      className="flex-1 bg-neutral-50"
+      style={{ backgroundColor: colors.background }} 
       edges={isConnected ? ['top','left','right'] : ['left','right']}
     >
       <Header onBack={handleBack} colors={colors} />
       
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-        style={styles.keyboardView}
+        className="flex-1"
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView 
-            style={styles.scrollView} 
-            contentContainerStyle={styles.scrollContent}
+            className="flex-1" 
+            contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 }}
             showsVerticalScrollIndicator={false}
           >
-            <View style={styles.formContainer}>
-              <View style={styles.fieldsContainer}>
+            <View className="flex-1">
+              <View className="gap-6 mb-8 w-full">
                 <FormField
                   label="Nama Lengkap"
                   value={formData.name}
@@ -478,103 +519,3 @@ export default function AddUserScreen() {
     </SafeAreaView>
   );
 }
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 56,
-    paddingHorizontal: 16,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-    zIndex: 10,
-  },
-  backButton: {
-    marginRight: 16,
-    minWidth: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 16,
-    marginTop: 16,
-  },
-  errorIcon: {
-    marginBottom: 8,
-  },
-  errorText: {
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  errorButton: {
-    height: 48,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 32,
-    paddingHorizontal: 32,
-  },
-  errorButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  formContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 32,
-  },
-  fieldsContainer: {
-    gap: 24,
-    marginBottom: 32,
-    width: '100%',
-  },
-  fieldContainer: {
-    width: '100%',
-  },
-  fieldLabel: {
-    marginBottom: 8,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  textInput: {
-    height: 48,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderRadius: 8,
-    fontSize: 16,
-  },
-  submitButton: {
-    height: 48,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 32,
-  },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});

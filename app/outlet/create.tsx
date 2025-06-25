@@ -1,7 +1,8 @@
-import { useRouter } from 'expo-router';
 import React, { useCallback } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Input } from '@/components/ui/Input';
@@ -26,7 +27,7 @@ interface FormErrors {
   contactPhone?: string;
 }
 
-const Header = ({ 
+const Header = React.memo(function Header({ 
   onBack, 
   styles, 
   colors, 
@@ -36,45 +37,32 @@ const Header = ({
   styles: any;
   colors: any;
   insets: any;
-}) => (
-  <View style={[
-    {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingBottom: 16,
-      paddingTop: insets.top + 8,
-      borderBottomWidth: 1,
-    },
-    styles.background.primary,
-    styles.border.default
-  ]}>
-    <TouchableOpacity 
-      style={[
-        {
-          width: 40,
-          height: 40,
-          borderRadius: 8,
-          justifyContent: 'center',
-          alignItems: 'center',
-          borderWidth: 1,
-        },
-        styles.background.surface,
-        styles.border.default
-      ]} 
-      onPress={onBack}
+}) {
+  return (
+    <View 
+      className="flex-row justify-between items-center px-4 pb-4 border-b border-neutral-200 dark:border-neutral-800"
+      style={{
+        paddingTop: insets.top + 8,
+        backgroundColor: colors.background,
+        borderBottomColor: colors.border
+      }}
     >
-      <IconSymbol name="chevron.left" size={20} color={colors.text} />
-    </TouchableOpacity>
-    <Text style={[{ fontSize: 18, fontWeight: 'bold' }, styles.text.primary]}>
-      Register Outlet
-    </Text>
-    <View style={{ width: 40 }} />
-  </View>
-);
+      <TouchableOpacity 
+        className="w-10 h-10 rounded-lg justify-center items-center border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950"
+        style={{ borderColor: colors.border }}
+        onPress={onBack}
+      >
+        <IconSymbol name="chevron.left" size={20} color={colors.text} />
+      </TouchableOpacity>
+      <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-lg font-bold">
+        Register Outlet
+      </Text>
+      <View className="w-10" />
+    </View>
+  );
+});
 
-const FormSection = ({ 
+const FormSection = React.memo(function FormSection({ 
   title, 
   icon, 
   children, 
@@ -86,34 +74,24 @@ const FormSection = ({
   children: React.ReactNode;
   styles: any;
   colors: any;
-}) => (
-  <View style={[
-    {
-      borderRadius: 12,
-      padding: 16,
-      marginBottom: 16,
-      borderWidth: 1,
-    },
-    styles.card.default
-  ]}>
-    <Text style={[
-      { 
-        fontSize: 16, 
-        fontWeight: '600', 
-        marginBottom: 16,
-        flexDirection: 'row',
-        alignItems: 'center',
-      }, 
-      styles.text.primary
-    ]}>
-      <IconSymbol name={icon} size={18} color={colors.primary} />
-      {'  '}{title}
-    </Text>
-    {children}
-  </View>
-);
+}) {
+  return (
+    <View 
+      className="rounded-xl p-4 mb-4 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950"
+      style={{ backgroundColor: colors.card, borderColor: colors.border }}
+    >
+      <View className="flex-row items-center mb-4">
+        <IconSymbol name={icon} size={18} color={colors.primary} />
+        <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base font-semibold ml-2">
+          {title}
+        </Text>
+      </View>
+      {children}
+    </View>
+  );
+});
 
-const OutletTypeDropdown = ({
+const OutletTypeDropdown = React.memo(function OutletTypeDropdown({
   selectedType,
   showTypeDropdown,
   errors,
@@ -131,90 +109,71 @@ const OutletTypeDropdown = ({
   onSelect: (type: string) => void;
   styles: any;
   colors: any;
-}) => (
-  <View style={{ marginBottom: 16, position: 'relative', zIndex: 10 }}>
-    <Text style={[{ fontSize: 14, fontWeight: '500', marginBottom: 6 }, styles.text.primary]}>
-      Tipe Outlet
-    </Text>
-    <TouchableOpacity
-      style={[
-        {
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          height: 44,
-          borderRadius: 8,
-          paddingHorizontal: 12,
-          borderWidth: 1,
-        },
-        errors.type ? styles.border.error : styles.form.input,
-        { borderColor: errors.type ? colors.danger : colors.inputBorder }
-      ]}
-      onPress={onToggle}
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <IconSymbol name="tag.fill" size={18} color={colors.textSecondary} />
-        <Text style={[
-          { marginLeft: 8, fontSize: 16 },
-          selectedType ? styles.text.primary : styles.text.secondary
-        ]}>
-          {selectedType || 'Pilih tipe outlet'}
-        </Text>
-      </View>
-      <IconSymbol
-        name={showTypeDropdown ? 'chevron.up' : 'chevron.down'}
-        size={18}
-        color={colors.textSecondary}
-      />
-    </TouchableOpacity>
-    
-    {showTypeDropdown && (
-      <View style={[
-        {
-          marginTop: 4,
-          borderRadius: 8,
-          position: 'absolute',
-          top: 72,
-          left: 0,
-          right: 0,
-          zIndex: 20,
-          borderWidth: 1,
-        },
-        styles.card.elevated
-      ]}>
-        {outletTypes.map((type) => (
-          <TouchableOpacity
-            key={type}
-            style={[
-              {
-                paddingVertical: 12,
-                paddingHorizontal: 16,
-                borderBottomWidth: 1,
-              },
-              styles.border.light,
-              selectedType === type && { backgroundColor: colors.primary + '20' }
-            ]}
-            onPress={() => onSelect(type)}
-          >
-            <Text style={[
-              { fontSize: 16 },
-              selectedType === type ? { color: colors.primary, fontWeight: '500' } : styles.text.primary
-            ]}>
-              {type}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    )}
-    {errors.type && (
-      <Text style={[{ fontSize: 12, marginTop: 4 }, styles.text.error]}>
-        {errors.type}
+}) {
+  return (
+    <View className="mb-4 relative z-10">
+      <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-sm font-medium mb-1.5">
+        Tipe Outlet
       </Text>
-    )}
-  </View>
-);
+      <TouchableOpacity
+        className={`flex-row justify-between items-center h-11 rounded-lg px-3 border ${
+          errors.type ? 'border-red-500' : 'border-neutral-200 dark:border-neutral-700'
+        }`}
+        style={{ borderColor: errors.type ? colors.danger : colors.inputBorder }}
+        onPress={onToggle}
+      >
+        <View className="flex-row items-center">
+          <IconSymbol name="tag.fill" size={18} color={colors.textSecondary} />
+          <Text style={{
+            fontFamily: 'Inter',
+            color: selectedType ? colors.text : colors.textSecondary
+          }} className="ml-2 text-base">
+            {selectedType || 'Pilih tipe outlet'}
+          </Text>
+        </View>
+        <IconSymbol
+          name={showTypeDropdown ? 'chevron.up' : 'chevron.down'}
+          size={18}
+          color={colors.textSecondary}
+        />
+      </TouchableOpacity>
+      
+      {showTypeDropdown && (
+        <View 
+          className="mt-1 rounded-lg absolute top-18 left-0 right-0 z-20 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950"
+          style={{ backgroundColor: colors.card, borderColor: colors.border }}
+        >
+          {outletTypes.map((type, index) => (
+            <TouchableOpacity
+              key={type}
+              className={`py-3 px-4 ${index < outletTypes.length - 1 ? 'border-b border-neutral-100 dark:border-neutral-800' : ''}`}
+              style={{
+                borderBottomColor: colors.border,
+                backgroundColor: selectedType === type ? colors.primary + '20' : 'transparent'
+              }}
+              onPress={() => onSelect(type)}
+            >
+              <Text style={{
+                fontFamily: 'Inter',
+                color: selectedType === type ? colors.primary : colors.text,
+                fontWeight: selectedType === type ? '500' : '400'
+              }} className="text-base">
+                {type}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+      {errors.type && (
+        <Text style={{ fontFamily: 'Inter', color: colors.danger }} className="text-xs mt-1">
+          {errors.type}
+        </Text>
+      )}
+    </View>
+  );
+});
 
-const OutletInformationSection = ({
+const OutletInformationSection = React.memo(function OutletInformationSection({
   formData,
   errors,
   selectedType,
@@ -236,52 +195,54 @@ const OutletInformationSection = ({
   onTypeSelect: (type: any) => void;
   styles: any;
   colors: any;
-}) => (
-  <FormSection 
-    title="Informasi Outlet" 
-    icon="building.2.fill" 
-    styles={styles} 
-    colors={colors}
-  >
-    <View style={{ marginBottom: 16 }}>
-      <Input
-        label="Nama Outlet"
-        placeholder="Masukkan nama outlet"
-        value={formData.name}
-        onChangeText={(value) => onInputChange('name', value)}
-        error={errors.name}
-        leftIcon={<IconSymbol name="building.2.fill" size={18} color={colors.textSecondary} />}
-      />
-    </View>
-
-    <OutletTypeDropdown
-      selectedType={selectedType}
-      showTypeDropdown={showTypeDropdown}
-      errors={errors}
-      outletTypes={outletTypes}
-      onToggle={onToggleDropdown}
-      onSelect={onTypeSelect}
-      styles={styles}
+}) {
+  return (
+    <FormSection 
+      title="Informasi Outlet" 
+      icon="building.2.fill" 
+      styles={styles} 
       colors={colors}
-    />
+    >
+      <View className="mb-4">
+        <Input
+          label="Nama Outlet"
+          placeholder="Masukkan nama outlet"
+          value={formData.name}
+          onChangeText={(value) => onInputChange('name', value)}
+          error={errors.name}
+          leftIcon={<IconSymbol name="building.2.fill" size={18} color={colors.textSecondary} />}
+        />
+      </View>
 
-    <View style={{ marginBottom: 16 }}>
-      <Input
-        label="Alamat"
-        placeholder="Masukkan alamat outlet"
-        value={formData.address}
-        onChangeText={(value) => onInputChange('address', value)}
-        error={errors.address}
-        multiline
-        numberOfLines={3}
-        style={{ height: 80, textAlignVertical: 'top' }}
-        leftIcon={<IconSymbol name="mappin.and.ellipse" size={18} color={colors.textSecondary} />}
+      <OutletTypeDropdown
+        selectedType={selectedType}
+        showTypeDropdown={showTypeDropdown}
+        errors={errors}
+        outletTypes={outletTypes}
+        onToggle={onToggleDropdown}
+        onSelect={onTypeSelect}
+        styles={styles}
+        colors={colors}
       />
-    </View>
-  </FormSection>
-);
 
-const ContactInformationSection = ({
+      <View className="mb-4">
+        <Input
+          label="Alamat"
+          placeholder="Masukkan alamat outlet"
+          value={formData.address}
+          onChangeText={(value) => onInputChange('address', value)}
+          error={errors.address}
+          multiline
+          numberOfLines={3}
+          style={{ height: 80, textAlignVertical: 'top' }}
+          leftIcon={<IconSymbol name="mappin.and.ellipse" size={18} color={colors.textSecondary} />}
+        />
+      </View>
+    </FormSection>
+  );
+});
+
+const ContactInformationSection = React.memo(function ContactInformationSection({
   formData,
   errors,
   onInputChange,
@@ -293,52 +254,54 @@ const ContactInformationSection = ({
   onInputChange: (field: keyof FormData, value: string) => void;
   styles: any;
   colors: any;
-}) => (
-  <FormSection 
-    title="Informasi Kontak" 
-    icon="person.fill" 
-    styles={styles} 
-    colors={colors}
-  >
-    <View style={{ marginBottom: 16 }}>
-      <Input
-        label="Nama Contact Person"
-        placeholder="Masukkan nama contact person"
-        value={formData.contactName}
-        onChangeText={(value) => onInputChange('contactName', value)}
-        error={errors.contactName}
-        leftIcon={<IconSymbol name="person.fill" size={18} color={colors.textSecondary} />}
-      />
-    </View>
+}) {
+  return (
+    <FormSection 
+      title="Informasi Kontak" 
+      icon="person.fill" 
+      styles={styles} 
+      colors={colors}
+    >
+      <View className="mb-4">
+        <Input
+          label="Nama Contact Person"
+          placeholder="Masukkan nama contact person"
+          value={formData.contactName}
+          onChangeText={(value) => onInputChange('contactName', value)}
+          error={errors.contactName}
+          leftIcon={<IconSymbol name="person.fill" size={18} color={colors.textSecondary} />}
+        />
+      </View>
 
-    <View style={{ marginBottom: 16 }}>
-      <Input
-        label="Nomor Telepon"
-        placeholder="Masukkan nomor telepon"
-        value={formData.contactPhone}
-        onChangeText={(value) => onInputChange('contactPhone', value)}
-        error={errors.contactPhone}
-        keyboardType="phone-pad"
-        leftIcon={<IconSymbol name="phone.fill" size={18} color={colors.textSecondary} />}
-      />
-    </View>
+      <View className="mb-4">
+        <Input
+          label="Nomor Telepon"
+          placeholder="Masukkan nomor telepon"
+          value={formData.contactPhone}
+          onChangeText={(value) => onInputChange('contactPhone', value)}
+          error={errors.contactPhone}
+          keyboardType="phone-pad"
+          leftIcon={<IconSymbol name="phone.fill" size={18} color={colors.textSecondary} />}
+        />
+      </View>
 
-    <View>
-      <Input
-        label="Catatan (Opsional)"
-        placeholder="Masukkan catatan tambahan"
-        value={formData.notes}
-        onChangeText={(value) => onInputChange('notes', value)}
-        multiline
-        numberOfLines={3}
-        style={{ height: 80, textAlignVertical: 'top' }}
-        leftIcon={<IconSymbol name="text.alignleft" size={18} color={colors.textSecondary} />}
-      />
-    </View>
-  </FormSection>
-);
+      <View>
+        <Input
+          label="Catatan (Opsional)"
+          placeholder="Masukkan catatan tambahan"
+          value={formData.notes}
+          onChangeText={(value) => onInputChange('notes', value)}
+          multiline
+          numberOfLines={3}
+          style={{ height: 80, textAlignVertical: 'top' }}
+          leftIcon={<IconSymbol name="text.alignleft" size={18} color={colors.textSecondary} />}
+        />
+      </View>
+    </FormSection>
+  );
+});
 
-const ActionButtons = ({
+const ActionButtons = React.memo(function ActionButtons({
   isSubmitting,
   onLocationSet,
   onSubmit,
@@ -350,47 +313,35 @@ const ActionButtons = ({
   onSubmit: () => void;
   styles: any;
   colors: any;
-}) => (
-  <View style={localStyles.actionButtons}>
-    <TouchableOpacity
-      style={[
-        {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingVertical: 12,
-          borderRadius: 8,
-          borderWidth: 1,
-        },
-        styles.button.secondary
-      ]}
-      onPress={onLocationSet}
-    >
-      <IconSymbol name="mappin.and.ellipse" size={20} color={colors.primary} />
-      <Text style={[{ marginLeft: 8, fontSize: 16, fontWeight: '500' }, { color: colors.primary }]}>
-        Set Lokasi
-      </Text>
-    </TouchableOpacity>
+}) {
+  return (
+    <View className="gap-3 mt-2 mb-6">
+      <TouchableOpacity
+        className="flex-row items-center justify-center py-3 rounded-lg border border-primary-500"
+        style={{ borderColor: colors.primary }}
+        onPress={onLocationSet}
+      >
+        <IconSymbol name="mappin.and.ellipse" size={20} color={colors.primary} />
+        <Text style={{ fontFamily: 'Inter', color: colors.primary }} className="ml-2 text-base font-medium">
+          Set Lokasi
+        </Text>
+      </TouchableOpacity>
 
-    <TouchableOpacity
-      style={[
-        {
-          paddingVertical: 16,
-          borderRadius: 8,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-        isSubmitting ? styles.button.disabled : styles.button.primary
-      ]}
-      onPress={onSubmit}
-      disabled={isSubmitting}
-    >
-      <Text style={[{ fontSize: 16, fontWeight: '600' }, styles.text.inverse]}>
-        {isSubmitting ? 'Menyimpan...' : 'Submit Outlet'}
-      </Text>
-    </TouchableOpacity>
-  </View>
-);
+      <TouchableOpacity
+        className={`py-4 rounded-lg items-center justify-center ${
+          isSubmitting ? 'opacity-50' : ''
+        }`}
+        style={{ backgroundColor: isSubmitting ? colors.textSecondary : colors.primary }}
+        onPress={onSubmit}
+        disabled={isSubmitting}
+      >
+        <Text style={{ fontFamily: 'Inter', color: colors.textInverse }} className="text-base font-semibold">
+          {isSubmitting ? 'Menyimpan...' : 'Submit Outlet'}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+});
 
 /**
  * Register Outlet Screen - Form untuk mendaftarkan outlet baru
@@ -433,7 +384,7 @@ export default function RegisterOutletScreen() {
   }, [showTypeDropdown, setShowTypeDropdown]);
 
   return (
-    <View style={[localStyles.container, styles.background.primary]}>
+    <View className="flex-1 bg-neutral-50 dark:bg-neutral-900" style={{ backgroundColor: colors.background }}>
       <Header 
         onBack={handleBack}
         styles={styles}
@@ -442,8 +393,8 @@ export default function RegisterOutletScreen() {
       />
 
       <ScrollView 
-        style={localStyles.scrollView}
-        contentContainerStyle={localStyles.scrollContent}
+        className="flex-1"
+        contentContainerStyle={{ padding: 16 }}
         showsVerticalScrollIndicator={false}
       >
         <OutletInformationSection
@@ -477,20 +428,5 @@ export default function RegisterOutletScreen() {
       </ScrollView>
     </View>
   );
-}const localStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-  },
-  actionButtons: {
-    gap: 12,
-    marginTop: 8,
-    marginBottom: 24,
-  },
-});
+}
 

@@ -13,7 +13,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface FormData {
@@ -212,14 +212,27 @@ const useMediaManager = () => {
   return { takePhoto, takeVideo };
 };
 
-const LoadingScreen = ({ colors, isConnected }: { colors: any; isConnected: boolean }) => (
-  <SafeAreaView style={[styles.centerContainer, { backgroundColor: colors.background }]} edges={isConnected ? ['top','left','right'] : ['left','right']}>
-    <ActivityIndicator size="large" color={colors.primary} />
-    <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Memuat...</Text>
-  </SafeAreaView>
-);
+const LoadingScreen = React.memo(function LoadingScreen({ 
+  colors, 
+  isConnected 
+}: { 
+  colors: any; 
+  isConnected: boolean; 
+}) {
+  return (
+    <SafeAreaView 
+      className="flex-1 justify-center items-center bg-neutral-50 dark:bg-neutral-900" 
+      edges={isConnected ? ['top','left','right'] : ['left','right']}
+    >
+      <ActivityIndicator size="large" color={colors.primary} />
+      <Text style={{ fontFamily: 'Inter', color: colors.textSecondary }} className="text-base mt-4">
+        Memuat...
+      </Text>
+    </SafeAreaView>
+  );
+});
 
-const ErrorScreen = ({ 
+const ErrorScreen = React.memo(function ErrorScreen({ 
   error, 
   colors, 
   isConnected, 
@@ -229,14 +242,21 @@ const ErrorScreen = ({
   colors: any; 
   isConnected: boolean; 
   onGoBack: () => void; 
-}) => (
-  <SafeAreaView style={[styles.centerContainer, { backgroundColor: colors.background }]} edges={isConnected ? ['top','left','right'] : ['left','right']}>
-    <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
-    <Button title="Go Back" variant="primary" onPress={onGoBack} />
-  </SafeAreaView>
-);
+}) {
+  return (
+    <SafeAreaView 
+      className="flex-1 justify-center items-center bg-neutral-50 dark:bg-neutral-900" 
+      edges={isConnected ? ['top','left','right'] : ['left','right']}
+    >
+      <Text style={{ fontFamily: 'Inter', color: colors.danger }} className="text-center mx-5 mb-5">
+        {error}
+      </Text>
+      <Button title="Go Back" variant="primary" onPress={onGoBack} />
+    </SafeAreaView>
+  );
+});
 
-const FormField = ({ 
+const FormField = React.memo(function FormField({ 
   label, 
   value, 
   onChangeText, 
@@ -254,31 +274,39 @@ const FormField = ({
   keyboardType?: any;
   editable?: boolean;
   colors: any;
-}) => (
-  <View style={styles.inputGroup}>
-    <Text style={[styles.inputLabel, { color: colors.text }]}>{label}</Text>
-    <TextInput
-      style={[
-        styles.input, 
-        { 
+}) {
+  return (
+    <View className="mb-4">
+      <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base font-semibold mb-1.5">
+        {label}
+      </Text>
+      <TextInput
+        className={`border rounded-lg p-3 text-base ${
+          editable ? 'bg-transparent' : 'bg-neutral-100 dark:bg-neutral-800'
+        }`}
+        style={{ 
+          fontFamily: 'Inter',
           color: colors.text, 
           borderColor: colors.border,
           backgroundColor: editable ? 'transparent' : colors.card
-        }
-      ]}
-      value={value}
-      onChangeText={onChangeText}
-      placeholder={placeholder}
-      keyboardType={keyboardType}
-      editable={editable}
-    />
-    {error && (
-      <Text style={[styles.errorMessage, { color: colors.danger }]}>{error}</Text>
-    )}
-  </View>
-);
+        }}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        keyboardType={keyboardType}
+        editable={editable}
+        placeholderTextColor={colors.textSecondary}
+      />
+      {error && (
+        <Text style={{ fontFamily: 'Inter', color: colors.danger }} className="text-sm mt-1">
+          {error}
+        </Text>
+      )}
+    </View>
+  );
+});
 
-const MediaField = ({ 
+const MediaField = React.memo(function MediaField({ 
   label, 
   hasMedia, 
   mediaUri, 
@@ -294,27 +322,34 @@ const MediaField = ({
   onTake: () => void;
   onRemove: () => void;
   colors: any;
-}) => (
-  <View style={styles.inputGroup}>
-    <Text style={[styles.inputLabel, { color: colors.text }]}>{label}</Text>
-    <TouchableOpacity
-      style={[styles.pickerButton, { borderColor: colors.border }]}
-      onPress={onTake}
-    >
-      <Text style={{ color: colors.text }}>
-        {hasMedia ? `Change ${mediaType === 'image' ? 'Photo' : 'Video'}` : `Take ${mediaType === 'image' ? 'Photo' : 'Video'}`}
+}) {
+  return (
+    <View className="mb-4">
+      <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base font-semibold mb-1.5">
+        {label}
       </Text>
-    </TouchableOpacity>
-    {hasMedia && (
-      <MediaPreview
-        uri={mediaUri}
-        type={mediaType}
-        label={mediaType === 'video' ? mediaUri.split('/').pop()?.substring(0, 30) + '...' : undefined}
-        onRemove={onRemove}
-      />
-    )}
-  </View>
-);
+      <TouchableOpacity
+        className="border rounded-lg p-3 items-center bg-neutral-50 dark:bg-neutral-800"
+        style={{ borderColor: colors.border }}
+        onPress={onTake}
+      >
+        <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base">
+          {hasMedia ? `Change ${mediaType === 'image' ? 'Photo' : 'Video'}` : `Take ${mediaType === 'image' ? 'Photo' : 'Video'}`}
+        </Text>
+      </TouchableOpacity>
+      {hasMedia && (
+        <View className="mt-2">
+          <MediaPreview
+            uri={mediaUri}
+            type={mediaType}
+            label={mediaType === 'video' ? mediaUri.split('/').pop()?.substring(0, 30) + '...' : undefined}
+            onRemove={onRemove}
+          />
+        </View>
+      )}
+    </View>
+  );
+});
 
 export default function OutletEditPage() {
   const colorScheme = useColorScheme();
@@ -490,9 +525,14 @@ export default function OutletEditPage() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.container}>
-        <Text style={[styles.formTitle, { color: colors.text }]}>Edit Outlet</Text>
+    <SafeAreaView 
+      className="flex-1 bg-neutral-50 dark:bg-neutral-900" 
+      edges={isConnected ? ['top','left','right'] : ['left','right']}
+    >
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-xl font-bold mb-5">
+          Edit Outlet
+        </Text>
         
         <FormField
           label="Kode Outlet"
@@ -570,68 +610,15 @@ export default function OutletEditPage() {
           colors={colors}
         />
         
-        <Button
-          title={loading ? 'Updating...' : 'Update Outlet'}
-          onPress={handleUpdate}
-          disabled={loading}
-          style={styles.updateButton}
-        />
+        <View className="mt-6">
+          <Button
+            title={loading ? 'Updating...' : 'Update Outlet'}
+            onPress={handleUpdate}
+            disabled={loading}
+          />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
-const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-  },
-  container: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  formTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    fontWeight: '600',
-    marginBottom: 6,
-    fontSize: 15,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-  },
-  pickerButton: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-  },
-  errorText: {
-    margin: 20,
-    textAlign: 'center',
-  },
-  errorMessage: {
-    marginTop: 4,
-  },
-  updateButton: {
-    marginTop: 24,
-  },
-});
 

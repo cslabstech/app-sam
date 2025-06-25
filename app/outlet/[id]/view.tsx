@@ -1,62 +1,35 @@
-// Third-party imports
-import { useLocalSearchParams, useRouter } from 'expo-router';
+// React & React Native
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// Local component imports
+// Third-party libraries
+import { useLocalSearchParams, useRouter } from 'expo-router';
+
+// Local components
 import { MediaPreview } from '@/components/MediaPreview';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 
-// Constants and utilities
+// Constants & utilities
 import { Colors } from '@/constants/Colors';
 
-// Hooks
+// Hooks & contexts
 import { useNetwork } from '@/context/network-context';
 import { useOutlet } from '@/hooks/data/useOutlet';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 
+// Constants
 const BASE_URL_STORAGE = process.env.EXPO_PUBLIC_BASE_URL_STORAGE;
 
-// Komponen atomic untuk badge status outlet
-const StatusBadge = ({ status, color }: { status: string; color: string }) => (
-  <View style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: color + '15' }}>
-    <Text style={{ fontSize: 13, fontWeight: '600', color }}>{status}</Text>
-  </View>
-);
+// Types
+type ActiveTab = 'info' | 'location' | 'media';
+type MediaImage = { label: string; uri: string };
 
-// Helper untuk mendapatkan URL gambar yang benar
-const getImageUrl = (path: string | null) => {
-  if (!path || path === '-') return null;
-  if (path.startsWith('http')) return path;
-  // Pastikan BASE_URL_STORAGE diakhiri dengan '/' dan path tidak dimulai dengan '/'
-  const baseUrl = BASE_URL_STORAGE?.endsWith('/') ? BASE_URL_STORAGE : `${BASE_URL_STORAGE}/`;
-  const cleanPath = path.startsWith('/') ? path.substring(1) : path;
-  return `${baseUrl}${cleanPath}`;
-};
-
-export default function OutletViewPage() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
-  const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+// Custom hooks for separation of concerns
+const useOutletView = (id: string | undefined) => {
   const { outlet, loading, error, fetchOutlet } = useOutlet('');
-  const [activeTab, setActiveTab] = useState('info');
-  const { isConnected } = useNetwork();
-
-  // --- MEDIA TAB STATE ---
-  type MediaImage = { label: string; uri: string };
-  const imageList: MediaImage[] = outlet?.photos ? [
-    { label: 'Shop Sign', uri: getImageUrl(outlet.photos.shop_sign) || '' },
-    { label: 'Front View', uri: getImageUrl(outlet.photos.front) || '' },
-    { label: 'Left View', uri: getImageUrl(outlet.photos.left) || '' },
-    { label: 'Right View', uri: getImageUrl(outlet.photos.right) || '' },
-    { label: 'ID Card', uri: getImageUrl(outlet.photos.id_card) || '' },
-  ].filter(img => img.uri) : [];
-  
-  const videoUrl = outlet?.video ? getImageUrl(outlet.video) : null;
 
   useEffect(() => {
     if (id) fetchOutlet(id as string);
@@ -69,339 +42,424 @@ export default function OutletViewPage() {
     }
   }, [outlet]);
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'maintain':
-        return colors.success;
-      case 'unproductive':
-        return colors.danger;
-      case 'unmaintain':
-        return colors.warning;
-      default:
-        return colors.textSecondary;
-    }
-  };
+  return { outlet, loading, error };
+};
 
-  if (error) return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
-      <IconSymbol name="exclamationmark.triangle" size={48} color={colors.danger} />
-      <Text style={{ color: colors.danger, margin: 20, textAlign: 'center' }}>{error}</Text>
-      <Button title="Go Back" variant="primary" onPress={() => router.back()} />
-    </SafeAreaView>
+const useMediaData = (outlet: any) => {
+  const imageList: MediaImage[] = outlet?.photos ? [
+    { label: 'Shop Sign', uri: getImageUrl(outlet.photos.shop_sign) || '' },
+    { label: 'Front View', uri: getImageUrl(outlet.photos.front) || '' },
+    { label: 'Left View', uri: getImageUrl(outlet.photos.left) || '' },
+    { label: 'Right View', uri: getImageUrl(outlet.photos.right) || '' },
+    { label: 'ID Card', uri: getImageUrl(outlet.photos.id_card) || '' },
+  ].filter(img => img.uri) : [];
+  
+  const videoUrl = outlet?.video ? getImageUrl(outlet.video) : null;
+
+  return { imageList, videoUrl };
+};
+
+// Helper functions
+const getImageUrl = (path: string | null) => {
+  if (!path || path === '-') return null;
+  if (path.startsWith('http')) return path;
+  // Pastikan BASE_URL_STORAGE diakhiri dengan '/' dan path tidak dimulai dengan '/'
+  const baseUrl = BASE_URL_STORAGE?.endsWith('/') ? BASE_URL_STORAGE : `${BASE_URL_STORAGE}/`;
+  const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+  return `${baseUrl}${cleanPath}`;
+};
+
+const getStatusColor = (status: string, colors: any) => {
+  switch (status.toLowerCase()) {
+    case 'maintain':
+      return colors.success;
+    case 'unproductive':
+      return colors.danger;
+    case 'unmaintain':
+      return colors.warning;
+    default:
+      return colors.textSecondary;
+  }
+};
+
+// Memoized components for performance
+const StatusBadge = React.memo(function StatusBadge({ 
+  status, 
+  color 
+}: { 
+  status: string; 
+  color: string; 
+}) {
+  return (
+    <View className="px-2 py-1 rounded-md" style={{ backgroundColor: color + '15' }}>
+      <Text style={{ fontFamily: 'Inter', fontSize: 13, fontWeight: '600', color }}>
+        {status}
+      </Text>
+    </View>
   );
+});
 
-  if (loading) return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+const LoadingScreen = React.memo(function LoadingScreen({ 
+  colors, 
+  isConnected 
+}: { 
+  colors: any; 
+  isConnected: boolean; 
+}) {
+  return (
+    <SafeAreaView 
+      className="flex-1 bg-neutral-50 dark:bg-neutral-900" 
+      edges={isConnected ? ['top','left','right'] : ['left','right']}
+    >
+      <View className="flex-1 justify-center items-center">
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={{ marginTop: 16, color: colors.textSecondary, fontSize: 16 }}>Memuat...</Text>
+        <Text style={{ fontFamily: 'Inter', color: colors.textSecondary }} className="mt-4 text-base">
+          Memuat...
+        </Text>
       </View>
     </SafeAreaView>
   );
+});
 
-  // Jangan render "Data outlet tidak ditemukan" jika masih loading
-  if (!outlet && !loading) return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
+const ErrorScreen = React.memo(function ErrorScreen({ 
+  error, 
+  colors, 
+  isConnected, 
+  onGoBack 
+}: { 
+  error: string; 
+  colors: any; 
+  isConnected: boolean; 
+  onGoBack: () => void; 
+}) {
+  return (
+    <SafeAreaView 
+      className="flex-1 bg-neutral-50 dark:bg-neutral-900 justify-center items-center" 
+      edges={isConnected ? ['top','left','right'] : ['left','right']}
+    >
       <IconSymbol name="exclamationmark.triangle" size={48} color={colors.danger} />
-      <Text style={{ color: colors.danger, margin: 20, textAlign: 'center' }}>Data outlet tidak ditemukan.</Text>
-      <Button title="Go Back" variant="primary" onPress={() => router.back()} />
+      <Text style={{ fontFamily: 'Inter', color: colors.danger }} className="mx-5 my-5 text-center">
+        {error}
+      </Text>
+      <Button title="Go Back" variant="primary" onPress={onGoBack} />
     </SafeAreaView>
   );
+});
+
+const Header = React.memo(function Header({ 
+  title, 
+  colors, 
+  onBack, 
+  onEdit 
+}: { 
+  title: string; 
+  colors: any; 
+  onBack: () => void; 
+  onEdit: () => void; 
+}) {
+  return (
+    <View className="flex-row items-center justify-between px-4 py-3 border-b border-neutral-200 dark:border-neutral-800"> 
+      <View className="flex-row items-center">
+        <TouchableOpacity onPress={onBack} className="mr-2 p-2">
+          <IconSymbol name="chevron.left" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-xl font-bold"> 
+          {title}
+        </Text>
+      </View>
+      <TouchableOpacity onPress={onEdit} className="p-2 mr-1">
+        <IconSymbol name="pencil" size={22} color={colors.primary} />
+      </TouchableOpacity>
+    </View>
+  );
+});
+
+const TabNavigation = React.memo(function TabNavigation({ 
+  activeTab, 
+  onTabChange, 
+  colors 
+}: { 
+  activeTab: ActiveTab; 
+  onTabChange: (tab: ActiveTab) => void; 
+  colors: any; 
+}) {
+  const tabs = [
+    { id: 'info' as ActiveTab, label: 'Info' },
+    { id: 'location' as ActiveTab, label: 'Lokasi' },
+    { id: 'media' as ActiveTab, label: 'Media' },
+  ];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={isConnected ? ['top','left','right'] : ['left','right']}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}> 
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <IconSymbol name="chevron.left" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.title, { color: colors.text }]}> 
-            {outlet?.name || 'Outlet Detail'}
+    <View className="flex-row mt-2 border-b border-neutral-200 dark:border-neutral-800">
+      {tabs.map((tab) => (
+        <TouchableOpacity 
+          key={tab.id}
+          className={`py-3 px-4 flex-1 items-center ${
+            activeTab === tab.id ? 'border-b-2' : ''
+          }`}
+          style={{
+            borderBottomColor: activeTab === tab.id ? colors.primary : 'transparent'
+          }}
+          onPress={() => onTabChange(tab.id)}
+        >
+          <Text 
+            style={{ 
+              fontFamily: 'Inter',
+              color: activeTab === tab.id ? colors.primary : colors.textSecondary 
+            }}
+            className="text-base font-semibold"
+          >
+            {tab.label}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+});
+
+const InfoCard = React.memo(function InfoCard({ 
+  title, 
+  children, 
+  colors 
+}: { 
+  title: string; 
+  children: React.ReactNode; 
+  colors: any; 
+}) {
+  return (
+    <Card className="p-4 mb-4 rounded-xl">
+      <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base font-bold mb-3">
+        {title}
+      </Text>
+      {children}
+    </Card>
+  );
+});
+
+const InfoRow = React.memo(function InfoRow({ 
+  label, 
+  value, 
+  colors,
+  isLast = false 
+}: { 
+  label: string; 
+  value: React.ReactNode; 
+  colors: any;
+  isLast?: boolean;
+}) {
+  return (
+    <View className={`flex-row justify-between items-center py-2 ${!isLast ? 'border-b border-neutral-100 dark:border-neutral-800' : ''}`}>
+      <Text style={{ fontFamily: 'Inter', color: colors.textSecondary }} className="text-sm flex-1">
+        {label}
+      </Text>
+      <View className="text-right">
+        {typeof value === 'string' ? (
+          <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base font-medium text-right">
+            {value}
+          </Text>
+        ) : (
+          value
+        )}
+      </View>
+    </View>
+  );
+});
+
+const AddressCard = React.memo(function AddressCard({ 
+  address, 
+  colors 
+}: { 
+  address: string; 
+  colors: any; 
+}) {
+  return (
+    <InfoCard title="Alamat" colors={colors}>
+      <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base leading-6">
+        {address}
+      </Text>
+    </InfoCard>
+  );
+});
+
+const MediaSection = React.memo(function MediaSection({ 
+  title, 
+  items, 
+  emptyIcon, 
+  emptyMessage, 
+  colors 
+}: { 
+  title: string; 
+  items: any[]; 
+  emptyIcon: string; 
+  emptyMessage: string; 
+  colors: any; 
+}) {
+  return (
+    <View>
+      <Text style={{ fontFamily: 'Inter', color: colors.text }} className="font-bold text-base mb-3">
+        {title}
+      </Text>
+      {items.length > 0 ? (
+        items.map((item, index) => (
+          <Card key={item.label || index} className="mb-3 items-center p-3">
+            <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-sm mb-2 font-semibold">
+              {item.label}
+            </Text>
+            <MediaPreview uri={item.uri} type={title.includes('Video') ? 'video' : 'image'} />
+          </Card>
+        ))
+      ) : (
+        <View className="items-center justify-center my-4">
+          <IconSymbol name={emptyIcon} size={48} color={colors.textSecondary} />
+          <Text style={{ fontFamily: 'Inter', color: colors.textSecondary }} className="mt-2">
+            {emptyMessage}
           </Text>
         </View>
-        <TouchableOpacity
-          onPress={() => router.push(`/outlet/${outlet?.id}/edit`)}
-          style={{ padding: 8, marginRight: 4 }}
-        >
-          <IconSymbol name="pencil" size={22} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
-      {/* Tab Navigation */}
-      <View style={[styles.tabContainer, { borderColor: colors.border }]}>
-        <TouchableOpacity 
-          style={[
-            styles.tab, 
-            activeTab === 'info' && [styles.activeTab, { borderColor: colors.primary }]
-          ]} 
-          onPress={() => setActiveTab('info')}
-        >
-          <Text style={[
-            styles.tabText, 
-            { color: activeTab === 'info' ? colors.primary : colors.textSecondary }
-          ]}>Info</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[
-            styles.tab, 
-            activeTab === 'location' && [styles.activeTab, { borderColor: colors.primary }]
-          ]} 
-          onPress={() => setActiveTab('location')}
-        >
-          <Text style={[
-            styles.tabText, 
-            { color: activeTab === 'location' ? colors.primary : colors.textSecondary }
-          ]}>Lokasi</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[
-            styles.tab, 
-            activeTab === 'media' && [styles.activeTab, { borderColor: colors.primary }]
-          ]} 
-          onPress={() => setActiveTab('media')}
-        >
-          <Text style={[
-            styles.tabText, 
-            { color: activeTab === 'media' ? colors.primary : colors.textSecondary }
-          ]}>Media</Text>
-        </TouchableOpacity>
-      </View>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container}>
-        {/* Tab Content */}
+      )}
+    </View>
+  );
+});
+
+export default function OutletViewPage() {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+  const router = useRouter();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const [activeTab, setActiveTab] = useState<ActiveTab>('info');
+  const { isConnected } = useNetwork();
+
+  const { outlet, loading, error } = useOutletView(id);
+  const { imageList, videoUrl } = useMediaData(outlet);
+
+  const handleGoBack = () => router.back();
+  const handleEdit = () => router.push(`/outlet/${outlet?.id}/edit`);
+
+  if (error) {
+    return <ErrorScreen error={error} colors={colors} isConnected={isConnected} onGoBack={handleGoBack} />;
+  }
+
+  if (loading) {
+    return <LoadingScreen colors={colors} isConnected={isConnected} />;
+  }
+
+  if (!outlet && !loading) {
+    return <ErrorScreen error="Data outlet tidak ditemukan." colors={colors} isConnected={isConnected} onGoBack={handleGoBack} />;
+  }
+
+  return (
+    <SafeAreaView 
+      className="flex-1 bg-neutral-50 dark:bg-neutral-900" 
+      edges={isConnected ? ['top','left','right'] : ['left','right']}
+    >
+      <Header 
+        title={outlet?.name || 'Outlet Detail'}
+        colors={colors}
+        onBack={handleGoBack}
+        onEdit={handleEdit}
+      />
+
+      <TabNavigation 
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        colors={colors}
+      />
+
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         {activeTab === 'info' && (
-          <View style={styles.tabContent}>
+          <View className="pt-4">
             {/* Basic Info Card */}
-            <Card style={styles.card}>
-              <Text style={[styles.cardTitle, { color: colors.text }]}>Informasi Outlet</Text>
-              <View style={styles.cardRow}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Kode Outlet</Text>
-                <Text style={[styles.value, { color: colors.text }]}>{outlet!.code || '-'}</Text>
-              </View>
-              <View style={styles.cardRow}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Nama Outlet</Text>
-                <Text style={[styles.value, { color: colors.text }]}>{outlet!.name || '-'}</Text>
-              </View>
-              <View style={styles.cardRow}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>District</Text>
-                <Text style={[styles.value, { color: colors.text }]}>{outlet!.district || '-'}</Text>
-              </View>
-              <View style={styles.cardRow}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Status</Text>
-                <StatusBadge
-                  status={outlet!.status ? outlet!.status.charAt(0).toUpperCase() + outlet!.status.slice(1) : '-'}
-                  color={getStatusColor(outlet!.status || '')}
-                />
-              </View>
-              {outlet!.radius !== undefined && outlet!.radius !== null && (
-                <View style={styles.cardRow}>
-                  <Text style={[styles.label, { color: colors.textSecondary }]}>Radius</Text>
-                  <Text style={[styles.value, { color: colors.text }]}>{outlet!.radius} m</Text>
-                </View>
+            <InfoCard title="Informasi Outlet" colors={colors}>
+              <InfoRow label="Kode Outlet" value={outlet!.code || '-'} colors={colors} />
+              <InfoRow label="Nama Outlet" value={outlet!.name || '-'} colors={colors} />
+              <InfoRow label="District" value={outlet!.district || '-'} colors={colors} />
+              <InfoRow 
+                label="Status" 
+                value={
+                  <StatusBadge
+                    status={outlet!.status ? outlet!.status.charAt(0).toUpperCase() + outlet!.status.slice(1) : '-'}
+                    color={getStatusColor(outlet!.status || '', colors)}
+                  />
+                } 
+                colors={colors} 
+              />
+              {(outlet!.radius !== undefined && outlet!.radius !== null) && (
+                <InfoRow label="Radius" value={`${outlet!.radius} m`} colors={colors} isLast />
               )}
-            </Card>
+            </InfoCard>
 
             {/* Owner Info Card */}
             {(outlet!.owner_name || outlet!.owner_phone) && (
-              <Card style={styles.card}>
-                <Text style={[styles.cardTitle, { color: colors.text }]}>Informasi Pemilik</Text>
+              <InfoCard title="Informasi Pemilik" colors={colors}>
                 {outlet!.owner_name && (
-                  <View style={styles.cardRow}>
-                    <Text style={[styles.label, { color: colors.textSecondary }]}>Nama Pemilik</Text>
-                    <Text style={[styles.value, { color: colors.text }]}>{outlet!.owner_name}</Text>
-                  </View>
+                  <InfoRow label="Nama Pemilik" value={outlet!.owner_name} colors={colors} />
                 )}
                 {outlet!.owner_phone && (
-                  <View style={styles.cardRow}>
-                    <Text style={[styles.label, { color: colors.textSecondary }]}>No. Telepon</Text>
-                    <Text style={[styles.value, { color: colors.text }]}>{outlet!.owner_phone}</Text>
-                  </View>
+                  <InfoRow label="No. Telepon" value={outlet!.owner_phone} colors={colors} isLast />
                 )}
-              </Card>
+              </InfoCard>
             )}
 
             {/* Address Card */}
             {outlet!.address && (
-              <Card style={styles.card}>
-                <Text style={[styles.cardTitle, { color: colors.text }]}>Alamat</Text>
-                <Text style={[styles.addressText, { color: colors.text }]}>{outlet!.address}</Text>
-              </Card>
+              <AddressCard address={outlet!.address} colors={colors} />
             )}
 
             {/* Organization Info Card */}
-            <Card style={styles.card}>
-              <Text style={[styles.cardTitle, { color: colors.text }]}>Informasi Organisasi</Text>
-              <View style={styles.cardRow}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Badan Usaha</Text>
-                <Text style={[styles.value, { color: colors.text }]}>{outlet!.badan_usaha?.name || '-'}</Text>
-              </View>
-              <View style={styles.cardRow}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Division</Text>
-                <Text style={[styles.value, { color: colors.text }]}>{outlet!.division?.name || '-'}</Text>
-              </View>
-              <View style={styles.cardRow}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Region</Text>
-                <Text style={[styles.value, { color: colors.text }]}>{outlet!.region?.name || '-'}</Text>
-              </View>
-              <View style={styles.cardRow}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Cluster</Text>
-                <Text style={[styles.value, { color: colors.text }]}>{outlet!.cluster?.name || '-'}</Text>
-              </View>
-            </Card>
+            <InfoCard title="Informasi Organisasi" colors={colors}>
+              <InfoRow label="Badan Usaha" value={outlet!.badan_usaha?.name || '-'} colors={colors} />
+              <InfoRow label="Division" value={outlet!.division?.name || '-'} colors={colors} />
+              <InfoRow label="Region" value={outlet!.region?.name || '-'} colors={colors} />
+              <InfoRow label="Cluster" value={outlet!.cluster?.name || '-'} colors={colors} isLast />
+            </InfoCard>
           </View>
         )}
+
         {activeTab === 'location' && (
-          <View style={styles.tabContent}>
-            <Card style={styles.card}>
-              <Text style={[styles.cardTitle, { color: colors.text }]}>Informasi Lokasi</Text>
-              <View style={styles.cardRow}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>District</Text>
-                <Text style={[styles.value, { color: colors.text, textAlign: 'right', flex: 1, maxWidth: '70%' }]}>{outlet!.district || '-'}</Text>
-              </View>
-              <View style={styles.cardRow}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Region</Text>
-                <Text style={[styles.value, { color: colors.text }]}>{outlet!.region?.name || '-'}</Text>
-              </View>
-              <View style={styles.cardRow}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Cluster</Text>
-                <Text style={[styles.value, { color: colors.text }]}>{outlet!.cluster?.name || '-'}</Text>
-              </View>
-              <View style={styles.cardRow}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Koordinat</Text>
-                <Text style={[styles.value, { color: colors.text }]}>{outlet!.location || '-'}</Text>
-              </View>
-              {outlet!.radius !== undefined && outlet!.radius !== null && (
-                <View style={styles.cardRow}>
-                  <Text style={[styles.label, { color: colors.textSecondary }]}>Radius</Text>
-                  <Text style={[styles.value, { color: colors.text }]}>{outlet!.radius} m</Text>
-                </View>
+          <View className="pt-4">
+            <InfoCard title="Informasi Lokasi" colors={colors}>
+              <InfoRow label="District" value={outlet!.district || '-'} colors={colors} />
+              <InfoRow label="Region" value={outlet!.region?.name || '-'} colors={colors} />
+              <InfoRow label="Cluster" value={outlet!.cluster?.name || '-'} colors={colors} />
+              <InfoRow label="Koordinat" value={outlet!.location || '-'} colors={colors} />
+              {(outlet!.radius !== undefined && outlet!.radius !== null) && (
+                <InfoRow label="Radius" value={`${outlet!.radius} m`} colors={colors} isLast />
               )}
-            </Card>
+            </InfoCard>
             
             {/* Address Card */}
             {outlet!.address && (
-              <Card style={styles.card}>
-                <Text style={[styles.cardTitle, { color: colors.text }]}>Alamat Lengkap</Text>
-                <Text style={[styles.addressText, { color: colors.text }]}>{outlet!.address}</Text>
-              </Card>
+              <InfoCard title="Alamat Lengkap" colors={colors}>
+                <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base leading-6">
+                  {outlet!.address}
+                </Text>
+              </InfoCard>
             )}
           </View>
         )}
+
         {activeTab === 'media' && (
-          <View style={styles.tabContent}>
-            <Text style={{ fontWeight: 'bold', fontSize: 16, color: colors.text, marginBottom: 12 }}>Foto Outlet</Text>
-            {imageList.length > 0 ? (
-              imageList.map((img) => (
-                <Card key={img.label} style={{ marginBottom: 12, alignItems: 'center', padding: 12 }}>
-                  <Text style={[styles.mediaLabel, { color: colors.text }]}>{img.label}</Text>
-                  <MediaPreview uri={img.uri} type="image" />
-                </Card>
-              ))
-            ) : (
-              <View style={styles.mediaEmptyState}>
-                <IconSymbol name="photo" size={48} color={colors.textSecondary} />
-                <Text style={{ color: colors.textSecondary, marginTop: 8 }}>Tidak ada foto outlet.</Text>
-              </View>
-            )}
+          <View className="pt-4">
+            <MediaSection
+              title="Foto Outlet"
+              items={imageList}
+              emptyIcon="photo"
+              emptyMessage="Tidak ada foto outlet."
+              colors={colors}
+            />
             
-            <Text style={{ fontWeight: 'bold', fontSize: 16, color: colors.text, marginTop: 20, marginBottom: 12 }}>Video Outlet</Text>
-            {videoUrl ? (
-              <Card style={{ marginBottom: 12, alignItems: 'center', padding: 12 }}>
-                <Text style={[styles.mediaLabel, { color: colors.text }]}>Video Outlet</Text>
-                <MediaPreview uri={videoUrl} type="video" />
-              </Card>
-            ) : (
-              <View style={styles.mediaEmptyState}>
-                <IconSymbol name="video" size={48} color={colors.textSecondary} />
-                <Text style={{ color: colors.textSecondary, marginTop: 8 }}>Tidak ada video outlet.</Text>
-              </View>
-            )}
+            <View className="mt-5">
+              <MediaSection
+                title="Video Outlet"
+                items={videoUrl ? [{ label: 'Video Outlet', uri: videoUrl }] : []}
+                emptyIcon="video"
+                emptyMessage="Tidak ada video outlet."
+                colors={colors}
+              />
+            </View>
           </View>
         )}
       </ScrollView>
     </SafeAreaView>
   );
 }
-const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    marginRight: 8,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    marginTop: 8,
-    borderBottomWidth: 1,
-  },
-  tab: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    flex: 1,
-    alignItems: 'center',
-  },
-  activeTab: {
-    borderBottomWidth: 2,
-  },
-  tabText: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  tabContent: {
-    paddingTop: 16,
-  },
-  card: {
-    padding: 16,
-    marginBottom: 16,
-    borderRadius: 12,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 12,
-  },
-  cardRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(150, 150, 150, 0.2)',
-  },
-  label: {
-    fontSize: 14,
-    flex: 1,
-  },
-  value: {
-    fontSize: 15,
-    fontWeight: '500',
-    textAlign: 'right',
-  },
-  addressText: {
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  mediaLabel: {
-    fontSize: 14,
-    marginBottom: 8,
-    fontWeight: '600',
-  },
-  mediaEmptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 16,
-  },
-});
 

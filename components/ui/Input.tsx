@@ -1,11 +1,9 @@
-import React, { ReactNode, useState } from 'react';
-import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
+import React, { ReactNode, useCallback, useState } from 'react';
+import { Text, TextInput, TextInputProps, View } from 'react-native';
 
-import { Colors } from '@/constants/Colors';
-import { borderRadius, componentSpacing, spacing } from '@/constants/Spacing';
-import { typography } from '@/constants/Typography';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 
+// 1. Types first
 type InputVariant = 'default' | 'filled' | 'outlined';
 type InputSize = 'sm' | 'md' | 'lg';
 
@@ -25,7 +23,32 @@ interface InputProps extends Omit<TextInputProps, 'style'> {
   className?: string;
 }
 
-export function Input({
+// 2. Custom hook for component logic
+const useInputLogic = ({ onFocus, onBlur }: {
+  onFocus?: TextInputProps['onFocus'];
+  onBlur?: TextInputProps['onBlur'];
+}) => {
+  const [isFocused, setIsFocused] = useState(false);
+
+  const handleFocus = useCallback((e: any) => {
+    setIsFocused(true);
+    onFocus?.(e);
+  }, [onFocus]);
+
+  const handleBlur = useCallback((e: any) => {
+    setIsFocused(false);
+    onBlur?.(e);
+  }, [onBlur]);
+
+  return {
+    isFocused,
+    handleFocus,
+    handleBlur,
+  };
+};
+
+// 3. Main component
+export const Input = React.memo(function Input({
   label,
   helperText,
   error,
@@ -44,32 +67,134 @@ export function Input({
   ...props
 }: InputProps) {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
-  const [isFocused, setIsFocused] = useState(false);
+  const { isFocused, handleFocus, handleBlur } = useInputLogic({ onFocus, onBlur });
 
-  const labelColor = error
-    ? 'text-danger-600 dark:text-danger-400'
-    : success
-      ? 'text-success-600 dark:text-success-400'
-      : isFocused
-        ? 'text-primary-600 dark:text-primary-400'
-        : 'text-neutral-700 dark:text-neutral-200';
+  // ✅ PRIMARY - NativeWind classes
+  const getLabelClasses = () => {
+    const baseClasses = 'mb-2 text-sm font-medium font-sans';
+    
+    if (error) return `${baseClasses} text-danger-600 dark:text-danger-400`;
+    if (success) return `${baseClasses} text-success-600 dark:text-success-400`;
+    if (isFocused) return `${baseClasses} text-primary-600 dark:text-primary-400`;
+    return `${baseClasses} text-neutral-700 dark:text-neutral-200`;
+  };
 
+  const getContainerClasses = () => {
+    return 'my-3';
+  };
+
+  const getInputContainerClasses = () => {
+    const baseClasses = [
+      'flex-row items-center overflow-hidden',
+      disabled && 'opacity-60',
+    ];
+
+    // Background
+    const bgClasses = (() => {
+      if (disabled) return 'bg-neutral-100 dark:bg-neutral-800';
+      
+      switch (variant) {
+        case 'filled':
+          return 'bg-neutral-100 dark:bg-neutral-800';
+        case 'outlined':
+        case 'default':
+        default:
+          return 'bg-white dark:bg-neutral-900';
+      }
+    })();
+
+    // Border
+    const borderClasses = (() => {
+      if (disabled) return 'border border-neutral-200 dark:border-neutral-700';
+      if (error) return isFocused ? 'border-2 border-danger-500' : 'border border-danger-500';
+      if (success) return isFocused ? 'border-2 border-success-500' : 'border border-success-500';
+      if (isFocused) return 'border-2 border-primary-500';
+      
+      switch (variant) {
+        case 'outlined':
+          return 'border border-neutral-300 dark:border-neutral-600';
+        case 'filled':
+          return 'border-0';
+        default:
+          return 'border border-neutral-300 dark:border-neutral-600';
+      }
+    })();
+
+    // Size & Border Radius
+    const sizeClasses = (() => {
+      switch (size) {
+        case 'sm':
+          return 'h-9';
+        case 'lg':
+          return 'h-13';
+        case 'md':
+        default:
+          return 'h-11';
+      }
+    })();
+
+    const radiusClasses = (() => {
+      switch (variant) {
+        case 'filled':
+          return 'rounded-lg';
+        default:
+          return 'rounded-md';
+      }
+    })();
+
+    return [
+      ...baseClasses,
+      bgClasses,
+      borderClasses,
+      sizeClasses,
+      radiusClasses,
+    ].filter(Boolean).join(' ');
+  };
+
+  const getInputClasses = () => {
+    const baseClasses = [
+      'flex-1 h-full font-sans',
+      disabled ? 'text-neutral-400 dark:text-neutral-500' : 'text-neutral-900 dark:text-white',
+    ];
+
+    const sizeClasses = (() => {
+      switch (size) {
+        case 'sm':
+          return 'text-sm px-3';
+        case 'lg':
+          return 'text-lg px-4';
+        case 'md':
+        default:
+          return 'text-base px-3';
+      }
+    })();
+
+    const spacingClasses = [
+      leftIcon && 'pl-1',
+      rightIcon && 'pr-1',
+    ].filter(Boolean);
+
+    return [
+      ...baseClasses,
+      sizeClasses,
+      ...spacingClasses,
+    ].filter(Boolean).join(' ');
+  };
+
+  const getMessageClasses = () => {
+    const baseClasses = 'mt-1 px-1 text-xs font-sans';
+    
+    if (error) return `${baseClasses} text-danger-600 dark:text-danger-400`;
+    if (success) return `${baseClasses} text-success-600 dark:text-success-400`;
+    return `${baseClasses} text-neutral-600 dark:text-neutral-400`;
+  };
+
+  // Early return for className prop (backward compatibility)
   if (className) {
-    const handleFocus = (e: any) => {
-      setIsFocused(true);
-      onFocus?.(e);
-    };
-
-    const handleBlur = (e: any) => {
-      setIsFocused(false);
-      onBlur?.(e);
-    };
-
     return (
       <View style={containerStyle}>
         {label && (
-          <Text className={`mb-2 text-sm font-medium font-sans ${labelColor}`}>
+          <Text className={getLabelClasses()}>
             {label}
             {required && <Text className="text-danger-600">*</Text>}
           </Text>
@@ -77,7 +202,7 @@ export function Input({
         <TextInput
           className={className}
           style={style}
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor={colorScheme === 'dark' ? '#a3a3a3' : '#94a3b8'}
           editable={!disabled}
           onFocus={handleFocus}
           onBlur={handleBlur}
@@ -87,155 +212,33 @@ export function Input({
     );
   }
 
-  const getBackgroundColor = () => {
-    if (disabled) {
-      return colors.backgroundAlt;
-    }
-
-    switch (variant) {
-      case 'filled':
-        return colors.backgroundAlt;
-      case 'outlined':
-      case 'default':
-        return colors.input;
-      default:
-        return colors.input;
-    }
-  };
-
-  const getBorderColor = () => {
-    if (disabled) {
-      return colors.border;
-    }
-
-    if (error) {
-      return colors.danger;
-    }
-
-    if (success) {
-      return colors.success;
-    }
-
-    if (isFocused) {
-      return colors.inputFocus;
-    }
-
-    switch (variant) {
-      case 'outlined':
-        return colors.inputBorder;
-      case 'filled':
-        return 'transparent';
-      default:
-        return colors.inputBorder;
-    }
-  };
-
-  const getBorderWidth = () => {
-    switch (variant) {
-      case 'outlined':
-        return isFocused ? 2 : 1;
-      case 'filled':
-        return 0;
-      default:
-        return 1;
-    }
-  };
-
-  const getInputHeight = () => {
-    switch (size) {
-      case 'sm':
-        return 36;
-      case 'lg':
-        return 52;
-      default:
-        return 44;
-    }
-  };
-
-  const getFontSize = () => {
-    switch (size) {
-      case 'sm':
-        return typography.fontSize.sm;
-      case 'lg':
-        return typography.fontSize.md;
-      default:
-        return typography.fontSize.base;
-    }
-  };
-
-  const getPadding = () => {
-    switch (size) {
-      case 'sm':
-        return componentSpacing.input.padding;
-      case 'lg':
-        return componentSpacing.input.paddingHorizontal;
-      default:
-        return componentSpacing.input.paddingHorizontal;
-    }
-  };
-
-  const getBorderRadius = () => {
-    switch (variant) {
-      case 'filled':
-        return borderRadius.lg;
-      default:
-        return borderRadius.input;
-    }
-  };
-
-  const handleFocus = (e: any) => {
-    setIsFocused(true);
-    onFocus?.(e);
-  };
-
-  const handleBlur = (e: any) => {
-    setIsFocused(false);
-    onBlur?.(e);
-  };
-
   return (
-    <View style={[styles.container, containerStyle]}>
+    <View className={getContainerClasses()} style={containerStyle}>
       {label && (
-        <View style={styles.labelContainer}>
-          <Text style={[styles.label, { color: labelColor }]}>
-            {label}
-            {required && <Text style={[styles.required, { color: colors.danger }]}> *</Text>}
-          </Text>
-        </View>
+        <Text className={getLabelClasses()}>
+          {label}
+          {required && <Text className="text-danger-600"> *</Text>}
+        </Text>
       )}
       
-      <View
-        style={[
-          styles.inputContainer,
-          {
-            backgroundColor: getBackgroundColor(),
-            borderColor: getBorderColor(),
-            borderWidth: getBorderWidth(),
-            height: getInputHeight(),
-            borderRadius: getBorderRadius(),
-          },
-          disabled && styles.disabledInput,
-        ]}
-      >
+      <View className={getInputContainerClasses()}>
         {leftIcon && (
-          <View style={[styles.iconContainer, styles.leftIcon]}>
+          <View className="h-full justify-center px-3">
             {leftIcon}
           </View>
         )}
         
         <TextInput
+          className={getInputClasses()}
           style={[
-            styles.input,
-            { 
-              color: disabled ? colors.textDisabled : colors.text,
-              fontSize: getFontSize(),
-              paddingHorizontal: getPadding(),
+            // ⚠️ SECONDARY - Complex dynamic styling for text input specifics
+            {
+              includeFontPadding: false,
+              textAlignVertical: 'center',
             },
-            leftIcon ? styles.inputWithLeftIcon : undefined,
-            rightIcon ? styles.inputWithRightIcon : undefined,
             style,
           ]}
-          placeholderTextColor={colors.textTertiary}
+          placeholderTextColor={colorScheme === 'dark' ? '#a3a3a3' : '#94a3b8'}
           editable={!disabled}
           onFocus={handleFocus}
           onBlur={handleBlur}
@@ -243,84 +246,20 @@ export function Input({
         />
         
         {rightIcon && (
-          <View style={[styles.iconContainer, styles.rightIcon]}>
+          <View className="h-full justify-center px-3">
             {rightIcon}
           </View>
         )}
       </View>
       
       {(error || helperText) && (
-        <View style={styles.messageContainer}>
-          <Text 
-            style={[
-              styles.messageText, 
-              { 
-                color: error ? colors.danger : success ? colors.success : colors.textSecondary 
-              }
-            ]}
-          >
-            {error || helperText}
-          </Text>
-        </View>
+        <Text className={getMessageClasses()}>
+          {error || helperText}
+        </Text>
       )}
     </View>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    marginVertical: componentSpacing.input.marginVertical,
-  },
-  labelContainer: {
-    marginBottom: spacing.sm,
-  },
-  label: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: '500',
-    fontFamily: typography.fontFamily,
-  },
-  required: {
-    fontSize: typography.fontSize.sm,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  input: {
-    flex: 1,
-    height: '100%',
-    fontFamily: typography.fontFamily,
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-  },
-  inputWithLeftIcon: {
-    paddingLeft: spacing.sm,
-  },
-  inputWithRightIcon: {
-    paddingRight: spacing.sm,
-  },
-  iconContainer: {
-    height: '100%',
-    justifyContent: 'center',
-    paddingHorizontal: componentSpacing.input.iconPadding,
-  },
-  leftIcon: {
-    paddingLeft: componentSpacing.input.iconPadding,
-  },
-  rightIcon: {
-    paddingRight: componentSpacing.input.iconPadding,
-  },
-  disabledInput: {
-    opacity: 0.6,
-  },
-  messageContainer: {
-    marginTop: spacing.xs,
-    paddingHorizontal: spacing.xs,
-  },
-  messageText: {
-    fontSize: typography.fontSize.xs,
-    fontFamily: typography.fontFamily,
-    lineHeight: typography.lineHeight.normal * typography.fontSize.xs,
-  },
 });
+
+// 4. Export types for reuse
+export type { InputProps, InputSize, InputVariant };

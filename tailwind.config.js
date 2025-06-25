@@ -38,30 +38,44 @@ module.exports = {
           900: '#0f172a',
           950: '#020617',
         },
-        // 10% - Accent colors (orange primary)
+        // 10% - Accent colors (orange primary) - Synced with constants
         primary: {
           50: '#fff7ed',
           100: '#ffedd5',
-          200: '#fed7aa',
+          200: '#fed7aa', 
           300: '#fdba74',
-          400: '#fb923c',
-          500: '#f97316', // Main orange
+          400: '#FF8A65', // From constants primaryLight
+          500: '#FF6B35', // Main orange - From constants
           600: '#ea580c',
-          700: '#c2410c',
+          700: '#E65100', // From constants primaryDark
           800: '#9a3412',
           900: '#7c2d12',
           950: '#431407',
         },
-        // Supporting accent colors
+        // Secondary colors - From constants
+        secondary: {
+          50: '#e3f2fd',
+          100: '#bbdefb',
+          200: '#90caf9',
+          300: '#64B5F6', // From constants secondaryLight
+          400: '#42a5f5',
+          500: '#2196F3', // From constants secondary
+          600: '#1e88e5',
+          700: '#1976D2', // From constants secondaryDark
+          800: '#1565c0',
+          900: '#0d47a1',
+          950: '#0a2e5c',
+        },
+        // Supporting accent colors - Synced with constants
         success: {
           50: '#f0fdf4',
           100: '#dcfce7',
           200: '#bbf7d0',
-          300: '#86efac',
+          300: '#81C784', // From constants successLight
           400: '#4ade80',
-          500: '#22c55e',
+          500: '#4CAF50', // From constants success
           600: '#16a34a',
-          700: '#15803d',
+          700: '#388E3C', // From constants successDark
           800: '#166534',
           900: '#14532d',
           950: '#052e16',
@@ -70,11 +84,11 @@ module.exports = {
           50: '#fffbeb',
           100: '#fef3c7',
           200: '#fde68a',
-          300: '#fcd34d',
+          300: '#FFB74D', // From constants warningLight
           400: '#fbbf24',
-          500: '#f59e0b',
+          500: '#FF9800', // From constants warning
           600: '#d97706',
-          700: '#b45309',
+          700: '#F57C00', // From constants warningDark
           800: '#92400e',
           900: '#78350f',
           950: '#451a03',
@@ -83,14 +97,28 @@ module.exports = {
           50: '#fef2f2',
           100: '#fee2e2',
           200: '#fecaca',
-          300: '#fca5a5',
+          300: '#E57373', // From constants errorLight
           400: '#f87171',
-          500: '#ef4444',
+          500: '#F44336', // From constants error
           600: '#dc2626',
-          700: '#b91c1c',
+          700: '#D32F2F', // From constants errorDark
           800: '#991b1b',
           900: '#7f1d1d',
           950: '#450a0a',
+        },
+        // Info colors - From constants (same as secondary)
+        info: {
+          50: '#e3f2fd',
+          100: '#bbdefb',
+          200: '#90caf9',
+          300: '#64B5F6', // From constants infoLight
+          400: '#42a5f5',
+          500: '#2196F3', // From constants info
+          600: '#1e88e5',
+          700: '#1976D2', // From constants infoDark
+          800: '#1565c0',
+          900: '#0d47a1',
+          950: '#0a2e5c',
         },
       },
       // Typography system based on modular scale (Golden Ratio: 1.618)

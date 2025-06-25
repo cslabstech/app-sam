@@ -6,7 +6,7 @@ import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { usePermission } from '@/hooks/utils/usePermission';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUserData } from './_layout';
 
@@ -81,7 +81,7 @@ const useProfileActions = () => {
   };
 };
 
-const ProfileHeader = ({ 
+const ProfileHeader = React.memo(function ProfileHeader({ 
   name, 
   role, 
   image, 
@@ -91,29 +91,36 @@ const ProfileHeader = ({
   role: string; 
   image: string; 
   colors: any;
-}) => (
-  <View style={styles.profileHeader}>
-    <View style={[styles.profileImageContainer, { borderColor: colors.primary }]}>
-      <Image source={{ uri: image }} style={styles.profileImage} />
-    </View>
-    <View style={styles.profileInfo}>
-      <Text 
-        style={[styles.profileName, { color: colors.text }]} 
-        numberOfLines={1}
+}) {
+  return (
+    <View className="flex-row items-center mb-6">
+      <View 
+        className="w-16 h-16 rounded-xl border-2 justify-center items-center overflow-hidden"
+        style={{ borderColor: colors.primary }}
       >
-        {name}
-      </Text>
-      <Text 
-        style={[styles.profileRole, { color: colors.textSecondary }]} 
-        numberOfLines={1}
-      >
-        {role}
-      </Text>
+        <Image source={{ uri: image }} className="w-full h-full rounded-xl" />
+      </View>
+      <View className="ml-4 flex-1">
+        <Text 
+          style={{ fontFamily: 'Inter' }}
+          className="text-base font-semibold text-neutral-900 dark:text-neutral-100 mb-0.5" 
+          numberOfLines={1}
+        >
+          {name}
+        </Text>
+        <Text 
+          style={{ fontFamily: 'Inter' }}
+          className="text-xs text-neutral-600 dark:text-neutral-400" 
+          numberOfLines={1}
+        >
+          {role}
+        </Text>
+      </View>
     </View>
-  </View>
-);
+  );
+});
 
-const MenuItem = ({ 
+const MenuItem = React.memo(function MenuItem({ 
   icon, 
   title, 
   subtitle, 
@@ -127,51 +134,65 @@ const MenuItem = ({
   colors: any; 
   onPress?: () => void; 
   badge?: string;
-}) => (
-  <Pressable
-    style={[
-      styles.menuItem,
-      { 
-        backgroundColor: colors.card, 
-        borderColor: colors.border,
-      }
-    ]}
-    onPress={onPress}
-    accessibilityRole={onPress ? 'button' : undefined}
-    android_ripple={{ color: colors.primary + '20' }}
-  >
-    <View style={[styles.menuIcon, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
-      <IconSymbol name={ICONS[icon]} size={20} color={colors.primary} />
-    </View>
-    <View style={styles.menuContent}>
-      <Text style={[styles.menuTitle, { color: colors.text }]} numberOfLines={1}>
-        {title}
-      </Text>
-      {badge && (
-        <View style={[styles.badge, { backgroundColor: colors.primary + '20' }]}>
-          <Text style={[styles.badgeText, { color: colors.primary }]}>
-            {badge}
-          </Text>
-        </View>
-      )}
-    </View>
-    <IconSymbol name={ICONS.chevronRight} size={20} color={colors.textSecondary} />
-  </Pressable>
-);
+}) {
+  return (
+    <Pressable
+      className="flex-row items-center py-3 px-3 border border-neutral-200 dark:border-neutral-700 rounded-lg min-h-[48px] bg-white dark:bg-neutral-950"
+      onPress={onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      android_ripple={{ color: colors.primary + '20' }}
+    >
+      <View 
+        className="w-9 h-9 rounded-lg justify-center items-center mr-3 border"
+        style={{ 
+          backgroundColor: colors.primary + '20', 
+          borderColor: colors.primary 
+        }}
+      >
+        <IconSymbol name={ICONS[icon]} size={20} color={colors.primary} />
+      </View>
+      <View className="flex-1 flex-row items-center">
+        <Text 
+          style={{ fontFamily: 'Inter' }}
+          className="text-base font-medium text-neutral-900 dark:text-neutral-100" 
+          numberOfLines={1}
+        >
+          {title}
+        </Text>
+        {badge && (
+          <View 
+            className="ml-2 px-2 py-0.5 rounded-full"
+            style={{ backgroundColor: colors.primary + '20' }}
+          >
+            <Text 
+              style={{ fontFamily: 'Inter', color: colors.primary }}
+              className="text-xs font-semibold"
+            >
+              {badge}
+            </Text>
+          </View>
+        )}
+      </View>
+      <IconSymbol name={ICONS.chevronRight} size={20} color={colors.textSecondary} />
+    </Pressable>
+  );
+});
 
-const MenuSection = ({ 
+const MenuSection = React.memo(function MenuSection({ 
   children, 
-  style 
+  className 
 }: { 
   children: React.ReactNode; 
-  style?: any;
-}) => (
-  <View style={[styles.menuSection, style]}>
-    {children}
-  </View>
-);
+  className?: string;
+}) {
+  return (
+    <View className={`gap-2 mb-6 ${className || ''}`}>
+      {children}
+    </View>
+  );
+});
 
-const LogoutButton = ({ 
+const LogoutButton = React.memo(function LogoutButton({ 
   onPress, 
   loading, 
   colors 
@@ -179,22 +200,28 @@ const LogoutButton = ({
   onPress: () => void; 
   loading: boolean; 
   colors: any;
-}) => (
-  <View style={styles.logoutContainer}>
-    <Pressable
-      style={[styles.logoutButton, { backgroundColor: colors.danger }]}
-      onPress={onPress}
-      disabled={loading}
-      accessibilityLabel="Log Out"
-      accessibilityHint="Keluar dari aplikasi"
-      android_ripple={{ color: colors.dangerText + '20' }}
-    >
-      <Text style={[styles.logoutText, { color: colors.dangerText }]}>
-        {loading ? 'Log Out...' : 'Log Out'}
-      </Text>
-    </Pressable>
-  </View>
-);
+}) {
+  return (
+    <View className="mb-6">
+      <Pressable
+        className="h-12 w-full rounded-lg items-center justify-center mt-6"
+        style={{ backgroundColor: colors.danger }}
+        onPress={onPress}
+        disabled={loading}
+        accessibilityLabel="Log Out"
+        accessibilityHint="Keluar dari aplikasi"
+        android_ripple={{ color: colors.dangerText + '20' }}
+      >
+        <Text 
+          style={{ fontFamily: 'Inter', color: colors.dangerText }}
+          className="text-sm font-medium"
+        >
+          {loading ? 'Log Out...' : 'Log Out'}
+        </Text>
+      </Pressable>
+    </View>
+  );
+});
 
 export default function ProfileScreen() {
   const colorScheme = useColorScheme();
@@ -208,15 +235,15 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView 
-      style={[styles.container, { backgroundColor: colors.background }]} 
+      className="flex-1 bg-neutral-50 dark:bg-neutral-900" 
       edges={isConnected ? ['top','left','right'] : ['left','right']}
     >
       <ScrollView 
-        style={styles.scrollView} 
-        contentContainerStyle={styles.scrollContent}
+        className="flex-1" 
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 64 }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.content}>
+        <View className="px-4 pt-8 pb-6">
           <ProfileHeader 
             name={displayName} 
             role={displayRole} 
@@ -265,109 +292,3 @@ export default function ProfileScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 64,
-  },
-  content: {
-    paddingHorizontal: 16,
-    paddingTop: 32,
-    paddingBottom: 24,
-  },
-  profileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  profileImageContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 12,
-    borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  profileImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 12,
-  },
-  profileInfo: {
-    marginLeft: 16,
-    flex: 1,
-  },
-  profileName: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  profileRole: {
-    fontSize: 12,
-  },
-  menuSection: {
-    gap: 8,
-    marginBottom: 24,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderRadius: 8,
-    minHeight: 48,
-  },
-  menuIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-    borderWidth: 1,
-  },
-  menuContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  menuTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  badge: {
-    marginLeft: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  logoutContainer: {
-    marginBottom: 24,
-  },
-  logoutButton: {
-    height: 48,
-    width: '100%',
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 24,
-  },
-  logoutText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#ffffff',
-  },
-});

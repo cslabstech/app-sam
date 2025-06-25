@@ -1,19 +1,14 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
     ActivityIndicator,
     Platform,
     Pressable,
-    StyleSheet,
     Text,
     TextStyle,
     Vibration,
     ViewStyle,
 } from 'react-native';
 
-import { Colors } from '@/constants/Colors';
-import { shadow } from '@/constants/Shadows';
-import { borderRadius, componentSpacing, spacing } from '@/constants/Spacing';
-import { typography } from '@/constants/Typography';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 
 type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'danger' | 'success' | 'outline' | 'ghost' | 'link';
@@ -37,7 +32,28 @@ interface ButtonProps {
   accessibilityHint?: string;
 }
 
-export function Button({
+const useButtonLogic = ({ onPress, disabled, loading, hapticFeedback = true }: {
+  onPress?: () => void;
+  disabled: boolean;
+  loading: boolean;
+  hapticFeedback?: boolean;
+}) => {
+  
+  const handlePress = useCallback(() => {
+    if (disabled || loading) return;
+
+    // Haptic feedback
+    if (hapticFeedback && Platform.OS === 'ios') {
+      Vibration.vibrate(1);
+    }
+
+    onPress?.();
+  }, [disabled, loading, hapticFeedback, onPress]);
+
+  return { handlePress };
+};
+
+export const Button = React.memo(function Button({
   title,
   variant = 'primary',
   size = 'md',
@@ -55,207 +71,165 @@ export function Button({
   accessibilityHint,
 }: ButtonProps) {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { handlePress } = useButtonLogic({ 
+    onPress, disabled, loading, hapticFeedback 
+  });
 
-  const getBackgroundColor = (pressed: boolean) => {
+  const getBaseClasses = () => {
+    const baseClasses = [
+      'flex-row justify-center items-center relative overflow-hidden',
+      // Full width
+      fullWidth ? 'w-full' : '',
+    ].filter(Boolean).join(' ');
+
+    return baseClasses;
+  };
+
+  const getVariantClasses = () => {
     if (disabled) {
-      return colors.border;
+      return 'bg-neutral-200 dark:bg-neutral-700';
     }
 
-    const baseColor = (() => {
+    switch (variant) {
+      case 'primary':
+        return 'bg-primary-500 active:bg-primary-600';
+      case 'secondary':
+        return 'bg-secondary-500 active:bg-secondary-600';
+      case 'tertiary':
+        return 'bg-neutral-100 dark:bg-neutral-800 active:bg-neutral-200 dark:active:bg-neutral-700 border border-neutral-200 dark:border-neutral-700';
+      case 'danger':
+        return 'bg-danger-500 active:bg-danger-600';
+      case 'success':
+        return 'bg-success-500 active:bg-success-600';
+      case 'outline':
+        return 'bg-transparent border border-primary-500 active:bg-primary-50 dark:active:bg-primary-950';
+      case 'ghost':
+        return 'bg-transparent active:bg-neutral-100 dark:active:bg-neutral-800';
+      case 'link':
+        return 'bg-transparent active:bg-neutral-50 dark:active:bg-neutral-900';
+      default:
+        return 'bg-primary-500 active:bg-primary-600';
+    }
+  };
+
+  const getSizeClasses = () => {
+    switch (size) {
+      case 'xs':
+        return 'h-7 px-2 rounded';
+      case 'sm':
+        return 'h-9 px-3 rounded';
+      case 'md':
+        return 'h-11 px-4 rounded-md';
+      case 'lg':
+        return 'h-13 px-6 rounded-md';
+      case 'xl':
+        return 'h-15 px-8 rounded-lg';
+      default:
+        return 'h-11 px-4 rounded-md';
+    }
+  };
+
+  const getTextClasses = () => {
+    if (disabled) {
+      return 'text-neutral-400 dark:text-neutral-500';
+    }
+
+    const colorClasses = (() => {
       switch (variant) {
         case 'primary':
-          return colors.primary;
-        case 'secondary':
-          return colors.secondary;
-        case 'tertiary':
-          return colors.surface;
         case 'danger':
-          return colors.danger;
         case 'success':
-          return colors.success;
+        case 'secondary':
+          return 'text-white';
+        case 'tertiary':
+          return 'text-neutral-900 dark:text-neutral-100';
         case 'outline':
         case 'ghost':
         case 'link':
-          return 'transparent';
+          return 'text-primary-500';
         default:
-          return colors.primary;
+          return 'text-white';
       }
     })();
 
-    if (pressed && baseColor !== 'transparent') {
-      // Darken the color when pressed
-      return baseColor + 'CC'; // Add some transparency for pressed state
-    }
+    const sizeClasses = (() => {
+      switch (size) {
+        case 'xs':
+          return 'text-xs';
+        case 'sm':
+          return 'text-sm';
+        case 'md':
+          return 'text-base';
+        case 'lg':
+          return 'text-lg';
+        case 'xl':
+          return 'text-xl';
+        default:
+          return 'text-base';
+      }
+    })();
 
-    return baseColor;
+    const weightClasses = (() => {
+      switch (variant) {
+        case 'primary':
+        case 'secondary':
+        case 'danger':
+        case 'success':
+          return 'font-semibold';
+        case 'link':
+          return 'font-medium';
+        default:
+          return 'font-medium';
+      }
+    })();
+
+    return `${colorClasses} ${sizeClasses} ${weightClasses} text-center font-sans`;
   };
 
-  const getTextColor = () => {
-    if (disabled) {
-      return colors.textDisabled;
-    }
-
-    switch (variant) {
-      case 'primary':
-      case 'danger':
-      case 'success':
-        return colors.textInverse;
-      case 'secondary':
-        return colors.textInverse;
-      case 'tertiary':
-        return colors.text;
-      case 'outline':
-      case 'ghost':
-        return colors.primary;
-      case 'link':
-        return colors.primary;
-      default:
-        return colors.textInverse;
-    }
+  const getLinkTextDecoration = () => {
+    return variant === 'link' ? { textDecorationLine: 'underline' as const } : {};
   };
 
-  const getBorderColor = () => {
-    if (disabled) {
-      return colors.border;
-    }
-
-    switch (variant) {
-      case 'outline':
-        return colors.primary;
-      case 'tertiary':
-        return colors.border;
-      default:
-        return 'transparent';
-    }
-  };
-
-  const getBorderWidth = () => {
-    switch (variant) {
-      case 'outline':
-      case 'tertiary':
-        return 1;
-      default:
-        return 0;
-    }
-  };
-
-  const getShadow = () => {
-    if (disabled || variant === 'ghost' || variant === 'link') {
-      return {};
-    }
-    
-    switch (variant) {
-      case 'primary':
-      case 'secondary':
-      case 'danger':
-      case 'success':
-        return shadow.button;
-      default:
-        return {};
-    }
-  };
-
-  const getButtonDimensions = () => {
+  const getIconSpacing = () => {
     switch (size) {
       case 'xs':
-        return {
-          height: 28,
-          paddingHorizontal: spacing.sm,
-          borderRadius: borderRadius.sm,
-        };
       case 'sm':
-        return {
-          height: 36,
-          paddingHorizontal: spacing.md,
-          borderRadius: borderRadius.sm,
-        };
+        return 2;
       case 'md':
-        return {
-          height: 44,
-          paddingHorizontal: spacing.lg,
-          borderRadius: borderRadius.md,
-        };
+        return 3;
       case 'lg':
-        return {
-          height: 52,
-          paddingHorizontal: spacing.xl,
-          borderRadius: borderRadius.md,
-        };
       case 'xl':
-        return {
-          height: 60,
-          paddingHorizontal: spacing['2xl'],
-          borderRadius: borderRadius.lg,
-        };
+        return 4;
       default:
-        return {
-          height: 44,
-          paddingHorizontal: spacing.lg,
-          borderRadius: borderRadius.md,
-        };
+        return 3;
     }
   };
 
-  const getFontSize = () => {
-    switch (size) {
-      case 'xs':
-        return typography.fontSize.xs;
-      case 'sm':
-        return typography.fontSize.sm;
-      case 'md':
-        return typography.fontSize.base;
-      case 'lg':
-        return typography.fontSize.md;
-      case 'xl':
-        return typography.fontSize.lg;
-      default:
-        return typography.fontSize.base;
-    }
-  };
+  const buttonClasses = [
+    getBaseClasses(),
+    getVariantClasses(),
+    getSizeClasses(),
+  ].filter(Boolean).join(' ');
 
-  const getFontWeight = (): TextStyle['fontWeight'] => {
-    switch (variant) {
-      case 'primary':
-      case 'secondary':
-      case 'danger':
-      case 'success':
-        return '600' as const;
-      case 'link':
-        return '500' as const;
-      default:
-        return '500' as const;
-    }
-  };
-
-  const handlePress = () => {
-    if (disabled || loading) return;
-
-    // Haptic feedback
-    if (hapticFeedback && Platform.OS === 'ios') {
-      Vibration.vibrate(1);
-    }
-
-    onPress?.();
-  };
-
-  const dimensions = getButtonDimensions();
+  const textClasses = getTextClasses();
+  const iconSpacing = getIconSpacing();
 
   return (
     <Pressable
-      style={({ pressed }) => [
-        styles.button,
-        {
-          backgroundColor: getBackgroundColor(pressed),
-          borderColor: getBorderColor(),
-          borderWidth: getBorderWidth(),
-          height: dimensions.height,
-          paddingHorizontal: dimensions.paddingHorizontal,
-          borderRadius: dimensions.borderRadius,
-          width: fullWidth ? '100%' : undefined,
-          opacity: disabled ? 0.6 : pressed ? 0.9 : 1,
-        },
-        getShadow(),
+      className={buttonClasses}
+      style={[
+        disabled && { opacity: 0.6 },
+        !disabled && (variant === 'primary' || variant === 'secondary' || variant === 'danger' || variant === 'success') && Platform.select({
+          ios: {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 3,
+          },
+          android: {
+            elevation: 2,
+          },
+        }),
         style,
       ]}
       onPress={handlePress}
@@ -268,25 +242,18 @@ export function Button({
     >
       {loading ? (
         <ActivityIndicator 
-          color={getTextColor()} 
+          color={variant === 'primary' || variant === 'secondary' || variant === 'danger' || variant === 'success' ? 'white' : '#FF6B35'}
           size={size === 'xs' || size === 'sm' ? 'small' : 'small'} 
         />
       ) : (
         <>
           {leftIcon && (
-            <>{leftIcon}</>
+            <Text style={{ marginRight: iconSpacing * 4 }}>{leftIcon}</Text>
           )}
           <Text
+            className={textClasses}
             style={[
-              styles.buttonText,
-              {
-                color: getTextColor(),
-                fontSize: getFontSize(),
-                fontWeight: getFontWeight(),
-                marginLeft: leftIcon ? componentSpacing.button.gap : 0,
-                marginRight: rightIcon ? componentSpacing.button.gap : 0,
-              },
-              variant === 'link' && styles.linkText,
+              getLinkTextDecoration(),
               textStyle,
             ]}
             numberOfLines={1}
@@ -294,29 +261,14 @@ export function Button({
             {title}
           </Text>
           {rightIcon && (
-            <>{rightIcon}</>
+            <Text style={{ marginLeft: iconSpacing * 4 }}>{rightIcon}</Text>
           )}
         </>
       )}
     </Pressable>
   );
-}
-
-const styles = StyleSheet.create({
-  button: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  buttonText: {
-    fontFamily: typography.fontFamily,
-    textAlign: 'center',
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-  },
-  linkText: {
-    textDecorationLine: 'underline',
-  },
 });
+
+// 4. Export types for reuse
+export type { ButtonProps, ButtonSize, ButtonVariant };
+

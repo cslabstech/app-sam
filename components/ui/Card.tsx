@@ -1,11 +1,9 @@
-import React from 'react';
-import { Pressable, StyleSheet, View, ViewProps, ViewStyle } from 'react-native';
+import React, { useCallback } from 'react';
+import { Pressable, View, ViewProps, ViewStyle } from 'react-native';
 
-import { Colors } from '@/constants/Colors';
-import { shadow, shadowPresets } from '@/constants/Shadows';
-import { borderRadius, componentSpacing, spacing } from '@/constants/Spacing';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 
+// 1. Types first
 type CardVariant = 'default' | 'elevated' | 'outlined' | 'filled';
 type CardSize = 'sm' | 'md' | 'lg';
 
@@ -20,7 +18,21 @@ interface CardProps extends ViewProps {
   testID?: string;
 }
 
-export function Card({ 
+// 2. Custom hook for component logic
+const useCardLogic = ({ onPress, disabled }: {
+  onPress?: () => void;
+  disabled: boolean;
+}) => {
+  const handlePress = useCallback(() => {
+    if (disabled) return;
+    onPress?.();
+  }, [disabled, onPress]);
+
+  return { handlePress };
+};
+
+// 3. Main component
+export const Card = React.memo(function Card({ 
   children, 
   variant = 'default',
   size = 'md',
@@ -32,104 +44,116 @@ export function Card({
   ...props 
 }: CardProps) {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { handlePress } = useCardLogic({ onPress, disabled });
 
-  const getBackgroundColor = () => {
-    switch (variant) {
-      case 'filled':
-        return colors.backgroundAlt;
-      case 'elevated':
-      case 'default':
-      case 'outlined':
+  // ✅ PRIMARY - NativeWind classes
+  const getBaseClasses = () => {
+    const baseClasses = [
+      'overflow-hidden',
+      // Margin
+      'my-3',
+    ].filter(Boolean).join(' ');
+
+    return baseClasses;
+  };
+
+  const getVariantClasses = () => {
+    const baseVariantClasses = (() => {
+      switch (variant) {
+        case 'filled':
+          return 'bg-neutral-100 dark:bg-neutral-800';
+        case 'outlined':
+          return 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700';
+        case 'elevated':
+          return 'bg-white dark:bg-neutral-900';
+        case 'default':
+        default:
+          return 'bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800';
+      }
+    })();
+
+    return baseVariantClasses;
+  };
+
+  const getSizeClasses = () => {
+    if (noPadding) return '';
+    
+    switch (size) {
+      case 'sm':
+        return 'p-3';
+      case 'lg':
+        return 'p-6';
+      case 'md':
       default:
-        return colors.card;
+        return 'p-4';
     }
   };
 
-  const getBorderStyle = () => {
-    switch (variant) {
-      case 'outlined':
-        return {
-          borderWidth: 1,
-          borderColor: colors.border,
-        };
-      case 'elevated':
-        return {
-          borderWidth: 0,
-        };
+  const getBorderRadiusClasses = () => {
+    switch (size) {
+      case 'sm':
+        return 'rounded';
+      case 'lg':
+        return 'rounded-xl';
+      case 'md':
       default:
-        return {
-          borderWidth: 1,
-          borderColor: colors.borderLight,
-        };
+        return 'rounded-lg';
     }
   };
 
+  const cardClasses = [
+    getBaseClasses(),
+    getVariantClasses(),
+    getSizeClasses(),
+    getBorderRadiusClasses(),
+    disabled && 'opacity-60',
+  ].filter(Boolean).join(' ');
+
+  // ⚠️ SECONDARY - Complex dynamic styling for shadows
   const getShadowStyle = () => {
     if (disabled) return {};
     
     switch (variant) {
       case 'elevated':
-        return shadowPresets.surface;
+        return {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          elevation: 4,
+        };
       case 'default':
-        return shadow.sm;
+        return {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.05,
+          shadowRadius: 2,
+          elevation: 1,
+        };
       case 'outlined':
       case 'filled':
         return {};
       default:
-        return shadow.sm;
+        return {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.05,
+          shadowRadius: 2,
+          elevation: 1,
+        };
     }
   };
-
-  const getPadding = () => {
-    if (noPadding) return 0;
-    
-    switch (size) {
-      case 'sm':
-        return componentSpacing.card.paddingSmall;
-      case 'lg':
-        return componentSpacing.card.paddingLarge;
-      default:
-        return componentSpacing.card.padding;
-    }
-  };
-
-  const getBorderRadius = () => {
-    switch (size) {
-      case 'sm':
-        return borderRadius.sm;
-      case 'lg':
-        return componentSpacing.card.borderRadiusLarge;
-      default:
-        return borderRadius.card;
-    }
-  };
-
-  const cardStyle = [
-    styles.card,
-    {
-      backgroundColor: getBackgroundColor(),
-      padding: getPadding(),
-      borderRadius: getBorderRadius(),
-      opacity: disabled ? 0.6 : 1,
-    },
-    getBorderStyle(),
-    getShadowStyle(),
-    style,
-  ];
 
   // If onPress is provided, make it interactive
   if (onPress && !disabled) {
     return (
       <Pressable
-        style={({ pressed }) => [
-          ...cardStyle,
-          {
-            transform: pressed ? [{ scale: 0.98 }] : [{ scale: 1 }],
-            opacity: pressed ? 0.9 : 1,
-          },
+        className={cardClasses}
+        style={[
+          getShadowStyle(),
+          style,
         ]}
-        onPress={onPress}
+        onPress={handlePress}
         testID={testID}
         accessibilityRole="button"
         disabled={disabled}
@@ -143,58 +167,55 @@ export function Card({
   // Static card
   return (
     <View
-      style={cardStyle}
+      className={cardClasses}
+      style={[
+        getShadowStyle(),
+        style,
+      ]}
       testID={testID}
       {...props}
     >
       {children}
     </View>
   );
-}
+});
 
 // Additional Card components for common patterns
-export function CardHeader({ children, style, ...props }: ViewProps) {
+export const CardHeader = React.memo(function CardHeader({ children, style, ...props }: ViewProps) {
   return (
-    <View style={[styles.cardHeader, style]} {...props}>
+    <View 
+      className="pb-3 border-b border-neutral-100 dark:border-neutral-800 mb-3" 
+      style={style} 
+      {...props}
+    >
       {children}
     </View>
   );
-}
-
-export function CardContent({ children, style, ...props }: ViewProps) {
-  return (
-    <View style={[styles.cardContent, style]} {...props}>
-      {children}
-    </View>
-  );
-}
-
-export function CardFooter({ children, style, ...props }: ViewProps) {
-  return (
-    <View style={[styles.cardFooter, style]} {...props}>
-      {children}
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  card: {
-    marginVertical: componentSpacing.card.margin,
-    overflow: 'hidden',
-  },
-  cardHeader: {
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
-    marginBottom: spacing.md,
-  },
-  cardContent: {
-    flex: 1,
-  },
-  cardFooter: {
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.05)',
-    marginTop: spacing.md,
-  },
 });
+
+export const CardContent = React.memo(function CardContent({ children, style, ...props }: ViewProps) {
+  return (
+    <View 
+      className="flex-1" 
+      style={style} 
+      {...props}
+    >
+      {children}
+    </View>
+  );
+});
+
+export const CardFooter = React.memo(function CardFooter({ children, style, ...props }: ViewProps) {
+  return (
+    <View 
+      className="pt-3 border-t border-neutral-100 dark:border-neutral-800 mt-3" 
+      style={style} 
+      {...props}
+    >
+      {children}
+    </View>
+  );
+});
+
+// 4. Export types for reuse
+export type { CardProps, CardSize, CardVariant };
