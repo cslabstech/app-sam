@@ -1,5 +1,6 @@
 import { useAuth as useAuthHook, User } from '@/hooks/data/useAuth';
-import React, { createContext, useContext } from 'react';
+import { setAutoLogoutCallback } from '@/utils/api';
+import React, { createContext, useContext, useEffect } from 'react';
 
 interface AuthContextProps {
   user: User | null;
@@ -30,8 +31,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     permissions,
   } = useAuthHook();
 
+  // Setup auto logout callback untuk API
+  useEffect(() => {
+    setAutoLogoutCallback(() => {
+      // Logout tanpa loading state untuk menghindari UI flicker
+      logout();
+    });
+  }, [logout]);
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, refreshUser, loginWithToken, requestOtp, verifyOtp, permissions }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      token, 
+      loading, 
+      login, 
+      logout, 
+      refreshUser, 
+      loginWithToken, 
+      requestOtp, 
+      verifyOtp, 
+      permissions 
+    }}>
       {children}
     </AuthContext.Provider>
   );

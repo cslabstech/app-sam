@@ -31,6 +31,38 @@ export interface DivisionsResponse extends BaseResponse<ReferenceItem[]> {}
 export interface RegionsResponse extends BaseResponse<ReferenceItem[]> {}
 export interface ClustersResponse extends BaseResponse<ReferenceItem[]> {}
 
+// Tambahkan interface untuk response outlet-level-fields
+export interface OutletLevelFieldSection {
+  id: string | number | null;
+  code: string;
+  name: string;
+  type: string;
+  description?: string | null;
+  sort_order: number;
+  settings: any;
+  custom_fields: OutletLevelCustomField[];
+}
+
+export interface OutletLevelCustomField {
+  id: string | number | null;
+  code: string;
+  name: string;
+  type: string;
+  width: string;
+  lookup_type: string | null;
+  sort_order: number;
+  validation_rules: any[];
+  settings: any;
+  options: any[];
+  required: boolean;
+  model_field: boolean;
+  custom_field_found: boolean | null;
+  custom_field_note: string | null;
+  source: string;
+}
+
+export interface OutletLevelFieldsResponse extends BaseResponse<OutletLevelFieldSection[]> {}
+
 export function useReference() {
   const { token } = useAuth();
   
@@ -282,4 +314,49 @@ export function useReference() {
     fetchClusters,
     onRoleChange,
   };
+}
+
+// Custom hook untuk fetch outlet-level-fields
+export function useOutletLevelFields(level: 'LEAD' | 'NOO') {
+  const { token } = useAuth();
+  const [data, setData] = useState<OutletLevelFieldSection[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchFields = useCallback(async () => {
+    if (!token) {
+      setError('Token tidak tersedia');
+      setData(null);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const response: OutletLevelFieldsResponse = await apiRequest({
+        url: `${BASE_URL}/references/outlet-level-fields?level=${level}&include_custom_fields=true`,
+        method: 'GET',
+        body: null,
+        logLabel: 'FETCH_OUTLET_LEVEL_FIELDS',
+        token
+      });
+      if (response.data && Array.isArray(response.data)) {
+        setData(response.data);
+      } else {
+        setData(null);
+        setError('Invalid data format');
+      }
+    } catch (err: any) {
+      setData(null);
+      setError(err.message || 'Gagal fetch outlet-level-fields');
+    } finally {
+      setLoading(false);
+    }
+  }, [token, level]);
+
+  useEffect(() => {
+    fetchFields();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [level]);
+
+  return { data, loading, error, fetchFields };
 } 

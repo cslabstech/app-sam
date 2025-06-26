@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Input } from '@/components/ui/Input';
+import { useOutletLevelFields } from '@/hooks/data/useReference';
 import { useRegisterOutletForm } from '@/hooks/data/useRegisterOutletForm';
 import { useThemeStyles } from '@/hooks/utils/useThemeStyles';
 
@@ -343,6 +344,105 @@ const ActionButtons = React.memo(function ActionButtons({
   );
 });
 
+// Komponen Tab LEAD/NOO dengan nativewind
+const LeadNooTabs = React.memo(function LeadNooTabs({ activeTab, onTabChange }: { activeTab: 'LEAD' | 'NOO'; onTabChange: (tab: 'LEAD' | 'NOO') => void }) {
+  return (
+    <View className="my-4 mx-4">
+      <View className="flex-row bg-neutral-100 dark:bg-neutral-800 rounded-lg p-1">
+        <TouchableOpacity
+          className={`flex-1 py-2 rounded-md items-center ${activeTab === 'LEAD' ? 'bg-primary-500' : ''}`}
+          onPress={() => onTabChange('LEAD')}
+        >
+          <Text className={`font-semibold ${activeTab === 'LEAD' ? 'text-white' : 'text-neutral-500 dark:text-neutral-300'}`}>LEAD</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          className={`flex-1 py-2 rounded-md items-center ${activeTab === 'NOO' ? 'bg-primary-500' : ''}`}
+          onPress={() => onTabChange('NOO')}
+        >
+          <Text className={`font-semibold ${activeTab === 'NOO' ? 'text-white' : 'text-neutral-500 dark:text-neutral-300'}`}>NOO</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+});
+
+// Komponen untuk render field dinamis
+const DynamicField = React.memo(function DynamicField({ field, value, onChange, colors }: {
+  field: any;
+  value: string;
+  onChange: (val: string) => void;
+  colors: any;
+}) {
+  // Tentukan komponen input berdasarkan type
+  if (field.type === 'textarea') {
+    return (
+      <View className="mb-4">
+        <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>{field.name}{field.required && <Text className="text-red-500">*</Text>}</Text>
+        <Input
+          value={value}
+          onChangeText={onChange}
+          placeholder={field.name}
+          multiline
+          numberOfLines={3}
+          style={{ height: 80, textAlignVertical: 'top' }}
+        />
+      </View>
+    );
+  }
+  if (field.type === 'select') {
+    return (
+      <View className="mb-4">
+        <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>{field.name}{field.required && <Text className="text-red-500">*</Text>}</Text>
+        <View className="border rounded-lg px-2">
+          <TouchableOpacity>
+            {/* TODO: Implement Select Dropdown */}
+            <Text className="py-3 text-base text-neutral-500">{value || `Pilih ${field.name}`}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+  return (
+    <View className="mb-4">
+      <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>{field.name}{field.required && <Text className="text-red-500">*</Text>}</Text>
+      <Input
+        value={value}
+        onChangeText={onChange}
+        placeholder={field.name}
+        keyboardType={field.type === 'number' ? 'numeric' : (field.type === 'phone' ? 'phone-pad' : 'default')}
+      />
+    </View>
+  );
+});
+
+// Komponen untuk render section dinamis
+const DynamicFormSection = React.memo(function DynamicFormSection({ section, form, setForm, colors }: {
+  section: any;
+  form: Record<string, string>;
+  setForm: (f: Record<string, string>) => void;
+  colors: any;
+}) {
+  return (
+    <View className="rounded-xl p-4 mb-4 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
+      <View className="flex-row items-center mb-4">
+        <IconSymbol name="building.2.fill" size={18} color={colors.primary} />
+        <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base font-semibold ml-2">
+          {section.name}
+        </Text>
+      </View>
+      {section.custom_fields.map((field: any) => (
+        <DynamicField
+          key={field.code}
+          field={field}
+          value={form[field.code] || ''}
+          onChange={val => setForm({ ...form, [field.code]: val })}
+          colors={colors}
+        />
+      ))}
+    </View>
+  );
+});
+
 /**
  * Register Outlet Screen - Form untuk mendaftarkan outlet baru
  * Mengikuti best practice: UI-only components, custom hooks untuk logic
@@ -351,6 +451,10 @@ export default function RegisterOutletScreen() {
   const { colors, styles } = useThemeStyles();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [activeTab, setActiveTab] = useState<'LEAD' | 'NOO'>('LEAD');
+  // State untuk dynamic form
+  const [form, setForm] = useState<Record<string, string>>({});
+  const { data: sections, loading, error } = useOutletLevelFields(activeTab);
   
   const {
     formData,
@@ -391,33 +495,28 @@ export default function RegisterOutletScreen() {
         colors={colors}
         insets={insets}
       />
-
+      {/* Tabs LEAD/NOO */}
+      <LeadNooTabs activeTab={activeTab} onTabChange={setActiveTab} />
       <ScrollView 
         className="flex-1"
         contentContainerStyle={{ padding: 16 }}
         showsVerticalScrollIndicator={false}
       >
-        <OutletInformationSection
-          formData={formData}
-          errors={errors}
-          selectedType={selectedType}
-          showTypeDropdown={showTypeDropdown}
-          outletTypes={outletTypes}
-          onInputChange={handleInputChange}
-          onToggleDropdown={handleToggleDropdown}
-          onTypeSelect={handleTypeSelect}
-          styles={styles}
-          colors={colors}
-        />
-
-        <ContactInformationSection
-          formData={formData}
-          errors={errors}
-          onInputChange={handleInputChange}
-          styles={styles}
-          colors={colors}
-        />
-
+        {loading && (
+          <Text className="text-center text-base my-8" style={{ color: colors.textSecondary }}>Memuat form...</Text>
+        )}
+        {error && (
+          <Text className="text-center text-base my-8 text-red-500">{error}</Text>
+        )}
+        {sections && sections.map(section => (
+          <DynamicFormSection
+            key={section.code}
+            section={section}
+            form={form}
+            setForm={setForm}
+            colors={colors}
+          />
+        ))}
         <ActionButtons
           isSubmitting={isSubmitting}
           onLocationSet={handleLocationSet}

@@ -8,7 +8,6 @@ import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/context/auth-context';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
-import { useRouter } from 'expo-router';
 
 export const UserDataContext = createContext<any>(null);
 export const useUserData = () => useContext(UserDataContext);
@@ -16,14 +15,7 @@ export const useUserData = () => useContext(UserDataContext);
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { user, token, loading } = useAuth();
-  const router = useRouter();
-
-  React.useEffect(() => {
-    if (!loading && !token) {
-      router.replace('/login');
-    }
-  }, [token, loading]);
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (

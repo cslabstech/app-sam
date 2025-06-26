@@ -1,5 +1,5 @@
 import React, { ReactNode, useCallback, useState } from 'react';
-import { Text, TextInput, TextInputProps, View } from 'react-native';
+import { Platform, Text, TextInput, TextInputProps, View } from 'react-native';
 
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 
@@ -69,124 +69,90 @@ export const Input = React.memo(function Input({
   const colorScheme = useColorScheme();
   const { isFocused, handleFocus, handleBlur } = useInputLogic({ onFocus, onBlur });
 
-  // ✅ PRIMARY - NativeWind classes
+  // Following login pages styling standards
   const getLabelClasses = () => {
-    const baseClasses = 'mb-2 text-sm font-medium font-sans';
+    const baseClasses = 'mb-2 text-sm font-medium';
     
     if (error) return `${baseClasses} text-danger-600 dark:text-danger-400`;
     if (success) return `${baseClasses} text-success-600 dark:text-success-400`;
-    if (isFocused) return `${baseClasses} text-primary-600 dark:text-primary-400`;
+    if (isFocused) return `${baseClasses} text-neutral-700 dark:text-neutral-200`;
     return `${baseClasses} text-neutral-700 dark:text-neutral-200`;
-  };
-
-  const getContainerClasses = () => {
-    return 'my-3';
   };
 
   const getInputContainerClasses = () => {
     const baseClasses = [
-      'flex-row items-center overflow-hidden',
+      'flex-row items-center rounded-md border',
       disabled && 'opacity-60',
     ];
 
-    // Background
-    const bgClasses = (() => {
-      if (disabled) return 'bg-neutral-100 dark:bg-neutral-800';
-      
-      switch (variant) {
-        case 'filled':
-          return 'bg-neutral-100 dark:bg-neutral-800';
-        case 'outlined':
-        case 'default':
-        default:
-          return 'bg-white dark:bg-neutral-900';
-      }
-    })();
-
-    // Border
-    const borderClasses = (() => {
-      if (disabled) return 'border border-neutral-200 dark:border-neutral-700';
-      if (error) return isFocused ? 'border-2 border-danger-500' : 'border border-danger-500';
-      if (success) return isFocused ? 'border-2 border-success-500' : 'border border-success-500';
-      if (isFocused) return 'border-2 border-primary-500';
-      
-      switch (variant) {
-        case 'outlined':
-          return 'border border-neutral-300 dark:border-neutral-600';
-        case 'filled':
-          return 'border-0';
-        default:
-          return 'border border-neutral-300 dark:border-neutral-600';
-      }
-    })();
-
-    // Size & Border Radius
-    const sizeClasses = (() => {
+    // Height based on size - following login pages
+    const heightClasses = (() => {
       switch (size) {
         case 'sm':
-          return 'h-9';
+          return 'h-10';
         case 'lg':
-          return 'h-13';
+          return 'h-12'; // Consistent with login pages
         case 'md':
         default:
-          return 'h-11';
+          return 'h-12'; // Standard height like login pages
       }
     })();
 
-    const radiusClasses = (() => {
-      switch (variant) {
-        case 'filled':
-          return 'rounded-lg';
-        default:
-          return 'rounded-md';
-      }
+    // Background following login pages
+    const bgClasses = 'bg-neutral-50 dark:bg-neutral-900';
+
+    // Border classes following login pages styling
+    const borderClasses = (() => {
+      if (disabled) return 'border-neutral-200 dark:border-neutral-700';
+      if (error) return 'border-danger-500';
+      if (success) return 'border-success-500';
+      if (isFocused) return 'border-primary-500';
+      return 'border-neutral-300 dark:border-neutral-700';
     })();
 
     return [
       ...baseClasses,
+      heightClasses,
       bgClasses,
       borderClasses,
-      sizeClasses,
-      radiusClasses,
     ].filter(Boolean).join(' ');
   };
 
   const getInputClasses = () => {
     const baseClasses = [
-      'flex-1 h-full font-sans',
-      disabled ? 'text-neutral-400 dark:text-neutral-500' : 'text-neutral-900 dark:text-white',
+      'flex-1 text-base',
+      disabled ? 'text-neutral-400 dark:text-neutral-500' : 'text-neutral-900 dark:text-neutral-100',
     ];
 
-    const sizeClasses = (() => {
-      switch (size) {
-        case 'sm':
-          return 'text-sm px-3';
-        case 'lg':
-          return 'text-lg px-4';
-        case 'md':
-        default:
-          return 'text-base px-3';
-      }
+    // Padding following login pages
+    const paddingClasses = (() => {
+      if (leftIcon && rightIcon) return 'px-3';
+      if (leftIcon) return 'pl-1 pr-4';
+      if (rightIcon) return 'pl-4 pr-1';
+      return 'px-4';
     })();
-
-    const spacingClasses = [
-      leftIcon && 'pl-1',
-      rightIcon && 'pr-1',
-    ].filter(Boolean);
 
     return [
       ...baseClasses,
-      sizeClasses,
-      ...spacingClasses,
+      paddingClasses,
     ].filter(Boolean).join(' ');
   };
 
-  const getMessageClasses = () => {
-    const baseClasses = 'mt-1 px-1 text-xs font-sans';
+  const getErrorClasses = () => {
+    return 'mt-2 text-xs text-danger-600 dark:text-danger-400';
+  };
+
+  // iOS-specific text input styling to fix baseline issue
+  const getIOSTextInputStyle = () => {
+    if (Platform.OS !== 'ios') return {};
     
-    if (error) return `${baseClasses} text-danger-600 dark:text-danger-400`;
-    if (success) return `${baseClasses} text-success-600 dark:text-success-400`;
-    return `${baseClasses} text-neutral-600 dark:text-neutral-400`;
+    return {
+      // Fix iOS text baseline issue by removing default padding
+      paddingTop: 0,
+      paddingBottom: 0,
+      // Use line height for better vertical alignment
+      lineHeight: size === 'lg' ? 20 : 18,
+    };
   };
 
   // Early return for className prop (backward compatibility)
@@ -194,14 +160,18 @@ export const Input = React.memo(function Input({
     return (
       <View style={containerStyle}>
         {label && (
-          <Text className={getLabelClasses()}>
+          <Text className={getLabelClasses()} style={{ fontFamily: 'Inter' }}>
             {label}
             {required && <Text className="text-danger-600">*</Text>}
           </Text>
         )}
         <TextInput
           className={className}
-          style={style}
+          style={[
+            { fontFamily: 'Inter' },
+            getIOSTextInputStyle(), // iOS specific fixes
+            style,
+          ]}
           placeholderTextColor={colorScheme === 'dark' ? '#a3a3a3' : '#94a3b8'}
           editable={!disabled}
           onFocus={handleFocus}
@@ -213,9 +183,9 @@ export const Input = React.memo(function Input({
   }
 
   return (
-    <View className={getContainerClasses()} style={containerStyle}>
+    <View style={containerStyle}>
       {label && (
-        <Text className={getLabelClasses()}>
+        <Text className={getLabelClasses()} style={{ fontFamily: 'Inter' }}>
           {label}
           {required && <Text className="text-danger-600"> *</Text>}
         </Text>
@@ -231,14 +201,15 @@ export const Input = React.memo(function Input({
         <TextInput
           className={getInputClasses()}
           style={[
-            // ⚠️ SECONDARY - Complex dynamic styling for text input specifics
             {
-              includeFontPadding: false,
-              textAlignVertical: 'center',
+              fontFamily: 'Inter', // Consistent font family like login pages
+              includeFontPadding: false, // Remove extra padding on Android
+              textAlignVertical: Platform.OS === 'android' ? 'center' : 'auto', // Platform specific alignment
             },
+            getIOSTextInputStyle(), // iOS specific fixes
             style,
           ]}
-          placeholderTextColor={colorScheme === 'dark' ? '#a3a3a3' : '#94a3b8'}
+          placeholderTextColor={colorScheme === 'dark' ? '#a3a3a3' : '#a3a3a3'}
           editable={!disabled}
           onFocus={handleFocus}
           onBlur={handleBlur}
@@ -252,9 +223,15 @@ export const Input = React.memo(function Input({
         )}
       </View>
       
-      {(error || helperText) && (
-        <Text className={getMessageClasses()}>
-          {error || helperText}
+      {error && (
+        <Text className={getErrorClasses()} style={{ fontFamily: 'Inter' }}>
+          {error}
+        </Text>
+      )}
+      
+      {!error && helperText && (
+        <Text className="mt-1 text-xs text-neutral-600 dark:text-neutral-400" style={{ fontFamily: 'Inter' }}>
+          {helperText}
         </Text>
       )}
     </View>

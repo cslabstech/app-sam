@@ -127,21 +127,40 @@ export function useAuth() {
         try {
             const token = await AsyncStorage.getItem('token');
             if (token) {
-                await apiRequest({
-                    url: `${BASE_URL}/logout`,
-                    method: 'POST',
-                    body: null,
-                    logLabel: 'LOGOUT',
-                    token
-                });
+                // Try to call logout endpoint, tapi jangan throw error jika gagal
+                // karena yang penting adalah membersihkan local storage
+                try {
+                    await apiRequest({
+                        url: `${BASE_URL}/logout`,
+                        method: 'POST',
+                        body: null,
+                        logLabel: 'LOGOUT',
+                        token
+                    });
+                    log('[LOGOUT] Server logout success');
+                } catch (logoutError) {
+                    // Ignore logout endpoint errors (401 is expected if token expired)
+                    log('[LOGOUT] Server logout failed (expected if token expired):', logoutError);
+                }
             }
+            
+            // Yang penting: bersihkan local storage dan state
             await AsyncStorage.removeItem('token');
             await AsyncStorage.removeItem('user');
             await AsyncStorage.removeItem('permissions');
             setToken(null);
             setUser(null);
             setPermissions([]);
-            log('[LOGOUT] Logout success, token and user removed');
+            log('[LOGOUT] Local cleanup success, user logged out');
+        } catch (error) {
+            log('[LOGOUT] Unexpected error during logout:', error);
+            // Even if there's an error, clear local state
+            await AsyncStorage.removeItem('token');
+            await AsyncStorage.removeItem('user');
+            await AsyncStorage.removeItem('permissions');
+            setToken(null);
+            setUser(null);
+            setPermissions([]);
         } finally {
             setLoading(false);
         }
@@ -253,6 +272,10 @@ export function useAuth() {
         return data;
     };
 
+    const refreshUser = async () => {
+        return getProfile();
+    };
+
     return {
         user,
         token,
@@ -260,6 +283,7 @@ export function useAuth() {
         login,
         logout,
         getProfile,
+        refreshUser, // alias untuk getProfile
         loginWithToken,
         setUser,
         setToken,

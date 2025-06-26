@@ -1,5 +1,13 @@
 import { log } from '@/utils/logger';
 
+// Auto logout callback - akan diset oleh AuthProvider
+let autoLogoutCallback: (() => void) | null = null;
+
+// Function untuk set auto logout callback
+export const setAutoLogoutCallback = (callback: () => void) => {
+    autoLogoutCallback = callback;
+};
+
 // Base response interface sesuai ResponseFormatter Laravel - GLOBAL UTILS
 export interface BaseResponse<T = any> {
     meta: {
@@ -104,8 +112,29 @@ export async function apiRequest({
             // Buat error message yang informatif
             let errorMessage = data?.meta?.message || 'Request gagal';
             
+            // Check apakah ini endpoint logout - jangan trigger auto logout untuk logout endpoint
+            const isLogoutEndpoint = url.includes('/logout') || logLabel === 'LOGOUT';
+            
+            // Handle unauthorized/forbidden errors (401/403)
+            if (res.status === 401) {
+                errorMessage = 'Token tidak valid atau telah kedaluwarsa. Silakan login kembali.';
+                
+                // Auto logout untuk 401 errors - KECUALI jika ini logout endpoint
+                if (autoLogoutCallback && !isLogoutEndpoint) {
+                    log('[API] Auto logout triggered due to 401 error');
+                    setTimeout(() => autoLogoutCallback!(), 100); // Delay sedikit untuk menghindari race condition
+                }
+            } else if (res.status === 403) {
+                errorMessage = 'Anda tidak memiliki izin untuk mengakses resource ini.';
+                
+                // Auto logout untuk 403 errors juga (optional, tergantung business logic) - KECUALI logout endpoint
+                if (autoLogoutCallback && !isLogoutEndpoint) {
+                    log('[API] Auto logout triggered due to 403 error');
+                    setTimeout(() => autoLogoutCallback!(), 100);
+                }
+            }
             // Handle validation errors (422) - field errors are in errors property
-            if (data?.meta?.code === 422 && data?.errors) {
+            else if (data?.meta?.code === 422 && data?.errors) {
                 const errorDetails = Object.values(data.errors).flat().join(', ');
                 errorMessage += `: ${errorDetails}`;
             }

@@ -5,8 +5,12 @@ import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, TouchableWithoutFeedback, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TouchableWithoutFeedback, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+// Local components
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 
 // Memoized components for performance
 const PageHeader = React.memo(function PageHeader() {
@@ -47,152 +51,24 @@ const ErrorAlert = React.memo(function ErrorAlert({ error }: { error: string }) 
   );
 });
 
-const UsernameField = React.memo(function UsernameField({ 
-  email, 
-  setEmail, 
-  handleBlur, 
-  touched, 
-  formErrors 
-}: { 
-  email: string; 
-  setEmail: (value: string) => void; 
-  handleBlur: (field: "email" | "password") => void; 
-  touched: any; 
-  formErrors: any; 
-}) {
-  return (
-    <View className="space-y-2 w-full">
-      <Text 
-        className="mb-2 text-sm font-medium text-neutral-700 dark:text-neutral-200"
-        style={{ fontFamily: 'Inter' }}
-      >
-        Username
-      </Text>
-      <TextInput
-        className="px-4 pr-12 py-3 border rounded-md bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 border-neutral-300 dark:border-neutral-700 focus:border-primary-500 text-base leading-[24px]"
-        style={{ flex: 1, fontFamily: 'Inter' }}
-        placeholder="Masukkan username"
-        placeholderTextColor="#a3a3a3"
-        value={email}
-        onChangeText={setEmail}
-        onBlur={() => handleBlur('email')}
-        textAlignVertical="center"
-        accessibilityLabel="Input username"
-        accessibilityHint="Masukkan username Anda untuk login"
-        textContentType="username"
-        importantForAutofill="yes"
-        autoComplete="username"
-      />
-      {touched.email && formErrors.email ? (
-        <Text 
-          className="text-xs text-danger-600 dark:text-danger-400"
-          style={{ fontFamily: 'Inter' }}
-        >
-          {formErrors.email}
-        </Text>
-      ) : null}
-    </View>
-  );
-});
-
-const PasswordField = React.memo(function PasswordField({ 
-  password, 
-  setPassword, 
+const PasswordToggleIcon = React.memo(function PasswordToggleIcon({ 
   showPassword, 
-  setShowPassword, 
-  handleBlur, 
-  touched, 
-  formErrors 
+  onToggle 
 }: { 
-  password: string; 
-  setPassword: (value: string) => void; 
   showPassword: boolean; 
-  setShowPassword: (value: boolean | ((prev: boolean) => boolean)) => void; 
-  handleBlur: (field: "email" | "password") => void; 
-  touched: any; 
-  formErrors: any; 
+  onToggle: () => void; 
 }) {
-  return (
-    <View className="space-y-2 w-full">
-      <Text 
-        className="mb-2 text-sm font-medium text-neutral-700 dark:text-neutral-200"
-        style={{ fontFamily: 'Inter' }}
-      >
-        Kata Sandi
-      </Text>
-      <View className="relative flex-row items-center w-full">
-        <TextInput
-          className="px-4 pr-12 py-3 border rounded-md bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 border-neutral-300 dark:border-neutral-700 focus:border-primary-500 text-base leading-[24px]"
-          style={{ flex: 1, fontFamily: 'Inter' }}
-          placeholder="Masukkan kata sandi"
-          placeholderTextColor="#a3a3a3"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={!showPassword}
-          onBlur={() => handleBlur('password')}
-          textAlignVertical="center"
-          accessibilityLabel="Input kata sandi"
-          accessibilityHint="Masukkan kata sandi Anda untuk login"
-          textContentType="password"
-          importantForAutofill="yes"
-          autoComplete="password"
-        />
-        <Pressable
-          className="absolute right-4 h-12 w-10 items-center justify-center"
-          onPress={() => setShowPassword((v) => !v)}
-          accessibilityLabel={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
-          accessibilityRole="button"
-        >
-          <Ionicons
-            name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-            size={20}
-            color="#64748b"
-          />
-        </Pressable>
-      </View>
-      {touched.password && formErrors.password ? (
-        <Text 
-          className="text-xs text-danger-600 dark:text-danger-400"
-          style={{ fontFamily: 'Inter' }}
-        >
-          {formErrors.password}
-        </Text>
-      ) : null}
-    </View>
-  );
-});
-
-const LoginButton = React.memo(function LoginButton({ 
-  onPress, 
-  loading, 
-  isFormValid 
-}: { 
-  onPress: () => void; 
-  loading: boolean; 
-  isFormValid: boolean; 
-}) {
-  const isDisabled = loading || !isFormValid;
-  const buttonClasses = `h-12 rounded-md items-center justify-center mb-4 ${
-    isDisabled ? 'bg-neutral-300 dark:bg-neutral-700' : 'bg-primary-500 active:bg-primary-600'
-  }`;
-  const textClasses = `text-base font-semibold ${
-    isDisabled ? 'text-neutral-500 dark:text-neutral-400' : 'text-white'
-  }`;
-
   return (
     <Pressable
-      className={buttonClasses}
-      onPress={onPress}
-      disabled={isDisabled}
-      accessibilityLabel="Login manual"
-      accessibilityHint="Login menggunakan username dan password"
+      onPress={onToggle}
+      accessibilityLabel={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+      accessibilityRole="button"
     >
-      <Text 
-        className={textClasses}
-        style={{ fontFamily: 'Inter' }}
-      >
-        {loading ? 'Memproses...' : 'Masuk'}
-      </Text>
+      <Ionicons
+        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+        size={20}
+        color="#64748b"
+      />
     </Pressable>
   );
 });
@@ -209,29 +85,6 @@ const OrSeparator = React.memo(function OrSeparator() {
       </Text>
       <View className="flex-1 h-px bg-neutral-200 dark:bg-neutral-800" />
     </View>
-  );
-});
-
-const WhatsAppLoginButton = React.memo(function WhatsAppLoginButton({ 
-  onPress 
-}: { 
-  onPress: () => void; 
-}) {
-  return (
-    <Pressable
-      className="h-12 border-2 border-primary-500 rounded-md items-center justify-center flex-row mb-8 bg-white dark:bg-neutral-950 active:bg-neutral-50 dark:active:bg-neutral-900"
-      onPress={onPress}
-      accessibilityLabel="Login dengan WhatsApp"
-      accessibilityHint="Login menggunakan OTP WhatsApp"
-    >
-      <Ionicons name="logo-whatsapp" size={20} color="#f97316" style={{ marginRight: 8 }} />
-      <Text 
-        className="text-base font-semibold text-primary-500"
-        style={{ fontFamily: 'Inter' }}
-      >
-        Login dengan WhatsApp
-      </Text>
-    </Pressable>
   );
 });
 
@@ -296,34 +149,68 @@ export default function LoginScreen() {
               {error && <ErrorAlert error={error} />}
               
               <View className="space-y-6 mb-8 w-full gap-5">
-                <UsernameField
-                  email={email}
-                  setEmail={setEmail}
-                  handleBlur={handleBlur}
-                  touched={touched}
-                  formErrors={formErrors}
+                <Input
+                  label="Username"
+                  placeholder="Masukkan username"
+                  value={email}
+                  onChangeText={setEmail}
+                  onBlur={() => handleBlur('email')}
+                  error={touched.email && formErrors.email ? formErrors.email : undefined}
+                  textContentType="username"
+                  autoComplete="username"
+                  accessibilityLabel="Input username"
+                  accessibilityHint="Masukkan username Anda untuk login"
                 />
                 
-                <PasswordField
-                  password={password}
-                  setPassword={setPassword}
-                  showPassword={showPassword}
-                  setShowPassword={setShowPassword}
-                  handleBlur={handleBlur}
-                  touched={touched}
-                  formErrors={formErrors}
+                <Input
+                  label="Kata Sandi"
+                  placeholder="Masukkan kata sandi"
+                  value={password}
+                  onChangeText={setPassword}
+                  onBlur={() => handleBlur('password')}
+                  secureTextEntry={!showPassword}
+                  error={touched.password && formErrors.password ? formErrors.password : undefined}
+                  rightIcon={
+                    <PasswordToggleIcon 
+                      showPassword={showPassword} 
+                      onToggle={() => setShowPassword((v) => !v)} 
+                    />
+                  }
+                  textContentType="password"
+                  autoComplete="password"
+                  accessibilityLabel="Input kata sandi"
+                  accessibilityHint="Masukkan kata sandi Anda untuk login"
                 />
               </View>
               
-              <LoginButton
-                onPress={handleLogin}
-                loading={loading}
-                isFormValid={isFormValid}
-              />
+              <View className="mb-4">
+                <Button
+                  title="Masuk"
+                  variant="primary"
+                  size="lg"
+                  loading={loading}
+                  disabled={!isFormValid}
+                  onPress={handleLogin}
+                  fullWidth={true}
+                  accessibilityLabel="Login manual"
+                  accessibilityHint="Login menggunakan username dan password"
+                />
+              </View>
               
               <OrSeparator />
               
-              <WhatsAppLoginButton onPress={handleWhatsAppLogin} />
+              <View className="mb-8">
+                <Button
+                  title="Login dengan WhatsApp"
+                  variant="outline"
+                  size="lg"
+                  onPress={handleWhatsAppLogin}
+                  fullWidth={true}
+                  leftIcon={<Ionicons name="logo-whatsapp" size={20} color="#f97316" />}
+                  accessibilityLabel="Login dengan WhatsApp"
+                  accessibilityHint="Login menggunakan OTP WhatsApp"
+                />
+              </View>
               
               <Footer />
             </View>

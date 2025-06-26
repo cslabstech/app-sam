@@ -1,3 +1,4 @@
+import { AuthGuard } from '@/components/AuthGuard';
 import { NetworkBanner } from '@/components/NetworkBanner';
 import { AuthProvider } from '@/context/auth-context';
 import { NetworkProvider } from '@/context/network-context';
@@ -162,12 +163,14 @@ export default function RootLayout() {
         <NotifIdProvider>
           <NotifIdInitializer>
             <AuthProvider>
-              <NetworkBanner />
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="+not-found" />
-              </Stack>
-              <StatusBar style="auto" />
+              <AuthGuard>
+                <NetworkBanner />
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="+not-found" />
+                </Stack>
+                <StatusBar style="auto" />
+              </AuthGuard>
             </AuthProvider>
           </NotifIdInitializer>
         </NotifIdProvider>
