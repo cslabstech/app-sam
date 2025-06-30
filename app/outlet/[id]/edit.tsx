@@ -1,5 +1,7 @@
 import { MediaPreview } from '@/components/MediaPreview';
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useNetwork } from '@/context/network-context';
 import { useOutlet } from '@/hooks/data/useOutlet';
@@ -14,7 +16,7 @@ import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface FormData {
   code: string;
@@ -33,6 +35,37 @@ interface FormErrors {
 }
 
 type PhotoField = 'photo_shop_sign' | 'photo_front' | 'photo_left' | 'photo_right';
+
+const Header = React.memo(function Header({ 
+  title, 
+  colors, 
+  onBack 
+}: { 
+  title: string; 
+  colors: any; 
+  onBack: () => void; 
+}) {
+  const insets = useSafeAreaInsets();
+  
+  return (
+    <View className="bg-primary-500 px-4 pb-4" style={{ paddingTop: insets.top + 8 }}>
+      <View className="flex-row justify-between items-center">
+        <TouchableOpacity onPress={onBack}>
+          <IconSymbol name="chevron.left" size={24} color="#fff" />
+        </TouchableOpacity>
+        <View className="flex-1 items-center">
+          <Text 
+            className="text-white text-2xl font-bold"
+            style={{ fontFamily: 'Inter' }}
+          >
+            {title}
+          </Text>
+        </View>
+        <View className="w-6 h-6" />
+      </View>
+    </View>
+  );
+});
 
 const useEditOutletForm = (outlet: any) => {
   const [form, setForm] = useState<FormData>({
@@ -214,45 +247,44 @@ const useMediaManager = () => {
 
 const LoadingScreen = React.memo(function LoadingScreen({ 
   colors, 
-  isConnected 
+  onGoBack 
 }: { 
   colors: any; 
-  isConnected: boolean; 
+  onGoBack: () => void; 
 }) {
   return (
-    <SafeAreaView 
-      className="flex-1 justify-center items-center bg-neutral-50 dark:bg-neutral-900" 
-      edges={isConnected ? ['top','left','right'] : ['left','right']}
-    >
-      <ActivityIndicator size="large" color={colors.primary} />
-      <Text style={{ fontFamily: 'Inter', color: colors.textSecondary }} className="text-base mt-4">
-        Memuat...
-      </Text>
-    </SafeAreaView>
+    <View className="flex-1 bg-white">
+      <Header title="Edit Outlet" colors={colors} onBack={onGoBack} />
+      <View className="flex-1 justify-center items-center">
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ fontFamily: 'Inter', color: colors.textSecondary }} className="text-base mt-4">
+          Memuat...
+        </Text>
+      </View>
+    </View>
   );
 });
 
 const ErrorScreen = React.memo(function ErrorScreen({ 
   error, 
   colors, 
-  isConnected, 
   onGoBack 
 }: { 
   error: string; 
   colors: any; 
-  isConnected: boolean; 
   onGoBack: () => void; 
 }) {
   return (
-    <SafeAreaView 
-      className="flex-1 justify-center items-center bg-neutral-50 dark:bg-neutral-900" 
-      edges={isConnected ? ['top','left','right'] : ['left','right']}
-    >
-      <Text style={{ fontFamily: 'Inter', color: colors.danger }} className="text-center mx-5 mb-5">
-        {error}
-      </Text>
-      <Button title="Go Back" variant="primary" onPress={onGoBack} />
-    </SafeAreaView>
+    <View className="flex-1 bg-white">
+      <Header title="Edit Outlet" colors={colors} onBack={onGoBack} />
+      <View className="flex-1 justify-center items-center px-4">
+        <IconSymbol name="exclamationmark.triangle" size={48} color={colors.danger} />
+        <Text style={{ fontFamily: 'Inter', color: colors.danger }} className="text-center mx-5 mb-5">
+          {error}
+        </Text>
+        <Button title="Go Back" variant="primary" onPress={onGoBack} />
+      </View>
+    </View>
   );
 });
 
@@ -513,112 +545,125 @@ export default function OutletEditPage() {
   }, [outlet, validateForm, form, prepareFormData, updateOutletWithFile, updateOutlet, router]);
 
   if (loading) {
-    return <LoadingScreen colors={colors} isConnected={isConnected} />;
+    return <LoadingScreen colors={colors} onGoBack={handleGoBack} />;
   }
 
   if (error) {
-    return <ErrorScreen error={error} colors={colors} isConnected={isConnected} onGoBack={handleGoBack} />;
-  }
-
-  if (!outlet && !loading) {
-    return <ErrorScreen error="Data outlet tidak ditemukan." colors={colors} isConnected={isConnected} onGoBack={handleGoBack} />;
+    return <ErrorScreen error={error} colors={colors} onGoBack={handleGoBack} />;
   }
 
   return (
-    <SafeAreaView 
-      className="flex-1 bg-neutral-50 dark:bg-neutral-900" 
-      edges={isConnected ? ['top','left','right'] : ['left','right']}
-    >
-      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-        <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-xl font-bold mb-5">
-          Edit Outlet
-        </Text>
-        
-        <FormField
-          label="Kode Outlet"
-          value={form.code}
-          editable={false}
-          colors={colors}
-        />
-        
-        <FormField
-          label="Nama Pemilik"
-          value={form.owner_name}
-          onChangeText={(value) => handleChange('owner_name', value)}
-          placeholder="Nama pemilik outlet"
-          error={formErrors.owner_name}
-          colors={colors}
-        />
-        
-        <FormField
-          label="Nomor HP Pemilik"
-          value={form.owner_phone}
-          onChangeText={(value) => handleChange('owner_phone', value)}
-          placeholder="08xxxxxxxxxx"
-          keyboardType="phone-pad"
-          error={formErrors.owner_phone}
-          colors={colors}
-        />
-        
-        <MediaField
-          label="Photo Shop Sign"
-          hasMedia={!!form.photo_shop_sign}
-          mediaUri={form.photo_shop_sign}
-          mediaType="image"
-          onTake={() => handlePhotoTake('photo_shop_sign')}
-          onRemove={() => handleMediaRemove('photo_shop_sign')}
-          colors={colors}
-        />
-        
-        <MediaField
-          label="Photo Depan"
-          hasMedia={!!form.photo_front}
-          mediaUri={form.photo_front}
-          mediaType="image"
-          onTake={() => handlePhotoTake('photo_front')}
-          onRemove={() => handleMediaRemove('photo_front')}
-          colors={colors}
-        />
-        
-        <MediaField
-          label="Photo Kiri"
-          hasMedia={!!form.photo_left}
-          mediaUri={form.photo_left}
-          mediaType="image"
-          onTake={() => handlePhotoTake('photo_left')}
-          onRemove={() => handleMediaRemove('photo_left')}
-          colors={colors}
-        />
-        
-        <MediaField
-          label="Photo Kanan"
-          hasMedia={!!form.photo_right}
-          mediaUri={form.photo_right}
-          mediaType="image"
-          onTake={() => handlePhotoTake('photo_right')}
-          onRemove={() => handleMediaRemove('photo_right')}
-          colors={colors}
-        />
-        
-        <MediaField
-          label="Video"
-          hasMedia={!!form.video}
-          mediaUri={form.video}
-          mediaType="video"
-          onTake={handleVideoTake}
-          onRemove={() => handleMediaRemove('video')}
-          colors={colors}
-        />
-        
-        <View className="mt-6">
+    <View className="flex-1 bg-white">
+      <Header title="Edit Outlet" colors={colors} onBack={handleGoBack} />
+      
+      <ScrollView className="flex-1 px-4">
+        <View className="pt-4 pb-8">
+          {/* Basic Information Card */}
+          <Card className="p-4 mb-4">
+            <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base font-bold mb-3">
+              Informasi Dasar
+            </Text>
+            
+            <FormField
+              label="Kode Outlet"
+              value={form.code}
+              editable={false}
+              colors={colors}
+            />
+            
+            <FormField
+              label="Nama Pemilik"
+              value={form.owner_name}
+              onChangeText={(value) => handleChange('owner_name', value)}
+              placeholder="Nama pemilik outlet"
+              error={formErrors.owner_name}
+              colors={colors}
+            />
+            
+            <View className="mb-0">
+              <FormField
+                label="Nomor HP Pemilik"
+                value={form.owner_phone}
+                onChangeText={(value) => handleChange('owner_phone', value)}
+                placeholder="08xxxxxxxxxx"
+                keyboardType="phone-pad"
+                error={formErrors.owner_phone}
+                colors={colors}
+              />
+            </View>
+          </Card>
+          
+          {/* Media Card */}
+          <Card className="p-4 mb-4">
+            <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base font-bold mb-3">
+              Media Outlet
+            </Text>
+            
+            <MediaField
+              label="Photo Shop Sign"
+              hasMedia={!!form.photo_shop_sign}
+              mediaUri={form.photo_shop_sign}
+              mediaType="image"
+              onTake={() => handlePhotoTake('photo_shop_sign')}
+              onRemove={() => handleMediaRemove('photo_shop_sign')}
+              colors={colors}
+            />
+            
+            <MediaField
+              label="Photo Depan"
+              hasMedia={!!form.photo_front}
+              mediaUri={form.photo_front}
+              mediaType="image"
+              onTake={() => handlePhotoTake('photo_front')}
+              onRemove={() => handleMediaRemove('photo_front')}
+              colors={colors}
+            />
+            
+            <MediaField
+              label="Photo Kiri"
+              hasMedia={!!form.photo_left}
+              mediaUri={form.photo_left}
+              mediaType="image"
+              onTake={() => handlePhotoTake('photo_left')}
+              onRemove={() => handleMediaRemove('photo_left')}
+              colors={colors}
+            />
+            
+            <MediaField
+              label="Photo Kanan"
+              hasMedia={!!form.photo_right}
+              mediaUri={form.photo_right}
+              mediaType="image"
+              onTake={() => handlePhotoTake('photo_right')}
+              onRemove={() => handleMediaRemove('photo_right')}
+              colors={colors}
+            />
+            
+            <View className="mb-0">
+              <MediaField
+                label="Video"
+                hasMedia={!!form.video}
+                mediaUri={form.video}
+                mediaType="video"
+                onTake={handleVideoTake}
+                onRemove={() => handleMediaRemove('video')}
+                colors={colors}
+              />
+            </View>
+          </Card>
+          
           <Button
             title={loading ? 'Updating...' : 'Update Outlet'}
+            variant="primary"
+            size="lg"
+            fullWidth
+            loading={loading}
             onPress={handleUpdate}
             disabled={loading}
           />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

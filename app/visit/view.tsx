@@ -1,14 +1,12 @@
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
-import { useNetwork } from '@/context/network-context';
 import { useVisit, Visit } from '@/hooks/data/useVisit';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface StatusBadgeProps {
   status: string;
@@ -33,46 +31,54 @@ const StatusBadge = React.memo(function StatusBadge({ status, color }: StatusBad
 
 const ErrorScreen = React.memo(function ErrorScreen({ 
   colors, 
-  isConnected, 
   error, 
   onBack 
 }: {
   colors: any;
-  isConnected: boolean;
   error: string;
   onBack: () => void;
 }) {
   return (
-    <SafeAreaView 
-      className="flex-1 justify-center items-center" 
-      style={{ backgroundColor: colors.background }} 
-      edges={isConnected ? ['top','left','right'] : ['left','right']}
+    <View 
+      className="flex-1 bg-white" 
+      style={{ backgroundColor: colors.background }}
     >
-      <IconSymbol name="exclamationmark.triangle" size={48} color={colors.danger} />
-      <Text 
-        className="my-5 text-center" 
-        style={{ fontFamily: 'Inter', color: colors.danger }}
-      >
-        {error}
-      </Text>
-      <Button title="Kembali" variant="primary" onPress={onBack} />
-    </SafeAreaView>
+      <Header
+        colors={colors}
+        visitName="Detail Visit"
+        onBack={onBack}
+      />
+      
+      <View className="flex-1 justify-center items-center px-4">
+        <IconSymbol name="exclamationmark.triangle" size={48} color={colors.danger} />
+        <Text 
+          className="my-5 text-center text-base" 
+          style={{ fontFamily: 'Inter', color: colors.danger }}
+        >
+          {error}
+        </Text>
+        <Button title="Kembali" variant="primary" onPress={onBack} />
+      </View>
+    </View>
   );
 });
 
 const LoadingScreen = React.memo(function LoadingScreen({ 
-  colors, 
-  isConnected 
+  colors 
 }: {
   colors: any;
-  isConnected: boolean;
 }) {
   return (
-    <SafeAreaView 
-      className="flex-1" 
-      style={{ backgroundColor: colors.background }} 
-      edges={isConnected ? ['top','left','right'] : ['left','right']}
+    <View 
+      className="flex-1 bg-white" 
+      style={{ backgroundColor: colors.background }}
     >
+      <Header
+        colors={colors}
+        visitName="Detail Visit"
+        onBack={() => {}}
+      />
+      
       <View className="flex-1 justify-center items-center">
         <ActivityIndicator size="large" color={colors.primary} />
         <Text 
@@ -82,7 +88,7 @@ const LoadingScreen = React.memo(function LoadingScreen({
           Memuat...
         </Text>
       </View>
-    </SafeAreaView>
+    </View>
   );
 });
 
@@ -95,23 +101,24 @@ const Header = React.memo(function Header({
   visitName: string;
   onBack: () => void;
 }) {
+  const insets = useSafeAreaInsets();
+  
   return (
-    <View 
-      className="flex-row items-center justify-between border-b px-4 py-3" 
-      style={{ borderBottomColor: colors.border }}
-    >
-      <View className="flex-row items-center">
-        <TouchableOpacity onPress={onBack} className="mr-2">
-          <IconSymbol name="chevron.left" size={24} color={colors.text} />
+    <View className="bg-primary-500 px-4 pb-4" style={{ paddingTop: insets.top + 8 }}>
+      <View className="flex-row justify-between items-center">
+        <TouchableOpacity onPress={onBack}>
+          <IconSymbol name="chevron.left" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text 
-          className="text-xl font-bold" 
-          style={{ fontFamily: 'Inter', color: colors.text }}
-        >
-          {visitName}
-        </Text>
+        <View className="flex-1 items-center">
+          <Text 
+            className="text-white text-2xl font-bold"
+            style={{ fontFamily: 'Inter' }}
+          >
+            {visitName}
+          </Text>
+        </View>
+        <View className="w-6 h-6" />
       </View>
-      <View className="w-8" />
     </View>
   );
 });
@@ -171,7 +178,13 @@ const VisitDetailsCard = React.memo(function VisitDetailsCard({
   const outletRadius = (visit?.outlet as any)?.radius || '-';
 
   return (
-    <Card className="p-4 mb-4 rounded-xl">
+    <View 
+      className="rounded-xl mb-4 p-4 border"
+      style={{ 
+        backgroundColor: colors.cardBackground || colors.background,
+        borderColor: colors.border + '40'
+      }}
+    >
       <InfoRow
         label="Tanggal Kunjungan"
         value={visit?.visit_date || '-'}
@@ -223,7 +236,7 @@ const VisitDetailsCard = React.memo(function VisitDetailsCard({
         colors={colors}
         isLast={true}
       />
-    </Card>
+    </View>
   );
 });
 
@@ -235,7 +248,6 @@ export default function VisitViewPage() {
   const { loading, error, fetchVisit } = useVisit();
   const [visit, setVisit] = useState<Visit | null>(null);
   const [fetching, setFetching] = useState(false);
-  const { isConnected } = useNetwork();
 
   useEffect(() => {
     if (id) {
@@ -271,7 +283,6 @@ export default function VisitViewPage() {
     return (
       <ErrorScreen
         colors={colors}
-        isConnected={isConnected}
         error={error}
         onBack={handleBack}
       />
@@ -282,7 +293,6 @@ export default function VisitViewPage() {
     return (
       <LoadingScreen
         colors={colors}
-        isConnected={isConnected}
       />
     );
   }
@@ -291,7 +301,6 @@ export default function VisitViewPage() {
     return (
       <ErrorScreen
         colors={colors}
-        isConnected={isConnected}
         error="Data visit tidak ditemukan."
         onBack={handleBack}
       />
@@ -299,10 +308,9 @@ export default function VisitViewPage() {
   }
 
   return (
-    <SafeAreaView 
-      className="flex-1" 
-      style={{ backgroundColor: colors.background }} 
-      edges={isConnected ? ['top','left','right'] : ['left','right']}
+    <View 
+      className="flex-1 bg-white" 
+      style={{ backgroundColor: colors.background }}
     >
       <Header
         colors={colors}
@@ -310,11 +318,8 @@ export default function VisitViewPage() {
         onBack={handleBack}
       />
       
-      <ScrollView 
-        className="flex-1" 
-        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-      >
-        <View className="pt-4">
+      <ScrollView className="flex-1 px-4 pt-4">
+        <View className="pb-8">
           <VisitDetailsCard
             visit={visit}
             colors={colors}
@@ -322,6 +327,6 @@ export default function VisitViewPage() {
           />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

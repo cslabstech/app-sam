@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useRouter } from 'expo-router';
 
+import { Button } from '@/components/ui/Button';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Input } from '@/components/ui/Input';
 import { useOutletLevelFields } from '@/hooks/data/useReference';
@@ -30,35 +31,29 @@ interface FormErrors {
 
 const Header = React.memo(function Header({ 
   onBack, 
-  styles, 
-  colors, 
-  insets 
+  colors
 }: {
   onBack: () => void;
-  styles: any;
   colors: any;
-  insets: any;
 }) {
+  const insets = useSafeAreaInsets();
+  
   return (
-    <View 
-      className="flex-row justify-between items-center px-4 pb-4 border-b border-neutral-200 dark:border-neutral-800"
-      style={{
-        paddingTop: insets.top + 8,
-        backgroundColor: colors.background,
-        borderBottomColor: colors.border
-      }}
-    >
-      <TouchableOpacity 
-        className="w-10 h-10 rounded-lg justify-center items-center border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950"
-        style={{ borderColor: colors.border }}
-        onPress={onBack}
-      >
-        <IconSymbol name="chevron.left" size={20} color={colors.text} />
-      </TouchableOpacity>
-      <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-lg font-bold">
-        Register Outlet
-      </Text>
-      <View className="w-10" />
+    <View className="bg-primary-500 px-4 pb-4" style={{ paddingTop: insets.top + 8 }}>
+      <View className="flex-row justify-between items-center">
+        <TouchableOpacity onPress={onBack}>
+          <IconSymbol name="chevron.left" size={24} color="#fff" />
+        </TouchableOpacity>
+        <View className="flex-1 items-center">
+          <Text 
+            className="text-white text-2xl font-bold"
+            style={{ fontFamily: 'Inter' }}
+          >
+            Register Outlet
+          </Text>
+        </View>
+        <View className="w-6 h-6" />
+      </View>
     </View>
   );
 });
@@ -306,13 +301,11 @@ const ActionButtons = React.memo(function ActionButtons({
   isSubmitting,
   onLocationSet,
   onSubmit,
-  styles,
   colors,
 }: {
   isSubmitting: boolean;
   onLocationSet: () => void;
   onSubmit: () => void;
-  styles: any;
   colors: any;
 }) {
   return (
@@ -328,38 +321,53 @@ const ActionButtons = React.memo(function ActionButtons({
         </Text>
       </TouchableOpacity>
 
-      <TouchableOpacity
-        className={`py-4 rounded-lg items-center justify-center ${
-          isSubmitting ? 'opacity-50' : ''
-        }`}
-        style={{ backgroundColor: isSubmitting ? colors.textSecondary : colors.primary }}
-        onPress={onSubmit}
+      <Button
+        title={isSubmitting ? 'Menyimpan...' : 'Submit Outlet'}
+        variant="primary"
+        size="lg"
+        fullWidth
+        loading={isSubmitting}
         disabled={isSubmitting}
-      >
-        <Text style={{ fontFamily: 'Inter', color: colors.textInverse }} className="text-base font-semibold">
-          {isSubmitting ? 'Menyimpan...' : 'Submit Outlet'}
-        </Text>
-      </TouchableOpacity>
+        onPress={onSubmit}
+      />
     </View>
   );
 });
 
 // Komponen Tab LEAD/NOO dengan nativewind
-const LeadNooTabs = React.memo(function LeadNooTabs({ activeTab, onTabChange }: { activeTab: 'LEAD' | 'NOO'; onTabChange: (tab: 'LEAD' | 'NOO') => void }) {
+const LeadNooTabs = React.memo(function LeadNooTabs({ 
+  activeTab, 
+  onTabChange,
+  colors 
+}: { 
+  activeTab: 'LEAD' | 'NOO'; 
+  onTabChange: (tab: 'LEAD' | 'NOO') => void;
+  colors: any;
+}) {
   return (
-    <View className="my-4 mx-4">
+    <View className="px-4 mb-4">
       <View className="flex-row bg-neutral-100 dark:bg-neutral-800 rounded-lg p-1">
         <TouchableOpacity
           className={`flex-1 py-2 rounded-md items-center ${activeTab === 'LEAD' ? 'bg-primary-500' : ''}`}
           onPress={() => onTabChange('LEAD')}
         >
-          <Text className={`font-semibold ${activeTab === 'LEAD' ? 'text-white' : 'text-neutral-500 dark:text-neutral-300'}`}>LEAD</Text>
+          <Text 
+            className={`font-semibold ${activeTab === 'LEAD' ? 'text-white' : 'text-neutral-500 dark:text-neutral-300'}`}
+            style={{ fontFamily: 'Inter' }}
+          >
+            LEAD
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           className={`flex-1 py-2 rounded-md items-center ${activeTab === 'NOO' ? 'bg-primary-500' : ''}`}
           onPress={() => onTabChange('NOO')}
         >
-          <Text className={`font-semibold ${activeTab === 'NOO' ? 'text-white' : 'text-neutral-500 dark:text-neutral-300'}`}>NOO</Text>
+          <Text 
+            className={`font-semibold ${activeTab === 'NOO' ? 'text-white' : 'text-neutral-500 dark:text-neutral-300'}`}
+            style={{ fontFamily: 'Inter' }}
+          >
+            NOO
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -377,7 +385,12 @@ const DynamicField = React.memo(function DynamicField({ field, value, onChange, 
   if (field.type === 'textarea') {
     return (
       <View className="mb-4">
-        <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>{field.name}{field.required && <Text className="text-red-500">*</Text>}</Text>
+        <Text 
+          className="mb-2 text-sm font-medium" 
+          style={{ fontFamily: 'Inter', color: colors.text }}
+        >
+          {field.name}{field.required && <Text className="text-red-500">*</Text>}
+        </Text>
         <Input
           value={value}
           onChangeText={onChange}
@@ -392,11 +405,21 @@ const DynamicField = React.memo(function DynamicField({ field, value, onChange, 
   if (field.type === 'select') {
     return (
       <View className="mb-4">
-        <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>{field.name}{field.required && <Text className="text-red-500">*</Text>}</Text>
+        <Text 
+          className="mb-2 text-sm font-medium" 
+          style={{ fontFamily: 'Inter', color: colors.text }}
+        >
+          {field.name}{field.required && <Text className="text-red-500">*</Text>}
+        </Text>
         <View className="border rounded-lg px-2">
           <TouchableOpacity>
             {/* TODO: Implement Select Dropdown */}
-            <Text className="py-3 text-base text-neutral-500">{value || `Pilih ${field.name}`}</Text>
+            <Text 
+              className="py-3 text-base text-neutral-500"
+              style={{ fontFamily: 'Inter' }}
+            >
+              {value || `Pilih ${field.name}`}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -404,7 +427,12 @@ const DynamicField = React.memo(function DynamicField({ field, value, onChange, 
   }
   return (
     <View className="mb-4">
-      <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>{field.name}{field.required && <Text className="text-red-500">*</Text>}</Text>
+      <Text 
+        className="mb-2 text-sm font-medium" 
+        style={{ fontFamily: 'Inter', color: colors.text }}
+      >
+        {field.name}{field.required && <Text className="text-red-500">*</Text>}
+      </Text>
       <Input
         value={value}
         onChangeText={onChange}
@@ -423,7 +451,13 @@ const DynamicFormSection = React.memo(function DynamicFormSection({ section, for
   colors: any;
 }) {
   return (
-    <View className="rounded-xl p-4 mb-4 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950" style={{ backgroundColor: colors.card, borderColor: colors.border }}>
+    <View 
+      className="rounded-xl p-4 mb-4 border" 
+      style={{ 
+        backgroundColor: colors.cardBackground || colors.background, 
+        borderColor: colors.border + '40' 
+      }}
+    >
       <View className="flex-row items-center mb-4">
         <IconSymbol name="building.2.fill" size={18} color={colors.primary} />
         <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base font-semibold ml-2">
@@ -488,42 +522,55 @@ export default function RegisterOutletScreen() {
   }, [showTypeDropdown, setShowTypeDropdown]);
 
   return (
-    <View className="flex-1 bg-neutral-50 dark:bg-neutral-900" style={{ backgroundColor: colors.background }}>
+    <View 
+      className="flex-1 bg-white" 
+      style={{ backgroundColor: colors.background }}
+    >
       <Header 
         onBack={handleBack}
-        styles={styles}
         colors={colors}
-        insets={insets}
       />
+      
       {/* Tabs LEAD/NOO */}
-      <LeadNooTabs activeTab={activeTab} onTabChange={setActiveTab} />
+      <LeadNooTabs activeTab={activeTab} onTabChange={setActiveTab} colors={colors} />
+      
       <ScrollView 
-        className="flex-1"
-        contentContainerStyle={{ padding: 16 }}
+        className="flex-1 px-4"
         showsVerticalScrollIndicator={false}
       >
-        {loading && (
-          <Text className="text-center text-base my-8" style={{ color: colors.textSecondary }}>Memuat form...</Text>
-        )}
-        {error && (
-          <Text className="text-center text-base my-8 text-red-500">{error}</Text>
-        )}
-        {sections && sections.map(section => (
-          <DynamicFormSection
-            key={section.code}
-            section={section}
-            form={form}
-            setForm={setForm}
+        <View className="pt-4 pb-8">
+          {loading && (
+            <Text 
+              className="text-center text-base my-8" 
+              style={{ fontFamily: 'Inter', color: colors.textSecondary }}
+            >
+              Memuat form...
+            </Text>
+          )}
+          {error && (
+            <Text 
+              className="text-center text-base my-8 text-red-500"
+              style={{ fontFamily: 'Inter' }}
+            >
+              {error}
+            </Text>
+          )}
+          {sections && sections.map(section => (
+            <DynamicFormSection
+              key={section.code}
+              section={section}
+              form={form}
+              setForm={setForm}
+              colors={colors}
+            />
+          ))}
+          <ActionButtons
+            isSubmitting={isSubmitting}
+            onLocationSet={handleLocationSet}
+            onSubmit={handleSubmit}
             colors={colors}
           />
-        ))}
-        <ActionButtons
-          isSubmitting={isSubmitting}
-          onLocationSet={handleLocationSet}
-          onSubmit={handleSubmit}
-          styles={styles}
-          colors={colors}
-        />
+        </View>
       </ScrollView>
     </View>
   );

@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
+import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import { useFocusEffect } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, KeyboardAvoidingView, Linking, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Keyboard, Linking, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ViewShot, { captureRef } from 'react-native-view-shot';
@@ -15,8 +16,6 @@ import { Button } from '@/components/ui/Button';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { WatermarkOverlay } from '@/components/WatermarkOverlay';
 import { Colors } from '@/constants/Colors';
-import { spacing } from '@/constants/Spacing';
-import { typography } from '@/constants/Typography';
 import { useOutlet } from '@/hooks/data/useOutlet';
 import { usePlanVisit } from '@/hooks/data/usePlanVisit';
 import { useVisit } from '@/hooks/data/useVisit';
@@ -215,21 +214,21 @@ const Header = ({ currentStep, onBack, onRefresh }: {
   const insets = useSafeAreaInsets();
   
   return (
-    <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-      <View style={styles.headerContent}>
+    <View className="bg-primary-500 px-4 pb-4" style={{ paddingTop: insets.top + 8 }}>
+      <View className="flex-row justify-between items-center">
         <TouchableOpacity onPress={onBack}>
           <IconSymbol name="chevron.left" size={24} color="#fff" />
         </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Check in</Text>
-          <Text style={styles.headerSubtitle}>Langkah {currentStep} dari 2</Text>
+        <View className="flex-1 items-center">
+          <Text className="text-white text-2xl font-bold">Check in</Text>
+          <Text className="text-white text-sm mt-1">Langkah {currentStep} dari 2</Text>
         </View>
         {currentStep === 1 ? (
           <TouchableOpacity onPress={onRefresh}>
             <Ionicons name="refresh" size={22} color="#fff" />
           </TouchableOpacity>
         ) : (
-          <View style={styles.headerPlaceholder} />
+          <View className="w-6 h-6" />
         )}
       </View>
     </View>
@@ -240,22 +239,22 @@ const OutletTypeToggle = ({ visitType, onTypeChange }: {
   visitType: 'planned' | 'extracall'; 
   onTypeChange: (type: 'planned' | 'extracall') => void; 
 }) => (
-  <View style={styles.toggleContainer}>
-    <Text style={styles.toggleLabel}>Tipe Kunjungan</Text>
-    <View style={styles.toggleButtons}>
+  <View className="mb-4">
+    <Text className="font-bold text-lg mb-3 text-black">Tipe Kunjungan</Text>
+    <View className="flex-row bg-neutral-100 rounded-lg p-1">
       <TouchableOpacity
         onPress={() => onTypeChange('planned')}
-        style={[styles.toggleButton, visitType === 'planned' && styles.toggleButtonActive]}
+        className={`flex-1 py-2 px-4 rounded-md ${visitType === 'planned' ? 'bg-primary-500' : ''}`}
       >
-        <Text style={[styles.toggleButtonText, visitType === 'planned' && styles.toggleButtonTextActive]}>
+        <Text className={`text-center font-semibold ${visitType === 'planned' ? 'text-white' : 'text-neutral-600'}`}>
           Planned
         </Text>
       </TouchableOpacity>
       <TouchableOpacity
         onPress={() => onTypeChange('extracall')}
-        style={[styles.toggleButton, visitType === 'extracall' && styles.toggleButtonActive]}
+        className={`flex-1 py-2 px-4 rounded-md ${visitType === 'extracall' ? 'bg-primary-500' : ''}`}
       >
-        <Text style={[styles.toggleButtonText, visitType === 'extracall' && styles.toggleButtonTextActive]}>
+        <Text className={`text-center font-semibold ${visitType === 'extracall' ? 'text-white' : 'text-neutral-600'}`}>
           Extracall
         </Text>
       </TouchableOpacity>
@@ -277,10 +276,10 @@ const OutletSearchInput = ({
   if (visitType !== 'extracall') return null;
 
   return (
-    <View style={styles.searchContainer}>
+    <View className="flex-row items-center border border-neutral-300 rounded-lg px-3 mb-2 bg-white">
       <Ionicons name="search" size={18} color={colors.textSecondary} />
       <TextInput
-        style={styles.searchInput}
+        className="flex-1 h-10 ml-2 text-base text-black"
         placeholder="Cari outlet berdasarkan nama/kode..."
         placeholderTextColor={colors.textSecondary}
         value={searchValue}
@@ -312,46 +311,45 @@ const OutletList = ({
 }) => {
   if (dataLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View className="flex-1 justify-center items-center py-4">
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Memuat...</Text>
+        <Text className="mt-4 text-base" style={{ color: colors.textSecondary }}>Memuat...</Text>
       </View>
     );
   }
 
   if (displayData.length === 0) {
     return (
-      <Text style={styles.emptyText}>
+      <Text className="p-4 text-neutral-400 text-center">
         {visitType === 'planned' ? 'Tidak ada plan visit untuk hari ini' : 'Outlet tidak ditemukan'}
       </Text>
     );
   }
 
   return (
-    <Animated.ScrollView persistentScrollbar style={styles.outletList}>
+    <Animated.ScrollView persistentScrollbar className="max-h-40">
       {displayData.map(item => (
         <TouchableOpacity
           key={item.id}
           onPress={() => onOutletSelect(String(item.id), item.planVisitId || undefined)}
-          style={[
-            styles.outletItem,
-            String(item.id) === selectedOutletId && styles.outletItemSelected
-          ]}
+          className={`py-2 px-3 border-b border-neutral-200 rounded bg-white mb-0.5 ${
+            String(item.id) === selectedOutletId ? 'bg-primary-50' : ''
+          }`}
         >
-          <Text style={styles.outletName} numberOfLines={1}>
+          <Text className="font-semibold text-base text-black" numberOfLines={1}>
             {item.name}
           </Text>
-          <View style={styles.outletDetails}>
-            <Text style={styles.outletCode} numberOfLines={1}>
+          <View className="flex-row items-center mt-0.5">
+            <Text className="text-xs text-neutral-500 mr-2" numberOfLines={1}>
               {item.code}
             </Text>
             {item.district && (
-              <Text style={styles.outletDistrict} numberOfLines={1}>
+              <Text className="text-xs text-neutral-400" numberOfLines={1}>
                 {item.district}
               </Text>
             )}
             {visitType === 'planned' && item.visitDate && (
-              <Text style={styles.outletDate} numberOfLines={1}>
+              <Text className="text-xs text-blue-600 ml-auto" numberOfLines={1}>
                 📅 {new Date(item.visitDate).toLocaleDateString('id-ID')}
               </Text>
             )}
@@ -363,8 +361,8 @@ const OutletList = ({
 };
 
 const LocationBlocked = ({ selectedOutlet, router }: { selectedOutlet: OutletDisplayData | null; router: any }) => (
-  <View style={styles.locationBlockedContainer}>
-    <Text style={styles.locationBlockedText}>
+  <View className="flex-1 items-center justify-center px-8">
+    <Text className="text-danger-600 text-base text-center mb-4">
       Lokasi outlet belum diisi. Silakan update data outlet terlebih dahulu sebelum check-in.
     </Text>
     <Button 
@@ -374,7 +372,51 @@ const LocationBlocked = ({ selectedOutlet, router }: { selectedOutlet: OutletDis
   </View>
 );
 
-const CameraScreen = ({ 
+// Face detection overlay component
+const FaceDetectionOverlay = () => (
+  <View className="absolute inset-0 items-center justify-center">
+    <View 
+      className="w-80 h-80 rounded-full border-4 border-white border-dashed"
+      style={{
+        borderStyle: 'dashed',
+      }}
+    />
+  </View>
+);
+
+// Plan visit info card for camera overlay
+const PlanVisitCard = ({ selectedOutlet }: { selectedOutlet: OutletDisplayData | null }) => {
+  if (!selectedOutlet?.visitDate) return null;
+  
+  const visitDate = new Date(selectedOutlet.visitDate);
+  const dateStr = visitDate.toLocaleDateString('id-ID', { 
+    day: 'numeric', 
+    month: 'short', 
+    year: 'numeric' 
+  });
+  const timeStr = visitDate.toLocaleTimeString('id-ID', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    hour12: false 
+  });
+
+  return (
+    <View className="absolute top-16 left-4 right-4 z-10">
+      <View className="bg-white rounded-xl p-4 shadow-lg">
+        <Text className="text-neutral-500 text-sm mb-1">Plan Visit</Text>
+        <View className="flex-row items-center">
+          <IconSymbol name="calendar" size={16} color="#222B45" style={{ marginRight: 8 }} />
+          <Text className="text-black font-semibold">
+            {dateStr} ({timeStr} - 17:00)
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+};
+
+// Simple camera screen for check-in
+const SimpleCameraScreen = ({ 
   hasCameraPermission, 
   requestCameraPermission,
   cameraRef,
@@ -385,7 +427,8 @@ const CameraScreen = ({
   setIsFlashOn,
   isProcessingPhoto,
   onTakePhoto,
-  onGoBack 
+  onGoBack,
+  selectedOutlet
 }: {
   hasCameraPermission: any;
   requestCameraPermission: () => void;
@@ -398,51 +441,77 @@ const CameraScreen = ({
   isProcessingPhoto: boolean;
   onTakePhoto: () => void;
   onGoBack: () => void;
+  selectedOutlet: OutletDisplayData | null;
 }) => (
-  <View style={styles.cameraContainer}>
-    <Animated.View style={styles.cameraOverlay}>
-      <TouchableOpacity style={styles.backButton} onPress={onGoBack}>
-        <Ionicons name="arrow-back" size={24} color="#222B45" />
+  <View className="flex-1 bg-black">
+    {/* Back button */}
+    <TouchableOpacity 
+      className="absolute top-12 left-6 bg-black/50 rounded-full p-2 z-30 items-center justify-center" 
+      onPress={onGoBack}
+    >
+      <Ionicons name="arrow-back" size={24} color="#fff" />
+    </TouchableOpacity>
+    
+    {/* Flash toggle */}
+    {hasCameraPermission?.status === 'granted' && (
+      <TouchableOpacity 
+        className="absolute top-12 right-6 bg-black/50 rounded-full p-2 z-30 items-center justify-center" 
+        onPress={() => setIsFlashOn(!isFlashOn)}
+      >
+        <Ionicons name={isFlashOn ? 'flash' : 'flash-off'} size={24} color="#fff" />
       </TouchableOpacity>
-      
-      {hasCameraPermission?.status === 'granted' ? (
+    )}
+
+    {/* Camera view */}
+    {hasCameraPermission?.status === 'granted' ? (
+      <>
         <CameraView
           ref={ref => setCameraRef(ref)}
-          style={styles.camera}
+          style={{ flex: 1, width: '100%', height: '100%' }}
           onCameraReady={() => setIsCameraReady(true)}
           facing="front"
-          ratio="16:9"
           flash={isFlashOn ? 'on' : 'off'}
         />
-      ) : (
-        <View style={styles.cameraPermissionContainer}>
-          <TouchableOpacity onPress={requestCameraPermission} style={styles.cameraPermissionButton}>
-            <Ionicons name="camera" size={60} color="#FF8800" />
-            <Text style={styles.cameraPermissionText}>Izinkan akses kamera</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      
-      {hasCameraPermission?.status === 'granted' && (
-                          <TouchableOpacity style={styles.flashButton} onPress={() => setIsFlashOn(!isFlashOn)}>
-          <Ionicons name={isFlashOn ? 'flash' : 'flash-off'} size={24} color="#FF8800" />
+        
+        {/* Face detection overlay */}
+        <FaceDetectionOverlay />
+        
+        {!isCameraReady && (
+          <View className="absolute inset-0 items-center justify-center bg-black bg-opacity-50">
+            <ActivityIndicator size="large" color="#f97316" />
+            <Text className="text-white text-base mt-4">Menyiapkan kamera...</Text>
+          </View>
+        )}
+      </>
+    ) : (
+      <View className="flex-1 items-center justify-center bg-black">
+        <TouchableOpacity onPress={requestCameraPermission} className="items-center justify-center">
+          <Ionicons name="camera" size={60} color="#f97316" />
+          <Text className="text-white text-base mt-4">Izinkan akses kamera</Text>
         </TouchableOpacity>
-      )}
-      
-      {hasCameraPermission?.status === 'granted' && (
-        <View style={styles.captureButtonContainer}>
-          <TouchableOpacity
-            style={[styles.captureButton, (!isCameraReady || isProcessingPhoto) && styles.captureButtonDisabled]}
-            onPress={onTakePhoto}
-            disabled={isProcessingPhoto || !isCameraReady}
-          >
-            <Text style={styles.captureButtonText}>
-              {isProcessingPhoto ? 'Memproses...' : 'Kirim'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </Animated.View>
+      </View>
+    )}
+
+    {/* Fixed bottom button */}
+    <View className="absolute bottom-0 left-0 right-0 p-4 items-center">
+      <Button
+        title={isProcessingPhoto ? 'Memproses...' : 'Kirim'}
+        variant="primary"
+        size="lg"
+        fullWidth
+        loading={isProcessingPhoto}
+        disabled={!isCameraReady}
+        onPress={onTakePhoto}
+      />
+    </View>
+    
+    {/* Processing overlay */}
+    {isProcessingPhoto && (
+      <View className="absolute inset-0 bg-black/50 items-center justify-center z-40">
+        <ActivityIndicator size="large" color="#f97316" />
+        <Text className="text-white text-base mt-4">Memproses foto dengan watermark...</Text>
+      </View>
+    )}
   </View>
 );
 
@@ -475,6 +544,8 @@ export default function CheckInScreen() {
   const [distance, setDistance] = useState<number | null>(null);
   const [mapRegion, setMapRegion] = useState<any>(null);
   const [locationBlocked, setLocationBlocked] = useState(false);
+  const [bottomSheetIndex, setBottomSheetIndex] = useState(1);
+  const bottomSheetRef = useRef<BottomSheet>(null);
 
   const MAX_DISTANCE = 100;
 
@@ -484,6 +555,15 @@ export default function CheckInScreen() {
       outletManager.setSelectedOutletId(outletId);
     }
     locationManager.getLocation();
+    
+    // Add keyboard listeners for better keyboard handling
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      // Optionally handle keyboard hide
+    });
+    
+    return () => {
+      keyboardDidHideListener.remove();
+    };
   }, [outletId]);
 
   // Fetch data
@@ -634,30 +714,45 @@ export default function CheckInScreen() {
       Alert.alert('Kamera Belum Siap', 'Kamera belum siap digunakan.');
       return;
     }
+
+    if (isProcessingPhoto) return;
+    
+    if (!outletManager.selectedOutlet?.id) {
+      Alert.alert('Error Data', 'Data outlet tidak valid. Silakan kembali dan coba lagi.');
+      return;
+    }
     
     setIsProcessingPhoto(true);
     
     try {
       const photo = await cameraRef.takePictureAsync({ 
         quality: 0.7, 
-        skipProcessing: true, 
-        mirrorImage: true 
+        skipProcessing: true,
+        mirrorImage: true
       });
       
+      if (!photo?.uri) {
+        Alert.alert('Gagal Mengambil Foto', 'Tidak dapat mengambil foto. Silakan coba lagi.');
+        setIsProcessingPhoto(false);
+        return;
+      }
+
       setRawPhoto(photo.uri);
       const now = new Date();
       const waktu = now.toLocaleString('id-ID', { hour12: false });
-      const outletName = outletManager.selectedOutlet?.name ?? '-';
-      const lokasi = `${locationManager.currentLocation?.latitude?.toFixed(6)},${locationManager.currentLocation?.longitude?.toFixed(6)}`;
+      const outletName = `${outletManager.selectedOutlet.code} • ${outletManager.selectedOutlet.name}`;
+      const lokasi = locationManager.currentLocation 
+        ? `${locationManager.currentLocation.latitude.toFixed(6)}, ${locationManager.currentLocation.longitude.toFixed(6)}`
+        : 'Lokasi tidak tersedia';
       
       setWatermarkData({ waktu, outlet: outletName, lokasi });
       
       setTimeout(async () => {
         if (viewShotRef.current) {
           try {
-            const uri = await captureRef(viewShotRef, { format: 'jpg', quality: 0.5 });
-            const formData = new FormData();
+            const uri = await captureRef(viewShotRef, { format: 'jpg', quality: 0.4 });
             
+            const formData = new FormData();
             formData.append('outlet_id', outletManager.selectedOutletId!);
             formData.append('checkin_location', `${locationManager.currentLocation!.latitude},${locationManager.currentLocation!.longitude}`);
             formData.append('type', outletManager.visitType.toUpperCase());
@@ -675,7 +770,7 @@ export default function CheckInScreen() {
             const res = await checkInVisit(formData);
             
             if (res?.meta?.code === 200) {
-              Alert.alert('Check In Berhasil', 'Data berhasil disimpan.');
+              Alert.alert('Check In Berhasil', 'Data berhasil disimpan dengan foto dan watermark.');
               setRawPhoto(null);
               setWatermarkData(null);
               router.replace({ pathname: '/(tabs)', params: { outletId: outletManager.selectedOutletId } });
@@ -688,25 +783,41 @@ export default function CheckInScreen() {
         }
         setIsProcessingPhoto(false);
       }, 400);
-    } catch (err) {
-      Alert.alert('Gagal Mengambil Foto', 'Terjadi kesalahan saat mengambil foto. Silakan coba lagi.');
+    } catch (error) {
+      console.error('Error in checkin process:', error);
       setIsProcessingPhoto(false);
+      setRawPhoto(null);
+      setWatermarkData(null);
+      Alert.alert('Check In Gagal', 'Terjadi kesalahan saat melakukan check in.');
     }
   }, [
     hasCameraPermission,
     requestCameraPermission,
     isCameraReady,
     cameraRef,
+    isProcessingPhoto,
     outletManager,
     locationManager,
     checkInVisit,
     router
   ]);
 
+  const handleBottomSheetAction = useCallback(() => {
+    handleContinue();
+  }, [handleContinue]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      setRawPhoto(null);
+      setWatermarkData(null);
+    };
+  }, []);
+
   // Render early returns
   if (currentStep === 1 && locationBlocked) {
     return (
-      <View style={styles.container}>
+      <View className="flex-1 bg-white">
         <Header currentStep={currentStep} onBack={() => router.back()} onRefresh={locationManager.getLocation} />
         <LocationBlocked selectedOutlet={outletManager.selectedOutlet} router={router} />
       </View>
@@ -715,10 +826,10 @@ export default function CheckInScreen() {
 
   if (currentStep === 2) {
     return (
-      <View style={styles.container}>
-        <Header currentStep={currentStep} onBack={() => router.back()} onRefresh={locationManager.getLocation} />
+      <View className="flex-1 bg-white">
+        <Header currentStep={currentStep} onBack={() => changeStep(1)} onRefresh={locationManager.getLocation} />
         
-        <CameraScreen
+        <SimpleCameraScreen
           hasCameraPermission={hasCameraPermission}
           requestCameraPermission={requestCameraPermission}
           cameraRef={cameraRef}
@@ -730,10 +841,21 @@ export default function CheckInScreen() {
           isProcessingPhoto={isProcessingPhoto}
           onTakePhoto={handleTakePhoto}
           onGoBack={() => changeStep(1)}
+          selectedOutlet={outletManager.selectedOutlet}
         />
         
         {rawPhoto && watermarkData && outletManager.selectedOutlet && (
-          <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 0.5 }} style={styles.hiddenViewShot}>
+          <ViewShot 
+            ref={viewShotRef} 
+            options={{ format: 'jpg', quality: 0.5 }} 
+            style={{ 
+              position: 'absolute', 
+              left: -1000, 
+              top: -1000, 
+              width: '100%', 
+              height: '100%' 
+            }}
+          >
             <WatermarkOverlay
               photoUri={rawPhoto}
               watermarkData={watermarkData}
@@ -746,429 +868,122 @@ export default function CheckInScreen() {
     );
   }
 
-  // Main render - Step 1
+  // Main render - Step 1 with Bottom Sheet
   return (
-    <View style={styles.container}>
+    <View className="flex-1 bg-white">
       <Header currentStep={currentStep} onBack={() => router.back()} onRefresh={locationManager.getLocation} />
       
-      <View style={styles.content}>
-        <View style={styles.mapContainer}>
-          <MapView
-            style={styles.map}
-            region={mapRegion}
-            provider={PROVIDER_GOOGLE}
-            showsUserLocation
-            showsMyLocationButton={false}
-          >
-            {outletManager.selectedOutlet && outletManager.selectedOutlet.location && (
-              <Marker
-                coordinate={{
-                  latitude: Number(outletManager.selectedOutlet.location.split(',')[0]),
-                  longitude: Number(outletManager.selectedOutlet.location.split(',')[1]),
-                }}
-                title={outletManager.selectedOutlet.name}
-                description={outletManager.selectedOutlet.district ?? ''}
-              >
-                <View style={styles.markerContainer}>
-                  <View style={styles.marker}>
-                    <Ionicons name="business" size={28} color="#C62828" />
-                  </View>
-                  <View style={styles.markerArrow} />
-                </View>
-              </Marker>
-            )}
-          </MapView>
-          
-          {outletManager.selectedOutlet && locationManager.currentLocation && (
-            <View style={styles.locationStatusContainer}>
-              <LocationStatus
-                locationValidated={locationValidated}
-                distance={distance ?? 0}
-                outletRadius={outletManager.selectedOutlet.radius ?? 0}
-                onUpdateOutlet={() => router.push(`/outlet/${outletManager.selectedOutlet!.id}/edit` as any)}
-                colors={colors}
-              />
-            </View>
-          )}
-        </View>
-        
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-          style={styles.bottomSheet}
+      <View className="flex-1">
+        <MapView
+          style={{ flex: 1 }}
+          region={mapRegion}
+          provider={PROVIDER_GOOGLE}
+          showsUserLocation
+          showsMyLocationButton={false}
+          onPress={() => Keyboard.dismiss()}
         >
-          <View style={styles.outletCard}>
-            <OutletTypeToggle 
-              visitType={outletManager.visitType} 
-              onTypeChange={handleTypeChange} 
+          {outletManager.selectedOutlet && outletManager.selectedOutlet.location && (
+            <Marker
+              coordinate={{
+                latitude: Number(outletManager.selectedOutlet.location.split(',')[0]),
+                longitude: Number(outletManager.selectedOutlet.location.split(',')[1]),
+              }}
+              title={outletManager.selectedOutlet.name}
+              description={outletManager.selectedOutlet.district ?? ''}
+            >
+              <View className="items-center justify-center">
+                <View className="bg-white rounded-full p-1.5 border-2 border-red-700 shadow-md">
+                  <Ionicons name="business" size={28} color="#C62828" />
+                </View>
+                <View 
+                  className="w-0 h-0 -mt-0.5"
+                  style={{
+                    borderLeftWidth: 10,
+                    borderRightWidth: 10,
+                    borderTopWidth: 18,
+                    borderLeftColor: 'transparent',
+                    borderRightColor: 'transparent',
+                    borderTopColor: '#C62828',
+                  }}
+                />
+              </View>
+            </Marker>
+          )}
+        </MapView>
+        
+        {outletManager.selectedOutlet && locationManager.currentLocation && (
+          <View className="absolute left-4 right-4 top-4 z-10">
+            <LocationStatus
+              locationValidated={locationValidated}
+              distance={distance ?? 0}
+              outletRadius={outletManager.selectedOutlet.radius ?? 0}
+              onUpdateOutlet={() => router.push(`/outlet/${outletManager.selectedOutlet!.id}/edit` as any)}
             />
-
-            <View style={styles.outletSelection}>
-              <Text style={styles.outletSelectionTitle}>
-                {outletManager.visitType === 'planned' ? 'Pilih Plan Visit Hari Ini' : 'Pilih Outlet'}
-              </Text>
-              
-              <OutletSearchInput
-                visitType={outletManager.visitType}
-                searchValue={outletManager.outletSearch}
-                onSearchChange={outletManager.setOutletSearch}
-                colors={colors}
+          </View>
+        )}
+        
+        {/* Bottom Sheet for Step 1 */}
+        <BottomSheet
+          ref={bottomSheetRef}
+          index={1}
+          snapPoints={['10%', '60%']}
+          enableDynamicSizing={true}
+          enablePanDownToClose={false}
+          handleIndicatorStyle={{ backgroundColor: '#D1D5DB', width: 40, height: 4 }}
+          backgroundStyle={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 20, borderTopRightRadius: 20 }}
+          onChange={(index) => {
+            setBottomSheetIndex(index);
+          }}
+        >
+          <BottomSheetView className="flex-1 px-4 pb-8">
+            {/* Form - always rendered and visible when expanded */}
+            <View style={{ 
+              opacity: bottomSheetIndex >= 1 ? 1 : 0,
+              height: bottomSheetIndex >= 1 ? 'auto' : 0,
+              overflow: 'hidden'
+            }}>
+              <OutletTypeToggle 
+                visitType={outletManager.visitType} 
+                onTypeChange={handleTypeChange} 
               />
-              
-              <View style={styles.outletListContainer}>
-                <OutletList
-                  displayData={outletManager.displayData}
-                  dataLoading={outletManager.dataLoading}
+
+              <View className="mb-3">
+                <Text className="font-bold text-lg mb-2 text-black">
+                  {outletManager.visitType === 'planned' ? 'Pilih Plan Visit Hari Ini' : 'Pilih Outlet'}
+                </Text>
+                
+                <OutletSearchInput
                   visitType={outletManager.visitType}
-                  selectedOutletId={outletManager.selectedOutletId}
-                  onOutletSelect={handleOutletSelect}
+                  searchValue={outletManager.outletSearch}
+                  onSearchChange={outletManager.setOutletSearch}
                   colors={colors}
                 />
+                
+                <View className="max-h-40">
+                  <OutletList
+                    displayData={outletManager.displayData}
+                    dataLoading={outletManager.dataLoading}
+                    visitType={outletManager.visitType}
+                    selectedOutletId={outletManager.selectedOutletId}
+                    onOutletSelect={handleOutletSelect}
+                    colors={colors}
+                  />
+                </View>
               </View>
             </View>
             
-            <TouchableOpacity
-              style={[
-                styles.continueButton, 
-                outletManager.selectedOutlet ? styles.continueButtonActive : styles.continueButtonInactive
-              ]}
-              onPress={handleContinue}
+            {/* Button with consistent text */}
+            <Button
+              title="Lanjutkan"
+              variant="primary"
+              size="lg"
+              fullWidth
               disabled={!outletManager.selectedOutlet}
-            >
-              <Text style={styles.continueButtonText}>Lanjutkan</Text>
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
+              onPress={handleBottomSheetAction}
+            />
+          </BottomSheetView>
+        </BottomSheet>
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  header: {
-    backgroundColor: '#FF8800',
-    paddingBottom: spacing.md,
-    paddingHorizontal: spacing.md,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    color: '#fff',
-    fontSize: typography.fontSize2xl,
-    fontWeight: 'bold',
-  },
-  headerSubtitle: {
-    color: '#fff',
-    fontSize: typography.fontSizeSm,
-    marginTop: 4,
-  },
-  headerPlaceholder: {
-    width: 22,
-    height: 22,
-  },
-  content: {
-    flex: 1,
-  },
-  mapContainer: {
-    flex: 1,
-  },
-  map: {
-    flex: 1,
-  },
-  markerContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  marker: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 6,
-    borderWidth: 2,
-    borderColor: '#C62828',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  markerArrow: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 10,
-    borderRightWidth: 10,
-    borderTopWidth: 18,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: '#C62828',
-    marginTop: -2,
-  },
-  locationStatusContainer: {
-    position: 'absolute',
-    left: spacing.md,
-    right: spacing.md,
-    top: spacing.md,
-    zIndex: 10,
-  },
-  bottomSheet: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  outletCard: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: spacing.md,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  toggleContainer: {
-    marginBottom: spacing.md,
-  },
-  toggleLabel: {
-    fontWeight: 'bold',
-    fontSize: typography.fontSizeLg,
-    marginBottom: 12,
-    color: '#000',
-  },
-  toggleButtons: {
-    flexDirection: 'row',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    padding: 4,
-  },
-  toggleButton: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-  },
-  toggleButtonActive: {
-    backgroundColor: '#FF8800',
-  },
-  toggleButtonText: {
-    textAlign: 'center',
-    fontWeight: '600',
-    color: '#666',
-  },
-  toggleButtonTextActive: {
-    color: '#fff',
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    marginBottom: 8,
-    backgroundColor: '#fff',
-  },
-  searchInput: {
-    flex: 1,
-    height: 40,
-    marginLeft: 8,
-    fontSize: typography.fontSizeMd,
-    color: '#000',
-  },
-  outletSelection: {
-    marginBottom: 12,
-  },
-  outletSelectionTitle: {
-    fontWeight: 'bold',
-    fontSize: typography.fontSizeLg,
-    marginBottom: 8,
-    color: '#000',
-  },
-  outletListContainer: {
-    maxHeight: 160,
-  },
-  outletList: {
-    maxHeight: 160,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  loadingText: {
-    marginTop: spacing.md,
-    fontSize: typography.fontSizeMd,
-  },
-  emptyText: {
-    padding: spacing.md,
-    color: '#9ca3af',
-    textAlign: 'center',
-  },
-  outletItem: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    borderRadius: 4,
-    backgroundColor: '#fff',
-    marginBottom: 2,
-  },
-  outletItemSelected: {
-    backgroundColor: '#fff7ed',
-  },
-  outletName: {
-    fontWeight: '600',
-    fontSize: typography.fontSizeMd,
-    color: '#000',
-  },
-  outletDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  outletCode: {
-    fontSize: typography.fontSizeXs,
-    color: '#6b7280',
-    marginRight: 8,
-  },
-  outletDistrict: {
-    fontSize: typography.fontSizeXs,
-    color: '#9ca3af',
-  },
-  outletDate: {
-    fontSize: typography.fontSizeXs,
-    color: '#3b82f6',
-    marginLeft: 'auto',
-  },
-  continueButton: {
-    borderRadius: 8,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  continueButtonActive: {
-    backgroundColor: '#FF8800',
-  },
-  continueButtonInactive: {
-    backgroundColor: '#d1d5db',
-  },
-  continueButtonText: {
-    color: '#fff',
-    fontSize: typography.fontSizeLg,
-    fontWeight: 'bold',
-  },
-  locationBlockedContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xl,
-  },
-  locationBlockedText: {
-    color: '#dc2626',
-    fontSize: typography.fontSizeMd,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  cameraContainer: {
-    flex: 1,
-    backgroundColor: '#f5f6fa',
-  },
-  cameraOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#000',
-    zIndex: 1,
-  },
-  backButton: {
-    position: 'absolute',
-    top: 40,
-    left: 24,
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 3,
-  },
-  camera: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-  },
-  cameraPermissionContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#000',
-  },
-  cameraPermissionButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cameraPermissionText: {
-    color: '#fff',
-    fontSize: typography.fontSizeMd,
-    marginTop: spacing.md,
-  },
-  flashButton: {
-    position: 'absolute',
-    top: 40,
-    right: 24,
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 3,
-  },
-  captureButtonContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: spacing.md,
-    alignItems: 'center',
-  },
-  captureButton: {
-    backgroundColor: '#FF8800',
-    borderRadius: 8,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    width: '100%',
-  },
-  captureButtonDisabled: {
-    backgroundColor: '#9ca3af',
-  },
-  captureButtonText: {
-    color: '#fff',
-    fontSize: typography.fontSizeLg,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  hiddenViewShot: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-  },
-});

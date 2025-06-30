@@ -1,13 +1,16 @@
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { useNetwork } from '@/context/network-context';
 import { useAddUser } from '@/hooks/data/useAddUser';
 import { useReference } from '@/hooks/data/useReference';
-import { Ionicons } from '@expo/vector-icons';
+import { useThemeStyles } from '@/hooks/utils/useThemeStyles';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface FormData {
   name: string;
@@ -133,20 +136,6 @@ const useFieldDependencies = (
   };
 };
 
-const getColors = () => ({
-  background: '#fafafa',
-  text: '#171717',
-  textSecondary: '#737373',
-  textTertiary: '#a3a3a3',
-  textInverse: '#ffffff',
-  primary: '#f97316',
-  danger: '#ef4444',
-  disabled: '#d4d4d4',
-  inputBackground: '#fafafa',
-  inputBorder: '#d4d4d4',
-  shadow: '#000000',
-});
-
 const Header = React.memo(function Header({ 
   onBack, 
   colors 
@@ -154,44 +143,48 @@ const Header = React.memo(function Header({
   onBack: () => void; 
   colors: any;
 }) {
+  const insets = useSafeAreaInsets();
+  
   return (
-    <View 
-      className="flex-row items-center h-14 px-4 shadow-sm z-10"
-      style={{ backgroundColor: colors.background, shadowColor: colors.shadow }}
-    >
-      <TouchableOpacity
-        onPress={onBack}
-        className="mr-4 min-w-9 items-center justify-center"
-        accessibilityLabel="Kembali"
-        accessibilityHint="Kembali ke halaman sebelumnya"
-        accessibilityRole="button"
-      >
-        <IconSymbol name="chevron.left" size={26} color={colors.text} />
-      </TouchableOpacity>
-      <Text 
-        className="text-xl font-bold"
-        style={{ fontFamily: 'Inter', color: colors.text }}
-      >
-        Tambah User
-      </Text>
+    <View className="bg-primary-500 px-4 pb-4" style={{ paddingTop: insets.top + 8 }}>
+      <View className="flex-row justify-between items-center">
+        <TouchableOpacity onPress={onBack}>
+          <IconSymbol name="chevron.left" size={24} color="#fff" />
+        </TouchableOpacity>
+        <View className="flex-1 items-center">
+          <Text 
+            className="text-white text-2xl font-bold"
+            style={{ fontFamily: 'Inter' }}
+          >
+            Tambah User
+          </Text>
+        </View>
+        <View className="w-6 h-6" />
+      </View>
     </View>
   );
 });
 
-const LoadingScreen = React.memo(function LoadingScreen({ colors }: { colors: any }) {
+const LoadingScreen = React.memo(function LoadingScreen({ 
+  colors, 
+  onBack 
+}: { 
+  colors: any; 
+  onBack: () => void;
+}) {
   return (
-    <SafeAreaView 
-      className="flex-1 justify-center items-center"
-      style={{ backgroundColor: colors.background }}
-    >
-      <ActivityIndicator size="large" color={colors.primary} />
-      <Text 
-        className="text-base mt-4"
-        style={{ fontFamily: 'Inter', color: colors.text }}
-      >
-        Menyimpan user...
-      </Text>
-    </SafeAreaView>
+    <View className="flex-1 bg-white dark:bg-gray-900">
+      <Header onBack={onBack} colors={colors} />
+      <View className="flex-1 justify-center items-center">
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text 
+          className="text-base mt-4 text-gray-600 dark:text-gray-400"
+          style={{ fontFamily: 'Inter' }}
+        >
+          Menyimpan user...
+        </Text>
+      </View>
+    </View>
   );
 });
 
@@ -205,74 +198,22 @@ const ErrorScreen = React.memo(function ErrorScreen({
   colors: any;
 }) {
   return (
-    <SafeAreaView 
-      className="flex-1 justify-center items-center"
-      style={{ backgroundColor: colors.background }}
-    >
-      <Ionicons name="alert-circle" size={24} color={colors.danger} className="mb-2" />
-      <Text 
-        className="text-center mb-4"
-        style={{ fontFamily: 'Inter', color: colors.danger }}
-      >
-        {error}
-      </Text>
-      <Pressable
-        className="h-12 rounded-lg items-center justify-center mb-8 px-8"
-        style={{ backgroundColor: colors.primary }}
-        onPress={onBack}
-      >
+    <View className="flex-1 bg-white dark:bg-gray-900">
+      <Header onBack={onBack} colors={colors} />
+      <View className="flex-1 justify-center items-center px-4">
+        <IconSymbol name="exclamationmark.triangle" size={48} color={colors.danger} />
         <Text 
-          className="text-base font-semibold"
-          style={{ fontFamily: 'Inter', color: colors.textInverse }}
+          className="text-center mb-4 text-red-600 dark:text-red-400"
+          style={{ fontFamily: 'Inter' }}
         >
-          Kembali
+          {error}
         </Text>
-      </Pressable>
-    </SafeAreaView>
-  );
-});
-
-const FormField = React.memo(function FormField({ 
-  label, 
-  value, 
-  onChangeText, 
-  placeholder, 
-  keyboardType, 
-  autoCapitalize, 
-  colors 
-}: {
-  label: string;
-  value: string;
-  onChangeText: (text: string) => void;
-  placeholder: string;
-  keyboardType?: any;
-  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
-  colors: any;
-}) {
-  return (
-    <View className="w-full">
-      <Text 
-        className="mb-2 text-sm font-medium"
-        style={{ fontFamily: 'Inter', color: colors.text }}
-      >
-        {label}
-      </Text>
-      <TextInput
-        className="h-12 px-4 border rounded-lg text-base"
-        style={{
-          fontFamily: 'Inter',
-          backgroundColor: colors.inputBackground,
-          color: colors.text,
-          borderColor: colors.inputBorder,
-        }}
-        placeholder={placeholder}
-        placeholderTextColor={colors.textTertiary}
-        value={value}
-        onChangeText={onChangeText}
-        textAlignVertical="center"
-        keyboardType={keyboardType}
-        autoCapitalize={autoCapitalize}
-      />
+        <Button
+          title="Kembali"
+          variant="primary"
+          onPress={onBack}
+        />
+      </View>
     </View>
   );
 });
@@ -295,8 +236,8 @@ const SelectField = React.memo(function SelectField({
   return (
     <View className="w-full">
       <Text 
-        className="mb-2 text-sm font-medium"
-        style={{ fontFamily: 'Inter', color: colors.text }}
+        className="mb-2 text-sm font-medium text-gray-900 dark:text-white"
+        style={{ fontFamily: 'Inter' }}
       >
         {label}
       </Text>
@@ -310,43 +251,11 @@ const SelectField = React.memo(function SelectField({
   );
 });
 
-const SubmitButton = React.memo(function SubmitButton({ 
-  onPress, 
-  loading, 
-  colors 
-}: { 
-  onPress: () => void; 
-  loading: boolean; 
-  colors: any;
-}) {
-  return (
-    <Pressable
-      className="h-12 rounded-lg items-center justify-center mb-8"
-      style={{ backgroundColor: loading ? colors.disabled : colors.primary }}
-      onPress={onPress}
-      disabled={loading}
-      accessibilityLabel="Simpan User"
-      accessibilityHint="Menambahkan user baru ke sistem"
-    >
-      <Text 
-        className="text-base font-semibold"
-        style={{ 
-          fontFamily: 'Inter',
-          color: loading ? colors.textSecondary : colors.textInverse 
-        }}
-      >
-        {loading ? 'Menyimpan...' : 'Simpan User'}
-      </Text>
-    </Pressable>
-  );
-});
-
 export default function AddUserScreen() {
   const router = useRouter();
   const { isConnected } = useNetwork();
   const { loading, error, addUser } = useAddUser();
-  
-  const colors = getColors();
+  const { colors } = useThemeStyles();
 
   const { formData, updateField, resetDependentFields, resetForm } = useAddUserForm();
   const {
@@ -403,15 +312,11 @@ export default function AddUserScreen() {
   }
 
   if (loading) {
-    return <LoadingScreen colors={colors} />;
+    return <LoadingScreen colors={colors} onBack={handleBack} />;
   }
 
   return (
-    <SafeAreaView 
-      className="flex-1 bg-neutral-50"
-      style={{ backgroundColor: colors.background }} 
-      edges={isConnected ? ['top','left','right'] : ['left','right']}
-    >
+    <View className="flex-1 bg-white dark:bg-gray-900">
       <Header onBack={handleBack} colors={colors} />
       
       <KeyboardAvoidingView 
@@ -421,101 +326,120 @@ export default function AddUserScreen() {
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView 
-            className="flex-1" 
-            contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 }}
+            className="flex-1 px-4"
             showsVerticalScrollIndicator={false}
           >
-            <View className="flex-1">
-              <View className="gap-6 mb-8 w-full">
-                <FormField
-                  label="Nama Lengkap"
-                  value={formData.name}
-                  onChangeText={(value) => updateField('name', value)}
-                  placeholder="Masukkan nama lengkap"
-                  colors={colors}
-                />
+            <View className="pt-4 pb-8">
+              {/* Personal Information Card */}
+              <Card className="p-4 mb-4 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                <Text className="text-base font-bold mb-3 text-gray-900 dark:text-white" style={{ fontFamily: 'Inter' }}>
+                  Informasi Personal
+                </Text>
+                
+                <View className="gap-4">
+                  <Input
+                    label="Nama Lengkap"
+                    value={formData.name}
+                    onChangeText={(value) => updateField('name', value)}
+                    placeholder="Masukkan nama lengkap"
+                    className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+                  />
 
-                <FormField
-                  label="Username"
-                  value={formData.username}
-                  onChangeText={(value) => updateField('username', value)}
-                  placeholder="Masukkan username"
-                  autoCapitalize="none"
-                  colors={colors}
-                />
+                  <Input
+                    label="Username"
+                    value={formData.username}
+                    onChangeText={(value) => updateField('username', value)}
+                    placeholder="Masukkan username"
+                    autoCapitalize="none"
+                    className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+                  />
 
-                <FormField
-                  label="No. HP"
-                  value={formData.phone}
-                  onChangeText={(value) => updateField('phone', value)}
-                  placeholder="Masukkan nomor HP"
-                  keyboardType="phone-pad"
-                  colors={colors}
-                />
+                  <Input
+                    label="No. HP"
+                    value={formData.phone}
+                    onChangeText={(value) => updateField('phone', value)}
+                    placeholder="Masukkan nomor HP"
+                    keyboardType="phone-pad"
+                    className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+                  />
+                </View>
+              </Card>
 
-                <SelectField
-                  label="Role"
-                  value={formData.role}
-                  onValueChange={handleRoleChange}
-                  options={roles.map((r) => ({ label: r.name, value: String(r.id) }))}
-                  placeholder="Pilih Role"
-                  colors={colors}
-                />
-
-                {roleScope.required.includes('badan_usaha_id') && (
+              {/* Role & Organization Card */}
+              <Card className="p-4 mb-4 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                <Text className="text-base font-bold mb-3 text-gray-900 dark:text-white" style={{ fontFamily: 'Inter' }}>
+                  Role & Organisasi
+                </Text>
+                
+                <View className="gap-4">
                   <SelectField
-                    label="Badan Usaha"
-                    value={formData.badanusaha}
-                    onValueChange={handleBadanUsahaChange}
-                    options={badanUsaha.map((item) => ({ label: item.name, value: String(item.id) }))}
-                    placeholder="Pilih Badan Usaha"
+                    label="Role"
+                    value={formData.role}
+                    onValueChange={handleRoleChange}
+                    options={roles.map((r) => ({ label: r.name, value: String(r.id) }))}
+                    placeholder="Pilih Role"
                     colors={colors}
                   />
-                )}
 
-                {roleScope.required.includes('division_id') && (
-                  <SelectField
-                    label="Divisi"
-                    value={formData.divisi}
-                    onValueChange={handleDivisiChange}
-                    options={divisions.map((item) => ({ label: item.name, value: String(item.id) }))}
-                    placeholder="Pilih Divisi"
-                    colors={colors}
-                  />
-                )}
+                  {roleScope.required.includes('badan_usaha_id') && (
+                    <SelectField
+                      label="Badan Usaha"
+                      value={formData.badanusaha}
+                      onValueChange={handleBadanUsahaChange}
+                      options={badanUsaha.map((item) => ({ label: item.name, value: String(item.id) }))}
+                      placeholder="Pilih Badan Usaha"
+                      colors={colors}
+                    />
+                  )}
 
-                {roleScope.required.includes('region_id') && (
-                  <SelectField
-                    label="Region"
-                    value={formData.region}
-                    onValueChange={handleRegionChange}
-                    options={regions.map((item) => ({ label: item.name, value: String(item.id) }))}
-                    placeholder="Pilih Region"
-                    colors={colors}
-                  />
-                )}
+                  {roleScope.required.includes('division_id') && (
+                    <SelectField
+                      label="Divisi"
+                      value={formData.divisi}
+                      onValueChange={handleDivisiChange}
+                      options={divisions.map((item) => ({ label: item.name, value: String(item.id) }))}
+                      placeholder="Pilih Divisi"
+                      colors={colors}
+                    />
+                  )}
 
-                {roleScope.required.includes('cluster_id') && (
-                  <SelectField
-                    label="Cluster"
-                    value={formData.cluster}
-                    onValueChange={handleClusterChange}
-                    options={clusters.map((item) => ({ label: item.name, value: String(item.id) }))}
-                    placeholder="Pilih Cluster"
-                    colors={colors}
-                  />
-                )}
-              </View>
+                  {roleScope.required.includes('region_id') && (
+                    <SelectField
+                      label="Region"
+                      value={formData.region}
+                      onValueChange={handleRegionChange}
+                      options={regions.map((item) => ({ label: item.name, value: String(item.id) }))}
+                      placeholder="Pilih Region"
+                      colors={colors}
+                    />
+                  )}
 
-              <SubmitButton
-                onPress={handleSubmit}
+                  {roleScope.required.includes('cluster_id') && (
+                    <SelectField
+                      label="Cluster"
+                      value={formData.cluster}
+                      onValueChange={handleClusterChange}
+                      options={clusters.map((item) => ({ label: item.name, value: String(item.id) }))}
+                      placeholder="Pilih Cluster"
+                      colors={colors}
+                    />
+                  )}
+                </View>
+              </Card>
+
+              <Button
+                title={loading ? 'Menyimpan...' : 'Simpan User'}
+                variant="primary"
+                size="lg"
+                fullWidth
                 loading={loading}
-                colors={colors}
+                onPress={handleSubmit}
+                disabled={loading}
               />
             </View>
           </ScrollView>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }

@@ -69,6 +69,14 @@ const useProfileActions = () => {
     router.push('/add-user');
   }, [router]);
 
+  const handlePersonalInfo = useCallback(() => {
+    router.push('/personal-info');
+  }, [router]);
+
+  const handleChangePassword = useCallback(() => {
+    router.push('/change-password');
+  }, [router]);
+
   const handleReportIssue = useCallback(() => {
     Linking.openURL('https://tally.so/r/nGXRvL');
   }, []);
@@ -77,6 +85,8 @@ const useProfileActions = () => {
     loading,
     handleLogout,
     handleAddUser,
+    handlePersonalInfo,
+    handleChangePassword,
     handleReportIssue,
   };
 };
@@ -231,7 +241,7 @@ export default function ProfileScreen() {
   const canCreateUser = usePermission('create_user');
 
   const { displayName, displayRole, profileImage } = useProfileData(user);
-  const { loading, handleLogout, handleAddUser, handleReportIssue } = useProfileActions();
+  const { loading, handleLogout, handleAddUser, handlePersonalInfo, handleChangePassword, handleReportIssue } = useProfileActions();
 
   return (
     <SafeAreaView 
@@ -256,11 +266,13 @@ export default function ProfileScreen() {
               icon="person" 
               title="Personal Information" 
               colors={colors} 
+              onPress={handlePersonalInfo}
             />
             <MenuItem 
               icon="lock" 
               title="Password" 
               colors={colors} 
+              onPress={handleChangePassword}
             />
           </MenuSection>
 

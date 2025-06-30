@@ -1,7 +1,7 @@
 // React & React Native
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Third-party libraries
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -107,17 +107,20 @@ const LoadingScreen = React.memo(function LoadingScreen({
   isConnected: boolean; 
 }) {
   return (
-    <SafeAreaView 
-      className="flex-1 bg-neutral-50 dark:bg-neutral-900" 
-      edges={isConnected ? ['top','left','right'] : ['left','right']}
-    >
+    <View className="flex-1 bg-white">
+      <Header 
+        title="Detail Outlet"
+        colors={colors}
+        onBack={() => {}}
+        onEdit={() => {}}
+      />
       <View className="flex-1 justify-center items-center">
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={{ fontFamily: 'Inter', color: colors.textSecondary }} className="mt-4 text-base">
           Memuat...
         </Text>
       </View>
-    </SafeAreaView>
+    </View>
   );
 });
 
@@ -133,16 +136,21 @@ const ErrorScreen = React.memo(function ErrorScreen({
   onGoBack: () => void; 
 }) {
   return (
-    <SafeAreaView 
-      className="flex-1 bg-neutral-50 dark:bg-neutral-900 justify-center items-center" 
-      edges={isConnected ? ['top','left','right'] : ['left','right']}
-    >
-      <IconSymbol name="exclamationmark.triangle" size={48} color={colors.danger} />
-      <Text style={{ fontFamily: 'Inter', color: colors.danger }} className="mx-5 my-5 text-center">
-        {error}
-      </Text>
-      <Button title="Go Back" variant="primary" onPress={onGoBack} />
-    </SafeAreaView>
+    <View className="flex-1 bg-white">
+      <Header 
+        title="Detail Outlet"
+        colors={colors}
+        onBack={onGoBack}
+        onEdit={() => {}}
+      />
+      <View className="flex-1 justify-center items-center px-4">
+        <IconSymbol name="exclamationmark.triangle" size={48} color={colors.danger} />
+        <Text style={{ fontFamily: 'Inter', color: colors.danger }} className="mx-5 my-5 text-center">
+          {error}
+        </Text>
+        <Button title="Go Back" variant="primary" onPress={onGoBack} />
+      </View>
+    </View>
   );
 });
 
@@ -157,19 +165,26 @@ const Header = React.memo(function Header({
   onBack: () => void; 
   onEdit: () => void; 
 }) {
+  const insets = useSafeAreaInsets();
+  
   return (
-    <View className="flex-row items-center justify-between px-4 py-3 border-b border-neutral-200 dark:border-neutral-800"> 
-      <View className="flex-row items-center">
-        <TouchableOpacity onPress={onBack} className="mr-2 p-2">
-          <IconSymbol name="chevron.left" size={24} color={colors.text} />
+    <View className="bg-primary-500 px-4 pb-4" style={{ paddingTop: insets.top + 8 }}>
+      <View className="flex-row justify-between items-center">
+        <TouchableOpacity onPress={onBack}>
+          <IconSymbol name="chevron.left" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-xl font-bold"> 
-          {title}
-        </Text>
+        <View className="flex-1 items-center">
+          <Text 
+            className="text-white text-2xl font-bold"
+            style={{ fontFamily: 'Inter' }}
+          >
+            {title}
+          </Text>
+        </View>
+        <TouchableOpacity onPress={onEdit} className="ml-2">
+          <IconSymbol name="pencil" size={22} color="#fff" />
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity onPress={onEdit} className="p-2 mr-1">
-        <IconSymbol name="pencil" size={22} color={colors.primary} />
-      </TouchableOpacity>
     </View>
   );
 });
@@ -347,12 +362,9 @@ export default function OutletViewPage() {
   }
 
   return (
-    <SafeAreaView 
-      className="flex-1 bg-neutral-50 dark:bg-neutral-900" 
-      edges={isConnected ? ['top','left','right'] : ['left','right']}
-    >
+    <View className="flex-1 bg-white">
       <Header 
-        title={outlet?.name || 'Outlet Detail'}
+        title={outlet?.name || 'Detail Outlet'}
         colors={colors}
         onBack={handleGoBack}
         onEdit={handleEdit}
@@ -364,102 +376,104 @@ export default function OutletViewPage() {
         colors={colors}
       />
 
-      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-        {activeTab === 'info' && (
-          <View className="pt-4">
-            {/* Basic Info Card */}
-            <InfoCard title="Informasi Outlet" colors={colors}>
-              <InfoRow label="Kode Outlet" value={outlet!.code || '-'} colors={colors} />
-              <InfoRow label="Nama Outlet" value={outlet!.name || '-'} colors={colors} />
-              <InfoRow label="District" value={outlet!.district || '-'} colors={colors} />
-              <InfoRow 
-                label="Status" 
-                value={
-                  <StatusBadge
-                    status={outlet!.status ? outlet!.status.charAt(0).toUpperCase() + outlet!.status.slice(1) : '-'}
-                    color={getStatusColor(outlet!.status || '', colors)}
-                  />
-                } 
-                colors={colors} 
-              />
-              {(outlet!.radius !== undefined && outlet!.radius !== null) && (
-                <InfoRow label="Radius" value={`${outlet!.radius} m`} colors={colors} isLast />
-              )}
-            </InfoCard>
-
-            {/* Owner Info Card */}
-            {(outlet!.owner_name || outlet!.owner_phone) && (
-              <InfoCard title="Informasi Pemilik" colors={colors}>
-                {outlet!.owner_name && (
-                  <InfoRow label="Nama Pemilik" value={outlet!.owner_name} colors={colors} />
-                )}
-                {outlet!.owner_phone && (
-                  <InfoRow label="No. Telepon" value={outlet!.owner_phone} colors={colors} isLast />
+      <ScrollView className="flex-1 px-4">
+        <View className="pt-4 pb-8">
+          {activeTab === 'info' && (
+            <View>
+              {/* Basic Info Card */}
+              <InfoCard title="Informasi Outlet" colors={colors}>
+                <InfoRow label="Kode Outlet" value={outlet!.code || '-'} colors={colors} />
+                <InfoRow label="Nama Outlet" value={outlet!.name || '-'} colors={colors} />
+                <InfoRow label="District" value={outlet!.district || '-'} colors={colors} />
+                <InfoRow 
+                  label="Status" 
+                  value={
+                    <StatusBadge
+                      status={outlet!.status ? outlet!.status.charAt(0).toUpperCase() + outlet!.status.slice(1) : '-'}
+                      color={getStatusColor(outlet!.status || '', colors)}
+                    />
+                  } 
+                  colors={colors} 
+                />
+                {(outlet!.radius !== undefined && outlet!.radius !== null) && (
+                  <InfoRow label="Radius" value={`${outlet!.radius} m`} colors={colors} isLast />
                 )}
               </InfoCard>
-            )}
 
-            {/* Address Card */}
-            {outlet!.address && (
-              <AddressCard address={outlet!.address} colors={colors} />
-            )}
-
-            {/* Organization Info Card */}
-            <InfoCard title="Informasi Organisasi" colors={colors}>
-              <InfoRow label="Badan Usaha" value={outlet!.badan_usaha?.name || '-'} colors={colors} />
-              <InfoRow label="Division" value={outlet!.division?.name || '-'} colors={colors} />
-              <InfoRow label="Region" value={outlet!.region?.name || '-'} colors={colors} />
-              <InfoRow label="Cluster" value={outlet!.cluster?.name || '-'} colors={colors} isLast />
-            </InfoCard>
-          </View>
-        )}
-
-        {activeTab === 'location' && (
-          <View className="pt-4">
-            <InfoCard title="Informasi Lokasi" colors={colors}>
-              <InfoRow label="District" value={outlet!.district || '-'} colors={colors} />
-              <InfoRow label="Region" value={outlet!.region?.name || '-'} colors={colors} />
-              <InfoRow label="Cluster" value={outlet!.cluster?.name || '-'} colors={colors} />
-              <InfoRow label="Koordinat" value={outlet!.location || '-'} colors={colors} />
-              {(outlet!.radius !== undefined && outlet!.radius !== null) && (
-                <InfoRow label="Radius" value={`${outlet!.radius} m`} colors={colors} isLast />
+              {/* Owner Info Card */}
+              {(outlet!.owner_name || outlet!.owner_phone) && (
+                <InfoCard title="Informasi Pemilik" colors={colors}>
+                  {outlet!.owner_name && (
+                    <InfoRow label="Nama Pemilik" value={outlet!.owner_name} colors={colors} />
+                  )}
+                  {outlet!.owner_phone && (
+                    <InfoRow label="No. Telepon" value={outlet!.owner_phone} colors={colors} isLast />
+                  )}
+                </InfoCard>
               )}
-            </InfoCard>
-            
-            {/* Address Card */}
-            {outlet!.address && (
-              <InfoCard title="Alamat Lengkap" colors={colors}>
-                <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base leading-6">
-                  {outlet!.address}
-                </Text>
-              </InfoCard>
-            )}
-          </View>
-        )}
 
-        {activeTab === 'media' && (
-          <View className="pt-4">
-            <MediaSection
-              title="Foto Outlet"
-              items={imageList}
-              emptyIcon="photo"
-              emptyMessage="Tidak ada foto outlet."
-              colors={colors}
-            />
-            
-            <View className="mt-5">
+              {/* Address Card */}
+              {outlet!.address && (
+                <AddressCard address={outlet!.address} colors={colors} />
+              )}
+
+              {/* Organization Info Card */}
+              <InfoCard title="Informasi Organisasi" colors={colors}>
+                <InfoRow label="Badan Usaha" value={outlet!.badan_usaha?.name || '-'} colors={colors} />
+                <InfoRow label="Division" value={outlet!.division?.name || '-'} colors={colors} />
+                <InfoRow label="Region" value={outlet!.region?.name || '-'} colors={colors} />
+                <InfoRow label="Cluster" value={outlet!.cluster?.name || '-'} colors={colors} isLast />
+              </InfoCard>
+            </View>
+          )}
+
+          {activeTab === 'location' && (
+            <View>
+              <InfoCard title="Informasi Lokasi" colors={colors}>
+                <InfoRow label="District" value={outlet!.district || '-'} colors={colors} />
+                <InfoRow label="Region" value={outlet!.region?.name || '-'} colors={colors} />
+                <InfoRow label="Cluster" value={outlet!.cluster?.name || '-'} colors={colors} />
+                <InfoRow label="Koordinat" value={outlet!.location || '-'} colors={colors} />
+                {(outlet!.radius !== undefined && outlet!.radius !== null) && (
+                  <InfoRow label="Radius" value={`${outlet!.radius} m`} colors={colors} isLast />
+                )}
+              </InfoCard>
+              
+              {/* Address Card */}
+              {outlet!.address && (
+                <InfoCard title="Alamat Lengkap" colors={colors}>
+                  <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base leading-6">
+                    {outlet!.address}
+                  </Text>
+                </InfoCard>
+              )}
+            </View>
+          )}
+
+          {activeTab === 'media' && (
+            <View>
               <MediaSection
-                title="Video Outlet"
-                items={videoUrl ? [{ label: 'Video Outlet', uri: videoUrl }] : []}
-                emptyIcon="video"
-                emptyMessage="Tidak ada video outlet."
+                title="Foto Outlet"
+                items={imageList}
+                emptyIcon="photo"
+                emptyMessage="Tidak ada foto outlet."
                 colors={colors}
               />
+              
+              <View className="mt-5">
+                <MediaSection
+                  title="Video Outlet"
+                  items={videoUrl ? [{ label: 'Video Outlet', uri: videoUrl }] : []}
+                  emptyIcon="video"
+                  emptyMessage="Tidak ada video outlet."
+                  colors={colors}
+                />
+              </View>
             </View>
-          </View>
-        )}
+          )}
+        </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

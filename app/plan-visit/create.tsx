@@ -166,16 +166,13 @@ const Header = React.memo(function Header({
   onBack: () => void;
 }) {
   return (
-    <View 
-      className="px-4 pb-4"
-      style={{ paddingTop: insets.top + 8 }}
-    >
+    <View className="bg-primary-500 px-4 pb-4" style={{ paddingTop: insets.top + 8 }} >
       <View className="flex-row items-center justify-between">
         <Pressable onPress={onBack} className="p-1" accessibilityRole="button">
           <IconSymbol name="chevron.left" size={24} color={colors.textInverse} />
         </Pressable>
         <View className="flex-1 items-center">
-          <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-xl font-bold">
+          <Text className="text-white text-xl font-bold">
             Buat Plan Visit
           </Text>
         </View>
