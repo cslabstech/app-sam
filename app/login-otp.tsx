@@ -2,7 +2,7 @@ import { useNetwork } from '@/context/network-context';
 import { useOtpLoginForm } from '@/hooks/data/useOtpLoginForm';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableWithoutFeedback, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
 // Memoized components for performance
-const PageHeader = React.memo(function PageHeader() {
+const PageHeader = memo(function PageHeader() {
   return (
     <>
       <Text 
@@ -30,7 +30,7 @@ const PageHeader = React.memo(function PageHeader() {
   );
 });
 
-const ErrorAlert = React.memo(function ErrorAlert({ error }: { error: string }) {
+const ErrorAlert = memo(function ErrorAlert({ error }: { error: string }) {
   return (
     <View 
       className="flex-row items-center bg-danger-50 dark:bg-danger-900 border border-danger-200 dark:border-danger-700 rounded-md p-4 mb-8" 
@@ -49,7 +49,7 @@ const ErrorAlert = React.memo(function ErrorAlert({ error }: { error: string }) 
   );
 });
 
-const OrSeparator = React.memo(function OrSeparator() {
+const OrSeparator = memo(function OrSeparator() {
   return (
     <View className="flex-row items-center mb-4">
       <View className="flex-1 h-px bg-neutral-200 dark:bg-neutral-800" />
@@ -64,7 +64,7 @@ const OrSeparator = React.memo(function OrSeparator() {
   );
 });
 
-const Footer = React.memo(function Footer() {
+const Footer = memo(function Footer() {
   return (
     <View className="items-center pb-8">
       <Text 
@@ -77,124 +77,178 @@ const Footer = React.memo(function Footer() {
   );
 });
 
+// Memoized OTP form section untuk mengurangi re-renders
+const OtpForm = memo(function OtpForm({
+  phone,
+  setPhone,
+  otp,
+  setOtp,
+  showOtp,
+  loading,
+  handleRequestOtp,
+  handleVerifyOtp,
+  onManualLogin
+}: {
+  phone: string;
+  setPhone: (phone: string) => void;
+  otp: string;
+  setOtp: (otp: string) => void;
+  showOtp: boolean;
+  loading: boolean;
+  handleRequestOtp: () => void;
+  handleVerifyOtp: () => void;
+  onManualLogin: () => void;
+}) {
+  // Memoize validation states
+  const isPhoneValid = useMemo(() => phone.trim() !== '', [phone]);
+  const isOtpValid = useMemo(() => otp.trim() !== '', [otp]);
+
+  return (
+    <>
+      <View className="space-y-6 mb-8 w-full gap-5">
+        <Input
+          label="Nomor HP"
+          placeholder="Masukkan nomor HP"
+          value={phone}
+          onChangeText={setPhone}
+          keyboardType="phone-pad"
+          textContentType="telephoneNumber"
+          autoComplete="tel"
+          returnKeyType="next"
+          accessibilityLabel="Input nomor HP"
+          accessibilityHint="Masukkan nomor HP Anda untuk menerima OTP"
+          maxLength={15} // Limit input length
+        />
+        
+        {showOtp && (
+          <Input
+            label="OTP"
+            placeholder="Masukkan kode OTP"
+            value={otp}
+            onChangeText={setOtp}
+            keyboardType="number-pad"
+            returnKeyType="done"
+            accessibilityLabel="Input kode OTP"
+            accessibilityHint="Masukkan kode OTP yang dikirim ke WhatsApp"
+            maxLength={6} // Limit OTP length
+          />
+        )}
+      </View>
+      
+      {!showOtp && (
+        <View className="mb-4">
+          <Button
+            title="Kirim OTP ke WhatsApp"
+            variant="primary"
+            size="lg"
+            loading={loading}
+            disabled={!isPhoneValid}
+            onPress={handleRequestOtp}
+            fullWidth={true}
+            accessibilityLabel="Kirim OTP ke WhatsApp"
+            accessibilityHint="Menekan tombol ini akan mengirim kode OTP ke WhatsApp Anda"
+          />
+        </View>
+      )}
+      
+      {showOtp && (
+        <View className="mb-8">
+          <Button
+            title="Verifikasi OTP"
+            variant="primary"
+            size="lg"
+            loading={loading}
+            disabled={!isOtpValid}
+            onPress={handleVerifyOtp}
+            fullWidth={true}
+            accessibilityLabel="Verifikasi OTP"
+            accessibilityHint="Menekan tombol ini akan memverifikasi kode OTP yang dimasukkan"
+          />
+        </View>
+      )}
+      
+      {!showOtp && (
+        <>
+          <OrSeparator />
+          <View className="mb-8">
+            <Button
+              title="Login manual"
+              variant="outline"
+              size="lg"
+              onPress={onManualLogin}
+              fullWidth={true}
+              leftIcon={<Ionicons name="person-outline" size={20} color="#f97316" />}
+              accessibilityLabel="Login manual"
+              accessibilityHint="Login menggunakan username dan password"
+            />
+          </View>
+        </>
+      )}
+    </>
+  );
+});
+
 export default function LoginOtpScreen() {
   const router = useRouter();
-  const {
-    phone,
-    setPhone,
-    otp,
-    setOtp,
-    showOtp,
-    loading,
-    error,
-    keyboardVisible,
-    handleRequestOtp,
-    handleVerifyOtp,
-  } = useOtpLoginForm();
+  const formManager = useOtpLoginForm();
   const { isConnected } = useNetwork();
 
-  const handleManualLogin = () => {
+  // Memoize navigation handler
+  const handleManualLogin = useCallback(() => {
     router.replace('/login');
-  };
+  }, [router]);
+
+  // Memoize safe area edges
+  const safeAreaEdges = useMemo(() => 
+    isConnected ? ['top','left','right'] as const : ['left','right'] as const,
+    [isConnected]
+  );
+
+  // Memoize scroll view content style
+  const scrollContentStyle = useMemo(() => ({
+    flexGrow: 1
+  }), []);
+
+  // Memoize keyboard vertical offset
+  const keyboardOffset = useMemo(() => 
+    Platform.OS === 'ios' ? 0 : 20,
+    []
+  );
 
   return (
     <SafeAreaView 
       className="flex-1 bg-neutral-50 dark:bg-neutral-900" 
-      edges={isConnected ? ['top','left','right'] : ['left','right']}
+      edges={safeAreaEdges}
     >
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
         className="flex-1" 
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        keyboardVerticalOffset={keyboardOffset}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView 
             className="flex-1" 
-            contentContainerStyle={{ flexGrow: 1 }} 
+            contentContainerStyle={scrollContentStyle}
             showsVerticalScrollIndicator={false}
+            removeClippedSubviews={true} // Performance optimization
+            keyboardShouldPersistTaps="handled"
           >
             <View className="px-4 mt-10 pb-8">
               <PageHeader />
               
-              {error && <ErrorAlert error={error} />}
+              {formManager.error && <ErrorAlert error={formManager.error} />}
               
-              <View className="space-y-6 mb-8 w-full gap-5">
-                <Input
-                  label="Nomor HP"
-                  placeholder="Masukkan nomor HP"
-                  value={phone}
-                  onChangeText={setPhone}
-                  keyboardType="phone-pad"
-                  textContentType="telephoneNumber"
-                  autoComplete="tel"
-                  returnKeyType="next"
-                  accessibilityLabel="Input nomor HP"
-                  accessibilityHint="Masukkan nomor HP Anda untuk menerima OTP"
-                />
-                
-                {showOtp && (
-                  <Input
-                    label="OTP"
-                    placeholder="Masukkan kode OTP"
-                    value={otp}
-                    onChangeText={setOtp}
-                    keyboardType="number-pad"
-                    returnKeyType="done"
-                    accessibilityLabel="Input kode OTP"
-                    accessibilityHint="Masukkan kode OTP yang dikirim ke WhatsApp"
-                  />
-                )}
-              </View>
-              
-              {!showOtp && (
-                <View className="mb-4">
-                  <Button
-                    title="Kirim OTP ke WhatsApp"
-                    variant="primary"
-                    size="lg"
-                    loading={loading}
-                    disabled={phone.trim() === ''}
-                    onPress={handleRequestOtp}
-                    fullWidth={true}
-                    accessibilityLabel="Kirim OTP ke WhatsApp"
-                    accessibilityHint="Menekan tombol ini akan mengirim kode OTP ke WhatsApp Anda"
-                  />
-                </View>
-              )}
-              
-              {showOtp && (
-                <View className="mb-8">
-                  <Button
-                    title="Verifikasi OTP"
-                    variant="primary"
-                    size="lg"
-                    loading={loading}
-                    disabled={otp.trim() === ''}
-                    onPress={handleVerifyOtp}
-                    fullWidth={true}
-                    accessibilityLabel="Verifikasi OTP"
-                    accessibilityHint="Menekan tombol ini akan memverifikasi kode OTP yang dimasukkan"
-                  />
-                </View>
-              )}
-              
-              {!showOtp && (
-                <>
-                  <OrSeparator />
-                  <View className="mb-8">
-                    <Button
-                      title="Login manual"
-                      variant="outline"
-                      size="lg"
-                      onPress={handleManualLogin}
-                      fullWidth={true}
-                      leftIcon={<Ionicons name="person-outline" size={20} color="#f97316" />}
-                      accessibilityLabel="Login manual"
-                      accessibilityHint="Login menggunakan username dan password"
-                    />
-                  </View>
-                </>
-              )}
+              <OtpForm
+                phone={formManager.phone}
+                setPhone={formManager.setPhone}
+                otp={formManager.otp}
+                setOtp={formManager.setOtp}
+                showOtp={formManager.showOtp}
+                loading={formManager.loading}
+                handleRequestOtp={formManager.handleRequestOtp}
+                handleVerifyOtp={formManager.handleVerifyOtp}
+                onManualLogin={handleManualLogin}
+              />
               
               <Footer />
             </View>

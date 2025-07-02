@@ -1,7 +1,8 @@
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard, ScrollView } from 'react-native';
+import { useDebounce } from 'use-debounce';
 
 export function useLoginForm() {
   const { login } = useAuth();
@@ -16,6 +17,10 @@ export function useLoginForm() {
   const [formErrors, setFormErrors] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
 
+  // Debounce form values untuk validation
+  const [debouncedEmail] = useDebounce(email, 300);
+  const [debouncedPassword] = useDebounce(password, 300);
+
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
     const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
@@ -25,28 +30,55 @@ export function useLoginForm() {
     };
   }, []);
 
+  // Memoized validation function
+  const validateField = useCallback((field: 'email' | 'password', value: string) => {
+    switch (field) {
+      case 'email':
+        return !value ? 'Username tidak boleh kosong' : '';
+      case 'password':
+        return !value ? 'Kata sandi tidak boleh kosong' : '';
+      default:
+        return '';
+    }
+  }, []);
+
+  // Auto-validate dengan debounced values
+  useEffect(() => {
+    if (touched.email) {
+      const emailError = validateField('email', debouncedEmail);
+      setFormErrors(prev => ({ ...prev, email: emailError }));
+    }
+  }, [debouncedEmail, touched.email, validateField]);
+
+  useEffect(() => {
+    if (touched.password) {
+      const passwordError = validateField('password', debouncedPassword);
+      setFormErrors(prev => ({ ...prev, password: passwordError }));
+    }
+  }, [debouncedPassword, touched.password, validateField]);
+
+  // Memoized form validation state
   const isFormValid = useMemo(() => {
-    return !formErrors.email && !formErrors.password && email.trim() !== '' && password.trim() !== '';
+    return !formErrors.email && !formErrors.password && 
+           email.trim() !== '' && password.trim() !== '';
   }, [email, password, formErrors]);
 
-  const handleBlur = (field: keyof typeof touched) => {
+  // Memoized handlers untuk menghindari re-creation
+  const handleBlur = useCallback((field: keyof typeof touched) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
-  };
+  }, []);
 
-  const validateForm = () => {
-    const errors = { email: '', password: '' };
-    if (!email) {
-      errors.email = 'Username tidak boleh kosong';
-    }
-    if (!password) {
-      errors.password = 'Kata sandi tidak boleh kosong';
-    }
+  const validateForm = useCallback(() => {
+    const errors = { 
+      email: validateField('email', email),
+      password: validateField('password', password)
+    };
     setFormErrors(errors);
     return !errors.email && !errors.password;
-  };
+  }, [email, password, validateField]);
 
   // Parse error response sesuai StandardResponse format
-  const parseLoginError = (e: any): string => {
+  const parseLoginError = useCallback((e: any): string => {
     // Check for StandardResponse format (response.data.meta)
     if (e?.response?.data?.meta) {
       const meta = e.response.data.meta;
@@ -96,9 +128,9 @@ export function useLoginForm() {
 
     // Fallback untuk error yang tidak mengikuti format standard
     return 'Login gagal. Silakan coba lagi.';
-  };
+  }, []);
 
-  const handleLogin = async () => {
+  const handleLogin = useCallback(async () => {
     setError('');
     setTouched({ email: true, password: true });
     if (!validateForm()) return;
@@ -112,7 +144,7 @@ export function useLoginForm() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [email, password, validateForm, login, router, parseLoginError]);
 
   return {
     email,

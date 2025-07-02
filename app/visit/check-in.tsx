@@ -648,7 +648,7 @@ const SimpleCameraScreen = React.memo(function SimpleCameraScreen({
             <ActivityIndicator size="large" color="#f97316" />
             <Text className="text-black text-lg font-semibold mt-4">Memproses Foto</Text>
             <Text className="text-neutral-600 text-sm mt-2 text-center">
-              Sedang mengompresi gambar dan menambahkan watermark...
+              Sedang mengompresi gambar...
             </Text>
             <Text className="text-neutral-500 text-xs mt-2 text-center">
               Mohon tunggu, proses ini membutuhkan beberapa detik
@@ -975,7 +975,7 @@ export default function CheckInScreen() {
             }
           } catch (err) {
             console.error('Error processing watermarked image:', err);
-            Alert.alert('Gagal Memproses Foto', 'Terjadi kesalahan saat mengompresi gambar atau menambahkan watermark. Silakan coba lagi.');
+            Alert.alert('Gagal Memproses Foto', 'Terjadi kesalahan saat mengompresi gambar. Silakan coba lagi.');
           }
         }
         setIsProcessingPhoto(false);

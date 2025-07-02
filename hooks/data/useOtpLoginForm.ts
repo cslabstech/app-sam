@@ -1,6 +1,6 @@
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Keyboard } from 'react-native';
 
 export function useOtpLoginForm() {
@@ -23,8 +23,8 @@ export function useOtpLoginForm() {
     };
   }, []);
 
-  // Parse error response sesuai StandardResponse format untuk OTP request
-  const parseOtpError = (err: any): string => {
+  // Parse error response sesuai StandardResponse format untuk OTP request - memoized
+  const parseOtpError = useCallback((err: any): string => {
     // Check for StandardResponse format (response.data.meta)
     if (err?.response?.data?.meta) {
       const meta = err.response.data.meta;
@@ -73,9 +73,9 @@ export function useOtpLoginForm() {
 
     // Fallback untuk error yang tidak mengikuti format standard
     return 'Gagal mengirim OTP. Silakan coba lagi.';
-  };
+  }, []);
 
-  const handleRequestOtp = async () => {
+  const handleRequestOtp = useCallback(async () => {
     setLoading(true);
     setError(null);
     setSuccess(false);
@@ -89,10 +89,10 @@ export function useOtpLoginForm() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [phone, auth, parseOtpError]);
 
-  // Parse verify OTP error response sesuai StandardResponse format
-  const parseVerifyOtpError = (err: any): string => {
+  // Parse verify OTP error response sesuai StandardResponse format - memoized
+  const parseVerifyOtpError = useCallback((err: any): string => {
     // Check for StandardResponse format (response.data.meta)
     if (err?.response?.data?.meta) {
       const meta = err.response.data.meta;
@@ -145,9 +145,9 @@ export function useOtpLoginForm() {
 
     // Fallback untuk error yang tidak mengikuti format standard
     return 'OTP salah atau login gagal. Silakan coba lagi.';
-  };
+  }, []);
 
-  const handleVerifyOtp = async () => {
+  const handleVerifyOtp = useCallback(async () => {
     setLoading(true);
     setError(null);
     setSuccess(false);
@@ -162,7 +162,7 @@ export function useOtpLoginForm() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [phone, otp, auth, router, parseVerifyOtpError]);
 
   return {
     phone,
