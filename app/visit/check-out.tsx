@@ -255,11 +255,15 @@ const SimpleCameraScreenCheckout = ({
   onTakePhoto: () => void;
   onGoBack: () => void;
   visit: Visit;
-}) => (
-  <View className="flex-1 bg-black">
+}) => {
+  const insets = useSafeAreaInsets();
+  
+  return (
+    <View className="flex-1 bg-black">
     {/* Back button */}
     <TouchableOpacity 
-      className="absolute top-12 left-6 bg-black/50 rounded-full p-2 z-30 items-center justify-center" 
+      className="absolute left-6 bg-black/50 rounded-full p-2 z-30 items-center justify-center" 
+      style={{ top: insets.top + 16 }}
       onPress={onGoBack}
     >
       <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -268,7 +272,8 @@ const SimpleCameraScreenCheckout = ({
     {/* Flash toggle */}
     {hasCameraPermission?.status === 'granted' && (
       <TouchableOpacity 
-        className="absolute top-12 right-6 bg-black/50 rounded-full p-2 z-30 items-center justify-center" 
+        className="absolute right-6 bg-black/50 rounded-full p-2 z-30 items-center justify-center" 
+        style={{ top: insets.top + 16 }}
         onPress={() => setIsFlashOn(!isFlashOn)}
       >
         <Ionicons name={isFlashOn ? 'flash' : 'flash-off'} size={24} color="#fff" />
@@ -306,7 +311,7 @@ const SimpleCameraScreenCheckout = ({
     )}
 
     {/* Fixed bottom button */}
-    <View className="absolute bottom-0 left-0 right-0 p-4 items-center">
+    <View className="absolute bottom-0 left-0 right-0 p-4 items-center" style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
       <Button
         title={isProcessingPhoto ? 'Memproses...' : 'Kirim'}
         variant="primary"
@@ -325,22 +330,23 @@ const SimpleCameraScreenCheckout = ({
         <Text className="text-white text-base mt-4">Memproses foto dengan watermark...</Text>
       </View>
     )}
-  </View>
-);
+      </View>
+    );
+  };
 
-const LoadingState = () => {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
-  
-  return (
-    <View className="flex-1 justify-center items-center" style={{ backgroundColor: colors.background }}>
-      <ActivityIndicator size="large" color={colors.primary} />
-      <Text className="mt-4 text-base" style={{ color: colors.textSecondary }}>Memuat...</Text>
-    </View>
-  );
-};
+  const LoadingState = () => {
+    const colorScheme = useColorScheme();
+    const colors = Colors[colorScheme ?? 'light'];
+    
+    return (
+      <View className="flex-1 justify-center items-center" style={{ backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text className="mt-4 text-base" style={{ color: colors.textSecondary }}>Memuat...</Text>
+      </View>
+    );
+  };
 
-const ErrorState = ({ onBack }: { onBack: () => void }) => {
+  const ErrorState = ({ onBack }: { onBack: () => void }) => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   
@@ -685,6 +691,8 @@ export default function CheckOutScreen() {
   }
 
   // Show form screen (Step 1) with Bottom Sheet
+  const insets = useSafeAreaInsets();
+  
   return (
     <ErrorBoundary>
       <Animated.View className="flex-1 bg-white" style={{ opacity: fadeAnim }}>
@@ -733,7 +741,7 @@ export default function CheckOutScreen() {
           </MapView>
           
           {/* Outlet Info Card Overlay */}
-          <View className="absolute left-4 right-4 top-4 z-10">
+          <View className="absolute left-4 right-4 z-10" style={{ top: insets.top + 16 }}>
             <View className="bg-white rounded-xl p-4 shadow-sm">
               <Text className="text-sm text-neutral-400 mb-1">Informasi Outlet</Text>
               <Text className="text-primary-500 text-lg font-bold mb-1">{visit!.outlet.name} ({visit!.outlet.code})</Text>
@@ -757,7 +765,7 @@ export default function CheckOutScreen() {
               setBottomSheetIndex(index);
             }}
           >
-            <BottomSheetView className="flex-1 px-4 pb-8">
+            <BottomSheetView className="flex-1 px-4" style={{ paddingBottom: Math.max(insets.bottom, 32) }}>
               <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
                 <View className="flex-1">
                   {/* Form - always rendered and visible when expanded */}

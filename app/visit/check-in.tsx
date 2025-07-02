@@ -386,6 +386,8 @@ const FaceDetectionOverlay = () => (
 
 // Plan visit info card for camera overlay
 const PlanVisitCard = ({ selectedOutlet }: { selectedOutlet: OutletDisplayData | null }) => {
+  const insets = useSafeAreaInsets();
+  
   if (!selectedOutlet?.visitDate) return null;
   
   const visitDate = new Date(selectedOutlet.visitDate);
@@ -401,7 +403,7 @@ const PlanVisitCard = ({ selectedOutlet }: { selectedOutlet: OutletDisplayData |
   });
 
   return (
-    <View className="absolute top-16 left-4 right-4 z-10">
+    <View className="absolute left-4 right-4 z-10" style={{ top: insets.top + 64 }}>
       <View className="bg-white rounded-xl p-4 shadow-lg">
         <Text className="text-neutral-500 text-sm mb-1">Plan Visit</Text>
         <View className="flex-row items-center">
@@ -442,11 +444,15 @@ const SimpleCameraScreen = ({
   onTakePhoto: () => void;
   onGoBack: () => void;
   selectedOutlet: OutletDisplayData | null;
-}) => (
-  <View className="flex-1 bg-black">
+}) => {
+  const insets = useSafeAreaInsets();
+  
+  return (
+    <View className="flex-1 bg-black">
     {/* Back button */}
     <TouchableOpacity 
-      className="absolute top-12 left-6 bg-black/50 rounded-full p-2 z-30 items-center justify-center" 
+      className="absolute left-6 bg-black/50 rounded-full p-2 z-30 items-center justify-center" 
+      style={{ top: insets.top + 16 }}
       onPress={onGoBack}
     >
       <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -455,7 +461,8 @@ const SimpleCameraScreen = ({
     {/* Flash toggle */}
     {hasCameraPermission?.status === 'granted' && (
       <TouchableOpacity 
-        className="absolute top-12 right-6 bg-black/50 rounded-full p-2 z-30 items-center justify-center" 
+        className="absolute right-6 bg-black/50 rounded-full p-2 z-30 items-center justify-center" 
+        style={{ top: insets.top + 16 }}
         onPress={() => setIsFlashOn(!isFlashOn)}
       >
         <Ionicons name={isFlashOn ? 'flash' : 'flash-off'} size={24} color="#fff" />
@@ -493,7 +500,7 @@ const SimpleCameraScreen = ({
     )}
 
     {/* Fixed bottom button */}
-    <View className="absolute bottom-0 left-0 right-0 p-4 items-center">
+    <View className="absolute bottom-0 left-0 right-0 p-4 items-center" style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
       <Button
         title={isProcessingPhoto ? 'Memproses...' : 'Kirim'}
         variant="primary"
@@ -513,7 +520,8 @@ const SimpleCameraScreen = ({
       </View>
     )}
   </View>
-);
+  );
+};
 
 export default function CheckInScreen() {
   const colorScheme = useColorScheme();
@@ -935,7 +943,7 @@ export default function CheckInScreen() {
             setBottomSheetIndex(index);
           }}
         >
-          <BottomSheetView className="flex-1 px-4 pb-8">
+          <BottomSheetView className="flex-1 px-4" style={{ paddingBottom: Math.max(useSafeAreaInsets().bottom, 32) }}>
             {/* Form - always rendered and visible when expanded */}
             <View style={{ 
               opacity: bottomSheetIndex >= 1 ? 1 : 0,
