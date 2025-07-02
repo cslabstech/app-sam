@@ -426,9 +426,14 @@ const SimpleCameraScreenCheckout = ({
 };
 
 export default function CheckOutScreen() {
+  // CRITICAL: All hooks must be at the top level and in consistent order
   const { id } = useLocalSearchParams();
-  const visitId = typeof id === 'string' ? id : '';
   const { checkOutVisit, fetchVisit } = useVisit();
+  const colorScheme = useColorScheme();
+  const [hasCameraPermission, requestCameraPermission] = useCameraPermissions();
+  const formManager = useCheckOutForm();
+  
+  // State hooks in consistent order
   const [visit, setVisit] = useState<Visit | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -438,19 +443,21 @@ export default function CheckOutScreen() {
   const [mapRegion, setMapRegion] = useState<any>(null);
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [bottomSheetIndex, setBottomSheetIndex] = useState(1);
+  const [cameraRef, setCameraRef] = useState<any>(null);
+  const [isCameraReady, setIsCameraReady] = useState(false);
+  const [isFlashOn, setIsFlashOn] = useState(false);
+  
+  // Refs
   const viewShotRef = useRef<any>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const bottomSheetRef = useRef<BottomSheet>(null);
-
-  // Camera management
-  const [cameraRef, setCameraRef] = useState<any>(null);
-  const [hasCameraPermission, requestCameraPermission] = useCameraPermissions();
-  const [isCameraReady, setIsCameraReady] = useState(false);
-  const [isFlashOn, setIsFlashOn] = useState(false);
-
-  const colorScheme = useColorScheme();
+  
+  // Safe area hook
+  const insets = useSafeAreaInsets();
+  
+  // Derived values
+  const visitId = typeof id === 'string' ? id : '';
   const colors = Colors[colorScheme ?? 'light'];
-  const formManager = useCheckOutForm();
 
   const getCurrentLocation = useCallback(async () => {
     try {
@@ -743,6 +750,13 @@ export default function CheckOutScreen() {
     };
   }, []);
 
+  // Memoized values
+  const isFormValid = useMemo(() => 
+    formManager.formData.notes.trim() && formManager.formData.transaction,
+    [formManager.formData.notes, formManager.formData.transaction]
+  );
+
+  // Early returns after all hooks
   if (loading) {
     return <LoadingState />;
   }
@@ -750,9 +764,6 @@ export default function CheckOutScreen() {
   if (!loading && !visit) {
     return <ErrorState onBack={() => router.back()} />;
   }
-
-  const isFormValid = formManager.formData.notes.trim() && 
-                   formManager.formData.transaction;
 
   // Show camera screen (Step 2)
   if (currentStep === 2) {
@@ -802,7 +813,6 @@ export default function CheckOutScreen() {
   }
 
   // Show form screen (Step 1) with Bottom Sheet
-  const insets = useSafeAreaInsets();
   
   return (
     <ErrorBoundary>
