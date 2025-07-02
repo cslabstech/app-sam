@@ -4,7 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Keyboard, Linking, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +20,7 @@ import { useOutlet } from '@/hooks/data/useOutlet';
 import { usePlanVisit } from '@/hooks/data/usePlanVisit';
 import { useVisit } from '@/hooks/data/useVisit';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
+import { processImageWithTargetSize, validateImage } from '@/utils/imageProcessor';
 
 interface LocationCoords {
   latitude: number;
@@ -206,17 +207,21 @@ const useOutletManager = () => {
   };
 };
 
-const Header = ({ currentStep, onBack, onRefresh }: { 
+const Header = React.memo(function Header({ currentStep, onBack, onRefresh }: { 
   currentStep: number; 
   onBack: () => void; 
   onRefresh: () => void; 
-}) => {
+}) {
   const insets = useSafeAreaInsets();
   
+  const headerStyle = useMemo(() => ({ 
+    paddingTop: insets.top + 8 
+  }), [insets.top]);
+  
   return (
-    <View className="bg-primary-500 px-4 pb-4" style={{ paddingTop: insets.top + 8 }}>
+    <View className="bg-primary-500 px-4 pb-4" style={headerStyle}>
       <View className="flex-row justify-between items-center">
-        <TouchableOpacity onPress={onBack}>
+        <TouchableOpacity onPress={onBack} accessibilityRole="button" accessibilityLabel="Kembali">
           <IconSymbol name="chevron.left" size={24} color="#fff" />
         </TouchableOpacity>
         <View className="flex-1 items-center">
@@ -224,7 +229,7 @@ const Header = ({ currentStep, onBack, onRefresh }: {
           <Text className="text-white text-sm mt-1">Langkah {currentStep} dari 2</Text>
         </View>
         {currentStep === 1 ? (
-          <TouchableOpacity onPress={onRefresh}>
+          <TouchableOpacity onPress={onRefresh} accessibilityRole="button" accessibilityLabel="Refresh data">
             <Ionicons name="refresh" size={22} color="#fff" />
           </TouchableOpacity>
         ) : (
@@ -233,36 +238,65 @@ const Header = ({ currentStep, onBack, onRefresh }: {
       </View>
     </View>
   );
-};
+});
 
-const OutletTypeToggle = ({ visitType, onTypeChange }: { 
+const OutletTypeToggle = React.memo(function OutletTypeToggle({ visitType, onTypeChange }: { 
   visitType: 'planned' | 'extracall'; 
   onTypeChange: (type: 'planned' | 'extracall') => void; 
-}) => (
-  <View className="mb-4">
-    <Text className="font-bold text-lg mb-3 text-black">Tipe Kunjungan</Text>
-    <View className="flex-row bg-neutral-100 rounded-lg p-1">
-      <TouchableOpacity
-        onPress={() => onTypeChange('planned')}
-        className={`flex-1 py-2 px-4 rounded-md ${visitType === 'planned' ? 'bg-primary-500' : ''}`}
-      >
-        <Text className={`text-center font-semibold ${visitType === 'planned' ? 'text-white' : 'text-neutral-600'}`}>
-          Planned
-        </Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        onPress={() => onTypeChange('extracall')}
-        className={`flex-1 py-2 px-4 rounded-md ${visitType === 'extracall' ? 'bg-primary-500' : ''}`}
-      >
-        <Text className={`text-center font-semibold ${visitType === 'extracall' ? 'text-white' : 'text-neutral-600'}`}>
-          Extracall
-        </Text>
-      </TouchableOpacity>
+}) {
+  const handlePlannedPress = useCallback(() => onTypeChange('planned'), [onTypeChange]);
+  const handleExtracallPress = useCallback(() => onTypeChange('extracall'), [onTypeChange]);
+  
+  const plannedStyle = useMemo(() => 
+    `flex-1 py-2 px-4 rounded-md ${visitType === 'planned' ? 'bg-primary-500' : ''}`,
+    [visitType]
+  );
+  
+  const extracallStyle = useMemo(() => 
+    `flex-1 py-2 px-4 rounded-md ${visitType === 'extracall' ? 'bg-primary-500' : ''}`,
+    [visitType]
+  );
+  
+  const plannedTextStyle = useMemo(() => 
+    `text-center font-semibold ${visitType === 'planned' ? 'text-white' : 'text-neutral-600'}`,
+    [visitType]
+  );
+  
+  const extracallTextStyle = useMemo(() => 
+    `text-center font-semibold ${visitType === 'extracall' ? 'text-white' : 'text-neutral-600'}`,
+    [visitType]
+  );
+  
+  return (
+    <View className="mb-4">
+      <Text className="font-bold text-lg mb-3 text-black">Tipe Kunjungan</Text>
+      <View className="flex-row bg-neutral-100 rounded-lg p-1">
+        <TouchableOpacity
+          onPress={handlePlannedPress}
+          className={plannedStyle}
+          accessibilityRole="button"
+          accessibilityLabel="Pilih tipe kunjungan planned"
+        >
+          <Text className={plannedTextStyle}>
+            Planned
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleExtracallPress}
+          className={extracallStyle}
+          accessibilityRole="button"
+          accessibilityLabel="Pilih tipe kunjungan extracall"
+        >
+          <Text className={extracallTextStyle}>
+            Extracall
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
-  </View>
-);
+  );
+});
 
-const OutletSearchInput = ({ 
+const OutletSearchInput = React.memo(function OutletSearchInput({ 
   visitType, 
   searchValue, 
   onSearchChange, 
@@ -272,7 +306,9 @@ const OutletSearchInput = ({
   searchValue: string;
   onSearchChange: (value: string) => void;
   colors: any;
-}) => {
+}) {
+  const handleClearSearch = useCallback(() => onSearchChange(''), [onSearchChange]);
+  
   if (visitType !== 'extracall') return null;
 
   return (
@@ -284,17 +320,84 @@ const OutletSearchInput = ({
         placeholderTextColor={colors.textSecondary}
         value={searchValue}
         onChangeText={onSearchChange}
+        maxLength={50}
+        accessibilityLabel="Input pencarian outlet"
+        accessibilityHint="Ketik nama atau kode outlet untuk mencari"
       />
       {searchValue ? (
-        <TouchableOpacity onPress={() => onSearchChange('')}>
+        <TouchableOpacity 
+          onPress={handleClearSearch}
+          accessibilityRole="button"
+          accessibilityLabel="Hapus pencarian"
+        >
           <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
         </TouchableOpacity>
       ) : null}
     </View>
   );
-};
+});
 
-const OutletList = ({ 
+// Memoized outlet item component for better performance
+const OutletListItem = React.memo(function OutletListItem({ 
+  item,
+  visitType,
+  isSelected,
+  onSelect 
+}: {
+  item: OutletDisplayData;
+  visitType: 'planned' | 'extracall';
+  isSelected: boolean;
+  onSelect: (id: string, planVisitId?: string) => void;
+}) {
+  const handlePress = useCallback(() => {
+    onSelect(String(item.id), item.planVisitId || undefined);
+  }, [onSelect, item.id, item.planVisitId]);
+
+  const itemStyle = useMemo(() =>
+    `py-2 px-3 border-b border-neutral-200 rounded bg-white mb-0.5 ${
+      isSelected ? 'bg-primary-50' : ''
+    }`,
+    [isSelected]
+  );
+
+  const visitDateText = useMemo(() => {
+    if (visitType === 'planned' && item.visitDate) {
+      return new Date(item.visitDate).toLocaleDateString('id-ID');
+    }
+    return null;
+  }, [visitType, item.visitDate]);
+
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      className={itemStyle}
+      accessibilityRole="button"
+      accessibilityLabel={`Pilih outlet ${item.name}`}
+      accessibilityHint={`Outlet ${item.code} di ${item.district || 'lokasi tidak diketahui'}`}
+    >
+      <Text className="font-semibold text-base text-black" numberOfLines={1}>
+        {item.name}
+      </Text>
+      <View className="flex-row items-center mt-0.5">
+        <Text className="text-xs text-neutral-500 mr-2" numberOfLines={1}>
+          {item.code}
+        </Text>
+        {item.district && (
+          <Text className="text-xs text-neutral-400" numberOfLines={1}>
+            {item.district}
+          </Text>
+        )}
+        {visitDateText && (
+          <Text className="text-xs text-blue-600 ml-auto" numberOfLines={1}>
+            📅 {visitDateText}
+          </Text>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+});
+
+const OutletList = React.memo(function OutletList({ 
   displayData, 
   dataLoading, 
   visitType, 
@@ -308,7 +411,12 @@ const OutletList = ({
   selectedOutletId: string | null;
   onOutletSelect: (id: string, planVisitId?: string) => void;
   colors: any;
-}) => {
+}) {
+  const emptyStateText = useMemo(() => 
+    visitType === 'planned' ? 'Tidak ada plan visit untuk hari ini' : 'Outlet tidak ditemukan',
+    [visitType]
+  );
+
   if (dataLoading) {
     return (
       <View className="flex-1 justify-center items-center py-4">
@@ -321,44 +429,31 @@ const OutletList = ({
   if (displayData.length === 0) {
     return (
       <Text className="p-4 text-neutral-400 text-center">
-        {visitType === 'planned' ? 'Tidak ada plan visit untuk hari ini' : 'Outlet tidak ditemukan'}
+        {emptyStateText}
       </Text>
     );
   }
 
   return (
-    <Animated.ScrollView persistentScrollbar className="max-h-40">
+    <Animated.ScrollView 
+      persistentScrollbar 
+      className="max-h-40"
+      removeClippedSubviews={true}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       {displayData.map(item => (
-        <TouchableOpacity
+        <OutletListItem
           key={item.id}
-          onPress={() => onOutletSelect(String(item.id), item.planVisitId || undefined)}
-          className={`py-2 px-3 border-b border-neutral-200 rounded bg-white mb-0.5 ${
-            String(item.id) === selectedOutletId ? 'bg-primary-50' : ''
-          }`}
-        >
-          <Text className="font-semibold text-base text-black" numberOfLines={1}>
-            {item.name}
-          </Text>
-          <View className="flex-row items-center mt-0.5">
-            <Text className="text-xs text-neutral-500 mr-2" numberOfLines={1}>
-              {item.code}
-            </Text>
-            {item.district && (
-              <Text className="text-xs text-neutral-400" numberOfLines={1}>
-                {item.district}
-              </Text>
-            )}
-            {visitType === 'planned' && item.visitDate && (
-              <Text className="text-xs text-blue-600 ml-auto" numberOfLines={1}>
-                📅 {new Date(item.visitDate).toLocaleDateString('id-ID')}
-              </Text>
-            )}
-          </View>
-        </TouchableOpacity>
+          item={item}
+          visitType={visitType}
+          isSelected={String(item.id) === selectedOutletId}
+          onSelect={onOutletSelect}
+        />
       ))}
     </Animated.ScrollView>
   );
-};
+});
 
 const LocationBlocked = ({ selectedOutlet, router }: { selectedOutlet: OutletDisplayData | null; router: any }) => (
   <View className="flex-1 items-center justify-center px-8">
@@ -418,7 +513,7 @@ const PlanVisitCard = ({ selectedOutlet }: { selectedOutlet: OutletDisplayData |
 };
 
 // Simple camera screen for check-in
-const SimpleCameraScreen = ({ 
+const SimpleCameraScreen = React.memo(function SimpleCameraScreen({ 
   hasCameraPermission, 
   requestCameraPermission,
   cameraRef,
@@ -444,91 +539,133 @@ const SimpleCameraScreen = ({
   onTakePhoto: () => void;
   onGoBack: () => void;
   selectedOutlet: OutletDisplayData | null;
-}) => {
+}) {
   const insets = useSafeAreaInsets();
+  
+  const backButtonStyle = useMemo(() => ({
+    top: insets.top + 16
+  }), [insets.top]);
+  
+  const flashButtonStyle = useMemo(() => ({
+    top: insets.top + 16
+  }), [insets.top]);
+  
+  const bottomButtonStyle = useMemo(() => ({
+    paddingBottom: Math.max(insets.bottom, 16)
+  }), [insets.bottom]);
+  
+  const handleCameraReady = useCallback(() => setIsCameraReady(true), [setIsCameraReady]);
+  const handleFlashToggle = useCallback(() => setIsFlashOn(!isFlashOn), [setIsFlashOn, isFlashOn]);
+  
+  const flashIconName = useMemo(() => 
+    isFlashOn ? 'flash' : 'flash-off', 
+    [isFlashOn]
+  );
+  
+  const buttonTitle = useMemo(() => 
+    isProcessingPhoto ? 'Mengompresi...' : 'Kirim',
+    [isProcessingPhoto]
+  );
   
   return (
     <View className="flex-1 bg-black">
-    {/* Back button */}
-    <TouchableOpacity 
-      className="absolute left-6 bg-black/50 rounded-full p-2 z-30 items-center justify-center" 
-      style={{ top: insets.top + 16 }}
-      onPress={onGoBack}
-    >
-      <Ionicons name="arrow-back" size={24} color="#fff" />
-    </TouchableOpacity>
-    
-    {/* Flash toggle */}
-    {hasCameraPermission?.status === 'granted' && (
+      {/* Back button */}
       <TouchableOpacity 
-        className="absolute right-6 bg-black/50 rounded-full p-2 z-30 items-center justify-center" 
-        style={{ top: insets.top + 16 }}
-        onPress={() => setIsFlashOn(!isFlashOn)}
+        className="absolute left-6 bg-black/50 rounded-full p-2 z-30 items-center justify-center" 
+        style={backButtonStyle}
+        onPress={onGoBack}
+        accessibilityRole="button"
+        accessibilityLabel="Kembali ke halaman sebelumnya"
       >
-        <Ionicons name={isFlashOn ? 'flash' : 'flash-off'} size={24} color="#fff" />
+        <Ionicons name="arrow-back" size={24} color="#fff" />
       </TouchableOpacity>
-    )}
-
-    {/* Camera view */}
-    {hasCameraPermission?.status === 'granted' ? (
-      <>
-        <CameraView
-          ref={ref => setCameraRef(ref)}
-          style={{ flex: 1, width: '100%', height: '100%' }}
-          onCameraReady={() => setIsCameraReady(true)}
-          facing="front"
-          flash={isFlashOn ? 'on' : 'off'}
-        />
-        
-        {/* Face detection overlay */}
-        <FaceDetectionOverlay />
-        
-        {!isCameraReady && (
-          <View className="absolute inset-0 items-center justify-center bg-black bg-opacity-50">
-            <ActivityIndicator size="large" color="#f97316" />
-            <Text className="text-white text-base mt-4">Menyiapkan kamera...</Text>
-          </View>
-        )}
-      </>
-    ) : (
-      <View className="flex-1 items-center justify-center bg-black">
-        <TouchableOpacity onPress={requestCameraPermission} className="items-center justify-center">
-          <Ionicons name="camera" size={60} color="#f97316" />
-          <Text className="text-white text-base mt-4">Izinkan akses kamera</Text>
+      
+      {/* Flash toggle */}
+      {hasCameraPermission?.status === 'granted' && (
+        <TouchableOpacity 
+          className="absolute right-6 bg-black/50 rounded-full p-2 z-30 items-center justify-center" 
+          style={flashButtonStyle}
+          onPress={handleFlashToggle}
+          accessibilityRole="button"
+          accessibilityLabel={isFlashOn ? 'Matikan flash' : 'Nyalakan flash'}
+        >
+          <Ionicons name={flashIconName} size={24} color="#fff" />
         </TouchableOpacity>
-      </View>
-    )}
+      )}
 
-    {/* Fixed bottom button */}
-    <View className="absolute bottom-0 left-0 right-0 p-4 items-center" style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
-      <Button
-        title={isProcessingPhoto ? 'Memproses...' : 'Kirim'}
-        variant="primary"
-        size="lg"
-        fullWidth
-        loading={isProcessingPhoto}
-        disabled={!isCameraReady}
-        onPress={onTakePhoto}
-      />
-    </View>
-    
-    {/* Processing overlay */}
-    {isProcessingPhoto && (
-      <View className="absolute inset-0 bg-black/50 items-center justify-center z-40">
-        <ActivityIndicator size="large" color="#f97316" />
-        <Text className="text-white text-base mt-4">Memproses foto dengan watermark...</Text>
+      {/* Camera view */}
+      {hasCameraPermission?.status === 'granted' ? (
+        <>
+          <CameraView
+            ref={setCameraRef}
+            style={{ flex: 1, width: '100%', height: '100%' }}
+            onCameraReady={handleCameraReady}
+            facing="front"
+            flash={isFlashOn ? 'on' : 'off'}
+          />
+          
+          {/* Face detection overlay */}
+          <FaceDetectionOverlay />
+          
+          {!isCameraReady && (
+            <View className="absolute inset-0 items-center justify-center bg-black bg-opacity-50">
+              <ActivityIndicator size="large" color="#f97316" />
+              <Text className="text-white text-base mt-4">Menyiapkan kamera...</Text>
+            </View>
+          )}
+        </>
+      ) : (
+        <View className="flex-1 items-center justify-center bg-black">
+          <TouchableOpacity 
+            onPress={requestCameraPermission} 
+            className="items-center justify-center"
+            accessibilityRole="button"
+            accessibilityLabel="Izinkan akses kamera"
+          >
+            <Ionicons name="camera" size={60} color="#f97316" />
+            <Text className="text-white text-base mt-4">Izinkan akses kamera</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Fixed bottom button */}
+      <View className="absolute bottom-0 left-0 right-0 p-4 items-center" style={bottomButtonStyle}>
+        <Button
+          title={buttonTitle}
+          variant="primary"
+          size="lg"
+          fullWidth
+          loading={isProcessingPhoto}
+          disabled={!isCameraReady}
+          onPress={onTakePhoto}
+        />
       </View>
-    )}
-  </View>
+      
+      {/* Processing overlay */}
+      {isProcessingPhoto && (
+        <View className="absolute inset-0 bg-black/50 items-center justify-center z-40">
+          <View className="bg-white rounded-xl p-6 mx-8 items-center">
+            <ActivityIndicator size="large" color="#f97316" />
+            <Text className="text-black text-lg font-semibold mt-4">Memproses Foto</Text>
+            <Text className="text-neutral-600 text-sm mt-2 text-center">
+              Sedang mengompresi gambar dan menambahkan watermark...
+            </Text>
+            <Text className="text-neutral-500 text-xs mt-2 text-center">
+              Mohon tunggu, proses ini membutuhkan beberapa detik
+            </Text>
+          </View>
+        </View>
+      )}
+    </View>
   );
-};
+});
 
 export default function CheckInScreen() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const colors = useMemo(() => Colors[colorScheme ?? 'light'], [colorScheme]);
   const router = useRouter();
   const params = useLocalSearchParams();
-  const outletId = params.id as string;
+  const outletId = useMemo(() => params.id as string, [params.id]);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const viewShotRef = useRef<any>(null);
 
@@ -733,8 +870,9 @@ export default function CheckInScreen() {
     setIsProcessingPhoto(true);
     
     try {
+      // Step 1: Take photo with higher quality first
       const photo = await cameraRef.takePictureAsync({ 
-        quality: 0.7, 
+        quality: 0.7,
         skipProcessing: true,
         mirrorImage: true
       });
@@ -745,7 +883,33 @@ export default function CheckInScreen() {
         return;
       }
 
-      setRawPhoto(photo.uri);
+      console.log(`[CheckIn] Raw photo taken, processing...`);
+
+      // Step 2: Validate the original photo first
+      const validation = await validateImage(photo.uri);
+      if (!validation.isValid) {
+        Alert.alert('Foto Tidak Valid', `Foto yang diambil tidak valid (${validation.fileSizeKB}KB). Silakan coba lagi.`);
+        setIsProcessingPhoto(false);
+        return;
+      }
+
+      console.log(`[CheckIn] Photo validated: ${validation.fileSizeKB}KB`);
+
+      // Step 3: Process image with target size (50-100KB)
+      const processedImage = await processImageWithTargetSize({
+        uri: photo.uri,
+        targetSizeKB: 75,
+        minSizeKB: 50,
+        maxSizeKB: 100,
+        maxWidth: 1280,
+        maxHeight: 1280,
+        quality: 0.8
+      });
+
+      console.log(`[CheckIn] Image processed to ${processedImage.fileSizeKB}KB (${processedImage.width}x${processedImage.height})`);
+
+      // Prepare watermark data
+      setRawPhoto(processedImage.uri);
       const now = new Date();
       const waktu = now.toLocaleString('id-ID', { hour12: false });
       const outletName = `${outletManager.selectedOutlet.code} • ${outletManager.selectedOutlet.name}`;
@@ -755,10 +919,34 @@ export default function CheckInScreen() {
       
       setWatermarkData({ waktu, outlet: outletName, lokasi });
       
+      // Step 4: Create watermarked image with ViewShot
       setTimeout(async () => {
         if (viewShotRef.current) {
           try {
-            const uri = await captureRef(viewShotRef, { format: 'jpg', quality: 0.4 });
+            const watermarkedUri = await captureRef(viewShotRef, { 
+              format: 'jpg', 
+              quality: 0.8, // Higher quality for ViewShot
+              result: 'tmpfile'
+            });
+
+            // Step 5: Process the watermarked image to ensure proper size
+            const finalProcessedImage = await processImageWithTargetSize({
+              uri: watermarkedUri,
+              targetSizeKB: 80,
+              minSizeKB: 55,
+              maxSizeKB: 120, // Slightly higher limit for watermarked images
+              maxWidth: 1280,
+              maxHeight: 1280,
+              quality: 0.7
+            });
+
+            console.log(`[CheckIn] Final watermarked image: ${finalProcessedImage.fileSizeKB}KB`);
+
+            // Step 6: Validate final image
+            const finalValidation = await validateImage(finalProcessedImage.uri);
+            if (!finalValidation.isValid || finalValidation.fileSizeKB < 20) {
+              throw new Error(`Final image invalid or too small: ${finalValidation.fileSizeKB}KB`);
+            }
             
             const formData = new FormData();
             formData.append('outlet_id', outletManager.selectedOutletId!);
@@ -770,7 +958,7 @@ export default function CheckInScreen() {
             }
             
             formData.append('checkin_photo', {
-              uri,
+              uri: finalProcessedImage.uri,
               name: `checkin-${Date.now()}.jpg`,
               type: 'image/jpeg',
             } as any);
@@ -778,7 +966,7 @@ export default function CheckInScreen() {
             const res = await checkInVisit(formData);
             
             if (res?.meta?.code === 200) {
-              Alert.alert('Check In Berhasil', 'Data berhasil disimpan dengan foto dan watermark.');
+              Alert.alert('Check In Berhasil', `Data berhasil disimpan dengan foto (${finalProcessedImage.fileSizeKB}KB).`);
               setRawPhoto(null);
               setWatermarkData(null);
               router.replace({ pathname: '/(tabs)', params: { outletId: outletManager.selectedOutletId } });
@@ -786,17 +974,18 @@ export default function CheckInScreen() {
               Alert.alert('Check In Gagal', res?.meta?.message || 'Gagal check in');
             }
           } catch (err) {
-            Alert.alert('Gagal Mengambil Foto', 'Terjadi kesalahan saat mengambil foto. Silakan coba lagi.');
+            console.error('Error processing watermarked image:', err);
+            Alert.alert('Gagal Memproses Foto', 'Terjadi kesalahan saat mengompresi gambar atau menambahkan watermark. Silakan coba lagi.');
           }
         }
         setIsProcessingPhoto(false);
-      }, 400);
+      }, 500); // Slightly longer timeout for better ViewShot processing
     } catch (error) {
       console.error('Error in checkin process:', error);
       setIsProcessingPhoto(false);
       setRawPhoto(null);
       setWatermarkData(null);
-      Alert.alert('Check In Gagal', 'Terjadi kesalahan saat melakukan check in.');
+      Alert.alert('Check In Gagal', `Terjadi kesalahan saat melakukan check in: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }, [
     hasCameraPermission,
@@ -888,6 +1077,13 @@ export default function CheckInScreen() {
           provider={PROVIDER_GOOGLE}
           showsUserLocation
           showsMyLocationButton={false}
+          removeClippedSubviews={true}
+          toolbarEnabled={false}
+          moveOnMarkerPress={false}
+          pitchEnabled={false}
+          rotateEnabled={false}
+          maxZoomLevel={18}
+          minZoomLevel={10}
           onPress={() => Keyboard.dismiss()}
         >
           {outletManager.selectedOutlet && outletManager.selectedOutlet.location && (

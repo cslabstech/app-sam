@@ -3,7 +3,7 @@ import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Keyboard, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,6 +15,7 @@ import { WatermarkOverlay } from '@/components/WatermarkOverlay';
 import { Colors } from '@/constants/Colors';
 import { useVisit } from '@/hooks/data/useVisit';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
+import { processImageWithTargetSize, validateImage } from '@/utils/imageProcessor';
 
 interface Visit {
   id: string | number;
@@ -119,17 +120,21 @@ const FaceDetectionOverlay = () => (
   </View>
 );
 
-const Header = ({ currentStep, onBack, onRefresh }: { 
+const Header = React.memo(function Header({ currentStep, onBack, onRefresh }: { 
   currentStep: number; 
   onBack: () => void; 
   onRefresh?: () => void; 
-}) => {
+}) {
   const insets = useSafeAreaInsets();
   
+  const headerStyle = useMemo(() => ({ 
+    paddingTop: insets.top + 8 
+  }), [insets.top]);
+  
   return (
-    <View className="bg-primary-500 px-4 pb-4" style={{ paddingTop: insets.top + 8 }}>
+    <View className="bg-primary-500 px-4 pb-4" style={headerStyle}>
       <View className="flex-row justify-between items-center">
-        <TouchableOpacity onPress={onBack}>
+        <TouchableOpacity onPress={onBack} accessibilityRole="button" accessibilityLabel="Kembali">
           <IconSymbol name="chevron.left" size={24} color="#fff" />
         </TouchableOpacity>
         <View className="flex-1 items-center">
@@ -137,7 +142,7 @@ const Header = ({ currentStep, onBack, onRefresh }: {
           <Text className="text-white text-sm mt-1">Langkah {currentStep} dari 2</Text>
         </View>
         {currentStep === 1 && onRefresh ? (
-          <TouchableOpacity onPress={onRefresh}>
+          <TouchableOpacity onPress={onRefresh} accessibilityRole="button" accessibilityLabel="Refresh data">
             <Ionicons name="refresh" size={22} color="#fff" />
           </TouchableOpacity>
         ) : (
@@ -146,7 +151,7 @@ const Header = ({ currentStep, onBack, onRefresh }: {
       </View>
     </View>
   );
-};
+});
 
 function parseLatLong(latlong: string): { latitude: number; longitude: number } | null {
   if (!latlong) return null;
@@ -155,78 +160,124 @@ function parseLatLong(latlong: string): { latitude: number; longitude: number } 
   return { latitude: lat, longitude: lng };
 }
 
-const TransactionSelector = ({ 
+const TransactionSelector = React.memo(function TransactionSelector({ 
   selectedTransaction, 
   onTransactionChange 
 }: { 
   selectedTransaction: 'YES' | 'NO' | null;
   onTransactionChange: (transaction: 'YES' | 'NO') => void;
-}) => (
-  <View className="mb-4">
-    <Text className="text-base font-semibold mb-2 text-black">Transaksi</Text>
-    <View className="flex-row gap-4">
-      <TouchableOpacity
-        className={`flex-row items-center py-2.5 px-4 rounded-lg mr-2 ${
-          selectedTransaction === 'YES' ? 'bg-primary-500' : 'bg-neutral-100'
-        }`}
-        onPress={() => onTransactionChange('YES')}
-      >
-        <IconSymbol 
-          name="checkmark.circle.fill" 
-          size={20} 
-          color={selectedTransaction === 'YES' ? '#fff' : '#f97316'} 
-        />
-        <Text className={`ml-2 font-semibold ${
-          selectedTransaction === 'YES' ? 'text-white' : 'text-primary-500'
-        }`}>
-          YES
-        </Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity
-        className={`flex-row items-center py-2.5 px-4 rounded-lg mr-2 ${
-          selectedTransaction === 'NO' ? 'bg-primary-500' : 'bg-neutral-100'
-        }`}
-        onPress={() => onTransactionChange('NO')}
-      >
-        <IconSymbol 
-          name="xmark.circle.fill" 
-          size={20} 
-          color={selectedTransaction === 'NO' ? '#fff' : '#f97316'} 
-        />
-        <Text className={`ml-2 font-semibold ${
-          selectedTransaction === 'NO' ? 'text-white' : 'text-primary-500'
-        }`}>
-          NO
-        </Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-);
+}) {
+  const handleYesPress = useCallback(() => onTransactionChange('YES'), [onTransactionChange]);
+  const handleNoPress = useCallback(() => onTransactionChange('NO'), [onTransactionChange]);
+  
+  const yesButtonStyle = useMemo(() =>
+    `flex-row items-center py-2.5 px-4 rounded-lg mr-2 ${
+      selectedTransaction === 'YES' ? 'bg-primary-500' : 'bg-neutral-100'
+    }`,
+    [selectedTransaction]
+  );
+  
+  const noButtonStyle = useMemo(() =>
+    `flex-row items-center py-2.5 px-4 rounded-lg mr-2 ${
+      selectedTransaction === 'NO' ? 'bg-primary-500' : 'bg-neutral-100'
+    }`,
+    [selectedTransaction]
+  );
+  
+  const yesTextStyle = useMemo(() =>
+    `ml-2 font-semibold ${
+      selectedTransaction === 'YES' ? 'text-white' : 'text-primary-500'
+    }`,
+    [selectedTransaction]
+  );
+  
+  const noTextStyle = useMemo(() =>
+    `ml-2 font-semibold ${
+      selectedTransaction === 'NO' ? 'text-white' : 'text-primary-500'
+    }`,
+    [selectedTransaction]
+  );
+  
+  const yesIconColor = useMemo(() => 
+    selectedTransaction === 'YES' ? '#fff' : '#f97316',
+    [selectedTransaction]
+  );
+  
+  const noIconColor = useMemo(() => 
+    selectedTransaction === 'NO' ? '#fff' : '#f97316',
+    [selectedTransaction]
+  );
 
-const NotesInput = ({ 
+  return (
+    <View className="mb-4">
+      <Text className="text-base font-semibold mb-2 text-black">Transaksi</Text>
+      <View className="flex-row gap-4">
+        <TouchableOpacity
+          className={yesButtonStyle}
+          onPress={handleYesPress}
+          accessibilityRole="button"
+          accessibilityLabel="Pilih transaksi YES"
+        >
+          <IconSymbol 
+            name="checkmark.circle.fill" 
+            size={20} 
+            color={yesIconColor} 
+          />
+          <Text className={yesTextStyle}>
+            YES
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          className={noButtonStyle}
+          onPress={handleNoPress}
+          accessibilityRole="button"
+          accessibilityLabel="Pilih transaksi NO"
+        >
+          <IconSymbol 
+            name="xmark.circle.fill" 
+            size={20} 
+            color={noIconColor} 
+          />
+          <Text className={noTextStyle}>
+            NO
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+});
+
+const NotesInput = React.memo(function NotesInput({ 
   notes, 
   onNotesChange 
 }: { 
   notes: string;
   onNotesChange: (notes: string) => void;
-}) => (
-  <View className="mb-4">
-    <Text className="text-base font-semibold mb-2 text-black">Catatan</Text>
-    <TextInput
-      className="bg-white rounded-lg border border-neutral-200 p-3 min-h-20 text-black"
-      placeholder="Tambahkan catatan untuk kunjungan ini..."
-      placeholderTextColor="#7B8FA1"
-      multiline
-      value={notes}
-      onChangeText={onNotesChange}
-      style={{ textAlignVertical: 'top' }}
-      blurOnSubmit={true}
-      returnKeyType="done"
-      onSubmitEditing={() => Keyboard.dismiss()}
-    />
-  </View>
-);
+}) {
+  const handleSubmitEditing = useCallback(() => Keyboard.dismiss(), []);
+  
+  return (
+    <View className="mb-4">
+      <Text className="text-base font-semibold mb-2 text-black">Catatan</Text>
+      <TextInput
+        className="bg-white rounded-lg border border-neutral-200 p-3 min-h-20 text-black"
+        placeholder="Tambahkan catatan untuk kunjungan ini..."
+        placeholderTextColor="#7B8FA1"
+        multiline
+        value={notes}
+        onChangeText={onNotesChange}
+        style={{ textAlignVertical: 'top' }}
+        blurOnSubmit={true}
+        returnKeyType="done"
+        onSubmitEditing={handleSubmitEditing}
+        maxLength={500}
+        accessibilityLabel="Input catatan kunjungan"
+        accessibilityHint="Masukkan catatan atau keterangan untuk kunjungan ini"
+      />
+    </View>
+  );
+});
 
 // Simple camera screen for checkout
 const SimpleCameraScreenCheckout = ({ 
@@ -313,7 +364,7 @@ const SimpleCameraScreenCheckout = ({
     {/* Fixed bottom button */}
     <View className="absolute bottom-0 left-0 right-0 p-4 items-center" style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
       <Button
-        title={isProcessingPhoto ? 'Memproses...' : 'Kirim'}
+        title={isProcessingPhoto ? 'Mengompresi...' : 'Kirim'}
         variant="primary"
         size="lg"
         fullWidth
@@ -326,8 +377,16 @@ const SimpleCameraScreenCheckout = ({
     {/* Processing overlay */}
     {isProcessingPhoto && (
       <View className="absolute inset-0 bg-black/50 items-center justify-center z-40">
-        <ActivityIndicator size="large" color="#f97316" />
-        <Text className="text-white text-base mt-4">Memproses foto dengan watermark...</Text>
+        <View className="bg-white rounded-xl p-6 mx-8 items-center">
+          <ActivityIndicator size="large" color="#f97316" />
+          <Text className="text-black text-lg font-semibold mt-4">Memproses Foto</Text>
+          <Text className="text-neutral-600 text-sm mt-2 text-center">
+            Sedang mengompresi gambar dan menambahkan watermark...
+          </Text>
+          <Text className="text-neutral-500 text-xs mt-2 text-center">
+            Mohon tunggu, proses ini membutuhkan beberapa detik
+          </Text>
+        </View>
       </View>
     )}
       </View>
@@ -535,8 +594,9 @@ export default function CheckOutScreen() {
     setIsSubmitting(true);
 
     try {
+      // Step 1: Take photo with higher quality first
       const photo = await cameraRef.takePictureAsync({ 
-        quality: 0.7, 
+        quality: 0.7,
         skipProcessing: true,
         mirrorImage: true
       });
@@ -546,6 +606,31 @@ export default function CheckOutScreen() {
         setIsSubmitting(false);
         return;
       }
+
+      console.log(`[CheckOut] Raw photo taken, processing...`);
+
+      // Step 2: Validate the original photo first
+      const validation = await validateImage(photo.uri);
+      if (!validation.isValid) {
+        Alert.alert('Foto Tidak Valid', `Foto yang diambil tidak valid (${validation.fileSizeKB}KB). Silakan coba lagi.`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      console.log(`[CheckOut] Photo validated: ${validation.fileSizeKB}KB`);
+
+      // Step 3: Process image with target size (50-100KB)
+      const processedImage = await processImageWithTargetSize({
+        uri: photo.uri,
+        targetSizeKB: 75,
+        minSizeKB: 50,
+        maxSizeKB: 100,
+        maxWidth: 1280,
+        maxHeight: 1280,
+        quality: 0.8
+      });
+
+      console.log(`[CheckOut] Image processed to ${processedImage.fileSizeKB}KB (${processedImage.width}x${processedImage.height})`);
 
       let checkout_location = '';
       try {
@@ -558,7 +643,8 @@ export default function CheckOutScreen() {
         console.warn('Failed to get location:', locationError);
       }
 
-      setRawPhoto(photo.uri);
+      // Prepare watermark data
+      setRawPhoto(processedImage.uri);
       const now = new Date();
       const waktu = now.toLocaleString('id-ID', { hour12: false });
       const outletName = `${visit.outlet.code} • ${visit.outlet.name}`;
@@ -568,17 +654,41 @@ export default function CheckOutScreen() {
       
       setWatermarkData({ waktu, outlet: outletName, lokasi });
       
+      // Step 4: Create watermarked image with ViewShot
       setTimeout(async () => {
         if (viewShotRef.current) {
           try {
-            const uri = await captureRef(viewShotRef, { format: 'jpg', quality: 0.4 });
+            const watermarkedUri = await captureRef(viewShotRef, { 
+              format: 'jpg', 
+              quality: 0.8, // Higher quality for ViewShot
+              result: 'tmpfile'
+            });
+
+            // Step 5: Process the watermarked image to ensure proper size
+            const finalProcessedImage = await processImageWithTargetSize({
+              uri: watermarkedUri,
+              targetSizeKB: 80,
+              minSizeKB: 55,
+              maxSizeKB: 120, // Slightly higher limit for watermarked images
+              maxWidth: 1280,
+              maxHeight: 1280,
+              quality: 0.7
+            });
+
+            console.log(`[CheckOut] Final watermarked image: ${finalProcessedImage.fileSizeKB}KB`);
+
+            // Step 6: Validate final image
+            const finalValidation = await validateImage(finalProcessedImage.uri);
+            if (!finalValidation.isValid || finalValidation.fileSizeKB < 20) {
+              throw new Error(`Final image invalid or too small: ${finalValidation.fileSizeKB}KB`);
+            }
 
             const formData = new FormData();
             formData.append('checkout_location', checkout_location);
             formData.append('transaction', formManager.formData.transaction!);
             formData.append('report', formManager.formData.notes);
             formData.append('checkout_photo', {
-              uri,
+              uri: finalProcessedImage.uri,
               name: `checkout-${Date.now()}.jpg`,
               type: 'image/jpeg',
             } as any);
@@ -587,7 +697,7 @@ export default function CheckOutScreen() {
             
             if (res && res.meta && typeof res.meta.code === 'number') {
               if (res.meta.code === 200) {
-                Alert.alert('Check Out Berhasil', 'Data berhasil disimpan dengan foto dan watermark.');
+                Alert.alert('Check Out Berhasil', `Data berhasil disimpan dengan foto (${finalProcessedImage.fileSizeKB}KB).`);
                 formManager.resetForm();
                 setRawPhoto(null);
                 setWatermarkData(null);
@@ -599,17 +709,18 @@ export default function CheckOutScreen() {
               Alert.alert('Check Out Gagal', 'Respon server tidak valid.');
             }
           } catch (err) {
-            Alert.alert('Gagal Mengambil Foto', 'Terjadi kesalahan saat mengambil foto. Silakan coba lagi.');
+            console.error('Error processing watermarked image:', err);
+            Alert.alert('Gagal Memproses Foto', 'Terjadi kesalahan saat mengompresi gambar atau menambahkan watermark. Silakan coba lagi.');
           }
         }
         setIsSubmitting(false);
-      }, 400);
+      }, 500); // Slightly longer timeout for better ViewShot processing
     } catch (error) {
       console.error('Error in checkout process:', error);
       setIsSubmitting(false);
       setRawPhoto(null);
       setWatermarkData(null);
-      Alert.alert('Check Out Gagal', 'Terjadi kesalahan saat melakukan check out.');
+      Alert.alert('Check Out Gagal', `Terjadi kesalahan saat melakukan check out: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }, [
     hasCameraPermission,
@@ -709,6 +820,13 @@ export default function CheckOutScreen() {
             provider={PROVIDER_GOOGLE}
             showsUserLocation
             showsMyLocationButton={false}
+            removeClippedSubviews={true}
+            toolbarEnabled={false}
+            moveOnMarkerPress={false}
+            pitchEnabled={false}
+            rotateEnabled={false}
+            maxZoomLevel={18}
+            minZoomLevel={10}
             onPress={() => Keyboard.dismiss()}
           >
             {visit && currentLocation && (
@@ -789,7 +907,7 @@ export default function CheckOutScreen() {
                   
                   {/* Button with consistent text */}
                   <Button
-                    title={isSubmitting ? 'Memproses...' : 'Lanjutkan'}
+                    title={isSubmitting ? 'Mengompresi...' : 'Lanjutkan'}
                     variant="primary"
                     size="lg"
                     fullWidth
