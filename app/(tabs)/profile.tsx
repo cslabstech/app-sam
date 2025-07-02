@@ -17,12 +17,10 @@ const ICONS = {
   escape: 'escape',
 } as const;
 
-const PROFILE_IMAGE = 'https://i.pravatar.cc/300';
-
 interface User {
-  nama_lengkap?: string;
   name?: string;
   username?: string;
+  photo?: string;
   role?: string | { name: string };
   role_id?: string;
 }
@@ -30,7 +28,7 @@ interface User {
 type IconType = keyof typeof ICONS;
 
 const useProfileData = (user: User | null) => {
-  const displayName = user?.nama_lengkap || user?.name || user?.username || '-';
+  const displayName = user?.name || user?.username || '-';
   
   let displayRole = '-';
   if (user?.role) {
@@ -44,7 +42,7 @@ const useProfileData = (user: User | null) => {
   return {
     displayName,
     displayRole,
-    profileImage: PROFILE_IMAGE,
+    profileImage: user?.photo || 'https://i.pravatar.cc/300',
   };
 };
 

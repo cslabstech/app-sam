@@ -1,5 +1,4 @@
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -146,20 +145,22 @@ const Header = React.memo(function Header({
   const insets = useSafeAreaInsets();
   
   return (
-    <View className="bg-primary-500 px-4 pb-4" style={{ paddingTop: insets.top + 8 }}>
+    <View className="px-4 pb-4" style={{ paddingTop: insets.top + 12, backgroundColor: colors.primary }}>
       <View className="flex-row justify-between items-center">
-        <TouchableOpacity onPress={onBack}>
+        <TouchableOpacity 
+          onPress={onBack}
+          className="w-8 h-8 items-center justify-center"
+          accessibilityRole="button"
+          accessibilityLabel="Kembali"
+        >
           <IconSymbol name="chevron.left" size={24} color="#fff" />
         </TouchableOpacity>
-        <View className="flex-1 items-center">
-          <Text 
-            className="text-white text-2xl font-bold"
-            style={{ fontFamily: 'Inter' }}
-          >
+        <View className="flex-1 items-center mx-4">
+          <Text className="text-white text-xl font-semibold" style={{ fontFamily: 'Inter_600SemiBold' }}>
             Tambah User
           </Text>
         </View>
-        <View className="w-6 h-6" />
+        <View className="w-8 h-8" />
       </View>
     </View>
   );
@@ -173,15 +174,12 @@ const LoadingScreen = React.memo(function LoadingScreen({
   onBack: () => void;
 }) {
   return (
-    <View className="flex-1 bg-white dark:bg-gray-900">
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header onBack={onBack} colors={colors} />
-      <View className="flex-1 justify-center items-center">
+      <View className="flex-1 justify-center items-center px-6">
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text 
-          className="text-base mt-4 text-gray-600 dark:text-gray-400"
-          style={{ fontFamily: 'Inter' }}
-        >
-          Menyimpan user...
+        <Text className="mt-4 text-base" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
+          Menyimpan user baru...
         </Text>
       </View>
     </View>
@@ -198,14 +196,16 @@ const ErrorScreen = React.memo(function ErrorScreen({
   colors: any;
 }) {
   return (
-    <View className="flex-1 bg-white dark:bg-gray-900">
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header onBack={onBack} colors={colors} />
-      <View className="flex-1 justify-center items-center px-4">
-        <IconSymbol name="exclamationmark.triangle" size={48} color={colors.danger} />
-        <Text 
-          className="text-center mb-4 text-red-600 dark:text-red-400"
-          style={{ fontFamily: 'Inter' }}
-        >
+      <View className="flex-1 justify-center items-center px-6">
+        <View className="w-16 h-16 rounded-full items-center justify-center mb-4" style={{ backgroundColor: colors.danger + '20' }}>
+          <IconSymbol name="exclamationmark.triangle" size={32} color={colors.danger} />
+        </View>
+        <Text className="text-lg font-semibold text-center mb-2" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
+          Gagal Menambah User
+        </Text>
+        <Text className="text-sm text-center mb-6" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
           {error}
         </Text>
         <Button
@@ -235,10 +235,7 @@ const SelectField = React.memo(function SelectField({
 }) {
   return (
     <View className="w-full">
-      <Text 
-        className="mb-2 text-sm font-medium text-gray-900 dark:text-white"
-        style={{ fontFamily: 'Inter' }}
-      >
+      <Text className="mb-3 text-base font-medium" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
         {label}
       </Text>
       <Select
@@ -316,7 +313,7 @@ export default function AddUserScreen() {
   }
 
   return (
-    <View className="flex-1 bg-white dark:bg-gray-900">
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header onBack={handleBack} colors={colors} />
       
       <KeyboardAvoidingView 
@@ -331,10 +328,23 @@ export default function AddUserScreen() {
           >
             <View className="pt-4 pb-8">
               {/* Personal Information Card */}
-              <Card className="p-4 mb-4 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-                <Text className="text-base font-bold mb-3 text-gray-900 dark:text-white" style={{ fontFamily: 'Inter' }}>
-                  Informasi Personal
-                </Text>
+              <TouchableOpacity 
+                className="rounded-lg border p-4 mb-4 shadow-sm"
+                style={{ 
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  minHeight: 48 
+                }}
+                activeOpacity={1}
+              >
+                <View className="flex-row items-center mb-4">
+                  <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
+                    <IconSymbol name="person.fill" size={18} color={colors.primary} />
+                  </View>
+                  <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
+                    Informasi Personal
+                  </Text>
+                </View>
                 
                 <View className="gap-4">
                   <Input
@@ -342,7 +352,6 @@ export default function AddUserScreen() {
                     value={formData.name}
                     onChangeText={(value) => updateField('name', value)}
                     placeholder="Masukkan nama lengkap"
-                    className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
                   />
 
                   <Input
@@ -351,7 +360,6 @@ export default function AddUserScreen() {
                     onChangeText={(value) => updateField('username', value)}
                     placeholder="Masukkan username"
                     autoCapitalize="none"
-                    className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
                   />
 
                   <Input
@@ -360,16 +368,28 @@ export default function AddUserScreen() {
                     onChangeText={(value) => updateField('phone', value)}
                     placeholder="Masukkan nomor HP"
                     keyboardType="phone-pad"
-                    className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
                   />
                 </View>
-              </Card>
+              </TouchableOpacity>
 
               {/* Role & Organization Card */}
-              <Card className="p-4 mb-4 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-                <Text className="text-base font-bold mb-3 text-gray-900 dark:text-white" style={{ fontFamily: 'Inter' }}>
-                  Role & Organisasi
-                </Text>
+              <TouchableOpacity 
+                className="rounded-lg border p-4 mb-4 shadow-sm"
+                style={{ 
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  minHeight: 48 
+                }}
+                activeOpacity={1}
+              >
+                <View className="flex-row items-center mb-4">
+                  <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
+                    <IconSymbol name="building.2" size={18} color={colors.primary} />
+                  </View>
+                  <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
+                    Role & Organisasi
+                  </Text>
+                </View>
                 
                 <View className="gap-4">
                   <SelectField
@@ -425,7 +445,7 @@ export default function AddUserScreen() {
                     />
                   )}
                 </View>
-              </Card>
+              </TouchableOpacity>
 
               <Button
                 title={loading ? 'Menyimpan...' : 'Simpan User'}

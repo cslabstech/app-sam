@@ -1,6 +1,5 @@
 import { MediaPreview } from '@/components/MediaPreview';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useNetwork } from '@/context/network-context';
@@ -48,20 +47,22 @@ const Header = React.memo(function Header({
   const insets = useSafeAreaInsets();
   
   return (
-    <View className="bg-primary-500 px-4 pb-4" style={{ paddingTop: insets.top + 8 }}>
+    <View className="px-4 pb-4" style={{ paddingTop: insets.top + 12, backgroundColor: colors.primary }}>
       <View className="flex-row justify-between items-center">
-        <TouchableOpacity onPress={onBack}>
+        <TouchableOpacity 
+          onPress={onBack}
+          className="w-8 h-8 items-center justify-center"
+          accessibilityRole="button"
+          accessibilityLabel="Kembali"
+        >
           <IconSymbol name="chevron.left" size={24} color="#fff" />
         </TouchableOpacity>
-        <View className="flex-1 items-center">
-          <Text 
-            className="text-white text-2xl font-bold"
-            style={{ fontFamily: 'Inter' }}
-          >
+        <View className="flex-1 items-center mx-4">
+          <Text className="text-white text-xl font-semibold" style={{ fontFamily: 'Inter_600SemiBold' }}>
             {title}
           </Text>
         </View>
-        <View className="w-6 h-6" />
+        <View className="w-8 h-8" />
       </View>
     </View>
   );
@@ -253,12 +254,12 @@ const LoadingScreen = React.memo(function LoadingScreen({
   onGoBack: () => void; 
 }) {
   return (
-    <View className="flex-1 bg-white">
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header title="Edit Outlet" colors={colors} onBack={onGoBack} />
-      <View className="flex-1 justify-center items-center">
+      <View className="flex-1 justify-center items-center px-6">
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={{ fontFamily: 'Inter', color: colors.textSecondary }} className="text-base mt-4">
-          Memuat...
+        <Text className="text-base mt-4" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
+          Memuat data outlet...
         </Text>
       </View>
     </View>
@@ -275,14 +276,19 @@ const ErrorScreen = React.memo(function ErrorScreen({
   onGoBack: () => void; 
 }) {
   return (
-    <View className="flex-1 bg-white">
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header title="Edit Outlet" colors={colors} onBack={onGoBack} />
-      <View className="flex-1 justify-center items-center px-4">
-        <IconSymbol name="exclamationmark.triangle" size={48} color={colors.danger} />
-        <Text style={{ fontFamily: 'Inter', color: colors.danger }} className="text-center mx-5 mb-5">
+      <View className="flex-1 justify-center items-center px-6">
+        <View className="w-16 h-16 rounded-full items-center justify-center mb-4" style={{ backgroundColor: colors.danger + '20' }}>
+          <IconSymbol name="exclamationmark.triangle" size={32} color={colors.danger} />
+        </View>
+        <Text className="text-lg font-semibold text-center mb-2" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
+          Gagal Memuat Data
+        </Text>
+        <Text className="text-sm text-center mb-6" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
           {error}
         </Text>
-        <Button title="Go Back" variant="primary" onPress={onGoBack} />
+        <Button title="Kembali" variant="primary" onPress={onGoBack} />
       </View>
     </View>
   );
@@ -309,18 +315,16 @@ const FormField = React.memo(function FormField({
 }) {
   return (
     <View className="mb-4">
-      <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base font-semibold mb-1.5">
+      <Text className="text-base font-medium mb-3" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
         {label}
       </Text>
       <TextInput
-        className={`border rounded-lg p-3 text-base ${
-          editable ? 'bg-transparent' : 'bg-neutral-100 dark:bg-neutral-800'
-        }`}
+        className="border rounded-lg p-3 text-base"
         style={{ 
-          fontFamily: 'Inter',
-          color: colors.text, 
+          fontFamily: 'Inter_400Regular',
+          color: editable ? colors.text : colors.textSecondary, 
           borderColor: colors.border,
-          backgroundColor: editable ? 'transparent' : colors.card
+          backgroundColor: editable ? colors.card : colors.inputBackground,
         }}
         value={value}
         onChangeText={onChangeText}
@@ -330,7 +334,7 @@ const FormField = React.memo(function FormField({
         placeholderTextColor={colors.textSecondary}
       />
       {error && (
-        <Text style={{ fontFamily: 'Inter', color: colors.danger }} className="text-sm mt-1">
+        <Text className="text-sm mt-1" style={{ fontFamily: 'Inter_400Regular', color: colors.danger }}>
           {error}
         </Text>
       )}
@@ -357,16 +361,18 @@ const MediaField = React.memo(function MediaField({
 }) {
   return (
     <View className="mb-4">
-      <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base font-semibold mb-1.5">
+      <Text className="text-base font-medium mb-3" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
         {label}
       </Text>
       <TouchableOpacity
-        className="border rounded-lg p-3 items-center bg-neutral-50 dark:bg-neutral-800"
-        style={{ borderColor: colors.border }}
+        className="border rounded-lg p-3 items-center"
+        style={{ borderColor: colors.border, backgroundColor: colors.inputBackground }}
         onPress={onTake}
+        accessibilityRole="button"
+        accessibilityLabel={`${hasMedia ? 'Ubah' : 'Ambil'} ${mediaType === 'image' ? 'foto' : 'video'}`}
       >
-        <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base">
-          {hasMedia ? `Change ${mediaType === 'image' ? 'Photo' : 'Video'}` : `Take ${mediaType === 'image' ? 'Photo' : 'Video'}`}
+        <Text className="text-base" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
+          {hasMedia ? `Ubah ${mediaType === 'image' ? 'Foto' : 'Video'}` : `Ambil ${mediaType === 'image' ? 'Foto' : 'Video'}`}
         </Text>
       </TouchableOpacity>
       {hasMedia && (
@@ -553,16 +559,29 @@ export default function OutletEditPage() {
   }
 
   return (
-    <View className="flex-1 bg-white">
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header title="Edit Outlet" colors={colors} onBack={handleGoBack} />
       
       <ScrollView className="flex-1 px-4">
         <View className="pt-4 pb-8">
           {/* Basic Information Card */}
-          <Card className="p-4 mb-4">
-            <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base font-bold mb-3">
-              Informasi Dasar
-            </Text>
+          <TouchableOpacity 
+            className="rounded-lg border p-4 mb-4 shadow-sm"
+            style={{ 
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              minHeight: 48 
+            }}
+            activeOpacity={1}
+          >
+            <View className="flex-row items-center mb-4">
+              <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
+                <IconSymbol name="info.circle" size={18} color={colors.primary} />
+              </View>
+              <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
+                Informasi Dasar
+              </Text>
+            </View>
             
             <FormField
               label="Kode Outlet"
@@ -591,13 +610,26 @@ export default function OutletEditPage() {
                 colors={colors}
               />
             </View>
-          </Card>
+          </TouchableOpacity>
           
           {/* Media Card */}
-          <Card className="p-4 mb-4">
-            <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base font-bold mb-3">
-              Media Outlet
-            </Text>
+          <TouchableOpacity 
+            className="rounded-lg border p-4 mb-4 shadow-sm"
+            style={{ 
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              minHeight: 48 
+            }}
+            activeOpacity={1}
+          >
+            <View className="flex-row items-center mb-4">
+              <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
+                <IconSymbol name="photo" size={18} color={colors.primary} />
+              </View>
+              <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
+                Media Outlet
+              </Text>
+            </View>
             
             <MediaField
               label="Photo Shop Sign"
@@ -650,7 +682,7 @@ export default function OutletEditPage() {
                 colors={colors}
               />
             </View>
-          </Card>
+          </TouchableOpacity>
           
           <Button
             title={loading ? 'Updating...' : 'Update Outlet'}

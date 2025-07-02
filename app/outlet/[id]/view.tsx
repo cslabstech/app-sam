@@ -107,17 +107,17 @@ const LoadingScreen = React.memo(function LoadingScreen({
   isConnected: boolean; 
 }) {
   return (
-    <View className="flex-1 bg-white">
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header 
         title="Detail Outlet"
         colors={colors}
         onBack={() => {}}
         onEdit={() => {}}
       />
-      <View className="flex-1 justify-center items-center">
+      <View className="flex-1 justify-center items-center px-6">
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={{ fontFamily: 'Inter', color: colors.textSecondary }} className="mt-4 text-base">
-          Memuat...
+        <Text className="mt-4 text-base" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
+          Memuat data outlet...
         </Text>
       </View>
     </View>
@@ -136,19 +136,24 @@ const ErrorScreen = React.memo(function ErrorScreen({
   onGoBack: () => void; 
 }) {
   return (
-    <View className="flex-1 bg-white">
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header 
         title="Detail Outlet"
         colors={colors}
         onBack={onGoBack}
         onEdit={() => {}}
       />
-      <View className="flex-1 justify-center items-center px-4">
-        <IconSymbol name="exclamationmark.triangle" size={48} color={colors.danger} />
-        <Text style={{ fontFamily: 'Inter', color: colors.danger }} className="mx-5 my-5 text-center">
+      <View className="flex-1 justify-center items-center px-6">
+        <View className="w-16 h-16 rounded-full items-center justify-center mb-4" style={{ backgroundColor: colors.danger + '20' }}>
+          <IconSymbol name="exclamationmark.triangle" size={32} color={colors.danger} />
+        </View>
+        <Text className="text-lg font-semibold text-center mb-2" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
+          Data Tidak Ditemukan
+        </Text>
+        <Text className="text-sm text-center mb-6" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
           {error}
         </Text>
-        <Button title="Go Back" variant="primary" onPress={onGoBack} />
+        <Button title="Kembali" variant="primary" onPress={onGoBack} />
       </View>
     </View>
   );
@@ -168,21 +173,28 @@ const Header = React.memo(function Header({
   const insets = useSafeAreaInsets();
   
   return (
-    <View className="bg-primary-500 px-4 pb-4" style={{ paddingTop: insets.top + 8 }}>
+    <View className="px-4 pb-4" style={{ paddingTop: insets.top + 12, backgroundColor: colors.primary }}>
       <View className="flex-row justify-between items-center">
-        <TouchableOpacity onPress={onBack}>
+        <TouchableOpacity 
+          onPress={onBack}
+          className="w-8 h-8 items-center justify-center"
+          accessibilityRole="button"
+          accessibilityLabel="Kembali"
+        >
           <IconSymbol name="chevron.left" size={24} color="#fff" />
         </TouchableOpacity>
-        <View className="flex-1 items-center">
-          <Text 
-            className="text-white text-2xl font-bold"
-            style={{ fontFamily: 'Inter' }}
-          >
+        <View className="flex-1 items-center mx-4">
+          <Text className="text-white text-xl font-semibold" style={{ fontFamily: 'Inter_600SemiBold' }}>
             {title}
           </Text>
         </View>
-        <TouchableOpacity onPress={onEdit} className="ml-2">
-          <IconSymbol name="pencil" size={22} color="#fff" />
+        <TouchableOpacity 
+          onPress={onEdit} 
+          className="w-8 h-8 items-center justify-center"
+          accessibilityRole="button"
+          accessibilityLabel="Edit outlet"
+        >
+          <IconSymbol name="pencil" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
     </View>
@@ -205,7 +217,7 @@ const TabNavigation = React.memo(function TabNavigation({
   ];
 
   return (
-    <View className="flex-row mt-2 border-b border-neutral-200 dark:border-neutral-800">
+    <View className="flex-row mt-2 border-b" style={{ borderBottomColor: colors.border }}>
       {tabs.map((tab) => (
         <TouchableOpacity 
           key={tab.id}
@@ -216,13 +228,15 @@ const TabNavigation = React.memo(function TabNavigation({
             borderBottomColor: activeTab === tab.id ? colors.primary : 'transparent'
           }}
           onPress={() => onTabChange(tab.id)}
+          accessibilityRole="button"
+          accessibilityLabel={`Tab ${tab.label}`}
         >
           <Text 
             style={{ 
-              fontFamily: 'Inter',
-              color: activeTab === tab.id ? colors.primary : colors.textSecondary 
+              fontFamily: 'Inter_600SemiBold',
+              color: activeTab === tab.id ? colors.primary : colors.textSecondary
             }}
-            className="text-base font-semibold"
+            className="text-base"
           >
             {tab.label}
           </Text>
@@ -242,12 +256,20 @@ const InfoCard = React.memo(function InfoCard({
   colors: any; 
 }) {
   return (
-    <Card className="p-4 mb-4 rounded-xl">
-      <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base font-bold mb-3">
+    <TouchableOpacity 
+      className="rounded-lg border p-4 mb-4 shadow-sm"
+      style={{ 
+        backgroundColor: colors.card,
+        borderColor: colors.border,
+        minHeight: 48 
+      }}
+      activeOpacity={1}
+    >
+      <Text className="text-lg font-semibold mb-3" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
         {title}
       </Text>
       {children}
-    </Card>
+    </TouchableOpacity>
   );
 });
 
@@ -263,13 +285,13 @@ const InfoRow = React.memo(function InfoRow({
   isLast?: boolean;
 }) {
   return (
-    <View className={`flex-row justify-between items-center py-2 ${!isLast ? 'border-b border-neutral-100 dark:border-neutral-800' : ''}`}>
-      <Text style={{ fontFamily: 'Inter', color: colors.textSecondary }} className="text-sm flex-1">
+    <View className={`flex-row justify-between items-center py-2 ${!isLast ? 'border-b' : ''}`} style={{ borderBottomColor: !isLast ? colors.border + '40' : 'transparent' }}>
+      <Text className="text-sm flex-1" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
         {label}
       </Text>
       <View className="text-right">
         {typeof value === 'string' ? (
-          <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base font-medium text-right">
+          <Text className="text-base font-medium text-right" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
             {value}
           </Text>
         ) : (
@@ -362,7 +384,7 @@ export default function OutletViewPage() {
   }
 
   return (
-    <View className="flex-1 bg-white">
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header 
         title={outlet?.name || 'Detail Outlet'}
         colors={colors}

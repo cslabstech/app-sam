@@ -1,4 +1,3 @@
-import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/context/auth-context';
@@ -37,16 +36,18 @@ const Header = React.memo(function Header({
   const insets = useSafeAreaInsets();
   
   return (
-    <View className="bg-primary-500 px-4 pb-4" style={{ paddingTop: insets.top + 8 }}>
+    <View className="px-4 pb-4" style={{ paddingTop: insets.top + 12, backgroundColor: colors.primary }}>
       <View className="flex-row justify-between items-center">
-        <TouchableOpacity onPress={onBack}>
+        <TouchableOpacity 
+          onPress={onBack}
+          className="w-8 h-8 items-center justify-center"
+          accessibilityRole="button"
+          accessibilityLabel="Kembali"
+        >
           <IconSymbol name="chevron.left" size={24} color="#fff" />
         </TouchableOpacity>
-        <View className="flex-1 items-center">
-          <Text 
-            className="text-white text-2xl font-bold"
-            style={{ fontFamily: 'Inter' }}
-          >
+        <View className="flex-1 items-center mx-4">
+          <Text className="text-white text-xl font-semibold" style={{ fontFamily: 'Inter_600SemiBold' }}>
             Informasi Personal
           </Text>
         </View>
@@ -57,29 +58,33 @@ const Header = React.memo(function Header({
             <>
               <TouchableOpacity
                 onPress={onCancel}
-                className="px-3 py-1 rounded-md border border-white/30"
+                className="px-3 py-1.5 rounded-lg border border-white/30"
                 disabled={loading}
+                accessibilityRole="button"
+                accessibilityLabel="Batal edit"
               >
-                <Text style={{ fontFamily: 'Inter', color: '#fff' }} className="text-sm font-medium">
+                <Text style={{ fontFamily: 'Inter_500Medium', color: '#fff' }} className="text-sm">
                   Batal
                 </Text>
               </TouchableOpacity>
               
               <TouchableOpacity
                 onPress={onSave}
-                className="px-3 py-1 rounded-md"
+                className="px-3 py-1.5 rounded-lg"
                 style={{ 
                   backgroundColor: loading ? 'rgba(255,255,255,0.3)' : '#fff',
                   opacity: loading ? 0.7 : 1
                 }}
                 disabled={loading}
+                accessibilityRole="button"
+                accessibilityLabel="Simpan perubahan"
               >
                 <Text 
                   style={{ 
-                    fontFamily: 'Inter', 
+                    fontFamily: 'Inter_500Medium', 
                     color: loading ? '#fff' : colors.primary 
                   }} 
-                  className="text-sm font-medium"
+                  className="text-sm"
                 >
                   {loading ? 'Menyimpan...' : 'Simpan'}
                 </Text>
@@ -88,10 +93,12 @@ const Header = React.memo(function Header({
           ) : (
             <TouchableOpacity
               onPress={onEdit}
-              className="px-3 py-1 rounded-md"
+              className="px-3 py-1.5 rounded-lg"
               style={{ backgroundColor: '#fff' }}
+              accessibilityRole="button"
+              accessibilityLabel="Edit informasi"
             >
-              <Text style={{ fontFamily: 'Inter', color: colors.primary }} className="text-sm font-medium">
+              <Text style={{ fontFamily: 'Inter_500Medium', color: colors.primary }} className="text-sm">
                 Edit
               </Text>
             </TouchableOpacity>
@@ -110,14 +117,11 @@ const LoadingScreen = React.memo(function LoadingScreen({
   onBack: () => void;
 }) {
   return (
-    <View className="flex-1 bg-white dark:bg-gray-900">
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header onBack={onBack} colors={colors} editing={false} loading={false} onEdit={() => {}} onSave={() => {}} onCancel={() => {}} />
-      <View className="flex-1 justify-center items-center">
+      <View className="flex-1 justify-center items-center px-6">
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text 
-          className="text-base mt-4 text-gray-600 dark:text-gray-400"
-          style={{ fontFamily: 'Inter' }}
-        >
+        <Text className="mt-4 text-base" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
           Memuat informasi personal...
         </Text>
       </View>
@@ -204,32 +208,34 @@ const ProfilePhoto = React.memo(function ProfilePhoto({
         onPress={handlePhotoPress}
         disabled={!editing}
         className="relative"
+        accessibilityRole="button"
+        accessibilityLabel={editing ? "Ubah foto profil" : "Foto profil"}
       >
         <View 
-          className="w-24 h-24 rounded-full border-4 overflow-hidden"
+          className="w-28 h-28 rounded-full border-4 overflow-hidden shadow-lg"
           style={{ borderColor: colors.primary }}
         >
           <Image 
             source={{ uri: photoUri || defaultImage }} 
             className="w-full h-full"
-            style={{ backgroundColor: colors.background }}
+            style={{ backgroundColor: colors.backgroundAlt }}
           />
         </View>
         
         {editing && (
           <View 
-            className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full border-2 border-white items-center justify-center"
+            className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full border-3 border-white items-center justify-center shadow-lg"
             style={{ backgroundColor: colors.primary }}
           >
-            <IconSymbol name="camera.fill" size={16} color="#fff" />
+            <IconSymbol name="camera.fill" size={18} color="#fff" />
           </View>
         )}
       </TouchableOpacity>
 
       {editing && (
         <Text 
-          style={{ fontFamily: 'Inter', color: colors.textSecondary }} 
-          className="text-xs mt-2 text-center"
+          style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }} 
+          className="text-sm mt-3 text-center"
         >
           Ketuk untuk mengubah foto
         </Text>
@@ -246,7 +252,7 @@ export default function PersonalInfoScreen() {
   const [editing, setEditing] = useState(false);
   
   const [formData, setFormData] = useState<PersonalInfoForm>({
-    name: user?.nama_lengkap || user?.name || '',
+    name: user?.name || '',
     username: user?.username || '',
     phone: user?.phone || '',
     email: user?.email || '',
@@ -265,7 +271,7 @@ export default function PersonalInfoScreen() {
     setEditing(false);
     // Reset form data to original values
     setFormData({
-      name: user?.nama_lengkap || user?.name || '',
+      name: user?.name || '',
       username: user?.username || '',
       phone: user?.phone || '',
       email: user?.email || '',
@@ -298,7 +304,7 @@ export default function PersonalInfoScreen() {
   }
 
   return (
-    <View className="flex-1 bg-white dark:bg-gray-900">
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header onBack={handleBack} colors={colors} editing={editing} loading={loading} onEdit={handleEdit} onSave={handleSave} onCancel={handleCancel} />
       
       <ScrollView className="flex-1 px-4">
@@ -312,9 +318,20 @@ export default function PersonalInfoScreen() {
           />
 
           {/* Personal Information Card */}
-          <Card className="p-4 mb-4 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-            <View className="flex-row justify-between items-center mb-4">
-              <Text className="text-base font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'Inter' }}>
+          <TouchableOpacity 
+            className="rounded-lg border p-4 mb-4 shadow-sm"
+            style={{ 
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              minHeight: 48 
+            }}
+            activeOpacity={1}
+          >
+            <View className="flex-row items-center mb-4">
+              <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
+                <IconSymbol name="person.fill" size={18} color={colors.primary} />
+              </View>
+              <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
                 Data Personal
               </Text>
             </View>
@@ -327,10 +344,9 @@ export default function PersonalInfoScreen() {
                 placeholder="Masukkan nama lengkap"
                 editable={editing}
                 style={{ 
-                  backgroundColor: editing ? 'transparent' : colors.background + '80',
+                  backgroundColor: editing ? 'transparent' : colors.backgroundAlt,
                   color: editing ? colors.text : colors.textSecondary
                 }}
-                className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
               />
 
               <Input
@@ -341,10 +357,9 @@ export default function PersonalInfoScreen() {
                 autoCapitalize="none"
                 editable={editing}
                 style={{ 
-                  backgroundColor: editing ? 'transparent' : colors.background + '80',
+                  backgroundColor: editing ? 'transparent' : colors.backgroundAlt,
                   color: editing ? colors.text : colors.textSecondary
                 }}
-                className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
               />
 
               <Input
@@ -355,10 +370,9 @@ export default function PersonalInfoScreen() {
                 keyboardType="phone-pad"
                 editable={editing}
                 style={{ 
-                  backgroundColor: editing ? 'transparent' : colors.background + '80',
+                  backgroundColor: editing ? 'transparent' : colors.backgroundAlt,
                   color: editing ? colors.text : colors.textSecondary
                 }}
-                className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
               />
 
               <Input
@@ -370,28 +384,45 @@ export default function PersonalInfoScreen() {
                 autoCapitalize="none"
                 editable={editing}
                 style={{ 
-                  backgroundColor: editing ? 'transparent' : colors.background + '80',
+                  backgroundColor: editing ? 'transparent' : colors.backgroundAlt,
                   color: editing ? colors.text : colors.textSecondary
                 }}
-                className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
               />
             </View>
-          </Card>
+          </TouchableOpacity>
 
           {/* Account Information Card */}
-          <Card className="p-4 mb-4 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-            <Text className="text-base font-bold mb-4 text-gray-900 dark:text-white" style={{ fontFamily: 'Inter' }}>
-              Informasi Akun
-            </Text>
+          <TouchableOpacity 
+            className="rounded-lg border p-4 mb-4 shadow-sm"
+            style={{ 
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              minHeight: 48 
+            }}
+            activeOpacity={1}
+          >
+            <View className="flex-row items-center mb-4">
+              <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
+                <IconSymbol name="person.badge.key.fill" size={18} color={colors.primary} />
+              </View>
+              <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
+                Informasi Akun
+              </Text>
+            </View>
             
             <View className="gap-4">
               <View>
-                <Text className="text-sm font-medium mb-2 text-gray-900 dark:text-white" style={{ fontFamily: 'Inter' }}>
+                <Text className="text-base font-medium mb-3" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
                   Role
                 </Text>
                 <Text 
-                  className="text-base px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-                  style={{ fontFamily: 'Inter' }}
+                  className="text-base px-4 py-3 rounded-lg border"
+                  style={{ 
+                    fontFamily: 'Inter_400Regular',
+                    backgroundColor: colors.backgroundAlt,
+                    borderColor: colors.border,
+                    color: colors.textSecondary
+                  }}
                   numberOfLines={1}
                 >
                   {typeof user?.role === 'string' ? user.role : user?.role?.name || 'User'}
@@ -399,19 +430,24 @@ export default function PersonalInfoScreen() {
               </View>
 
               <View>
-                <Text className="text-sm font-medium mb-2 text-gray-900 dark:text-white" style={{ fontFamily: 'Inter' }}>
+                <Text className="text-base font-medium mb-3" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
                   User ID
                 </Text>
                 <Text 
-                  className="text-base px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-                  style={{ fontFamily: 'Inter' }}
+                  className="text-base px-4 py-3 rounded-lg border"
+                  style={{ 
+                    fontFamily: 'Inter_400Regular',
+                    backgroundColor: colors.backgroundAlt,
+                    borderColor: colors.border,
+                    color: colors.textSecondary
+                  }}
                   numberOfLines={1}
                 >
                   {user?.id || '-'}
                 </Text>
               </View>
             </View>
-          </Card>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>

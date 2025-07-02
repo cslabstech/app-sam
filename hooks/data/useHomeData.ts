@@ -1,5 +1,6 @@
 import { log } from '@/utils/logger';
-import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback, useState } from 'react';
 import { useVisit } from './useVisit';
 
 /**
@@ -70,11 +71,15 @@ export function useHomeData() {
   }, [fetchTodayVisits]);
 
   /**
-   * Load initial data saat hook pertama kali digunakan
+   * Load data setiap kali screen difocus (termasuk saat kembali dari screen lain)
+   * Menggunakan useFocusEffect agar data selalu fresh saat user kembali ke home
    */
-  useEffect(() => {
-    fetchTodayVisits();
-  }, [fetchTodayVisits]);
+  useFocusEffect(
+    useCallback(() => {
+      log('[useHomeData] Screen focused, refreshing data');
+      fetchTodayVisits();
+    }, [fetchTodayVisits])
+  );
 
   return {
     // Data

@@ -1,5 +1,4 @@
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Input } from '@/components/ui/Input';
 import { useThemeStyles } from '@/hooks/utils/useThemeStyles';
@@ -30,20 +29,22 @@ const Header = React.memo(function Header({
   const insets = useSafeAreaInsets();
   
   return (
-    <View className="bg-primary-500 px-4 pb-4" style={{ paddingTop: insets.top + 8 }}>
+    <View className="px-4 pb-4" style={{ paddingTop: insets.top + 12, backgroundColor: colors.primary }}>
       <View className="flex-row justify-between items-center">
-        <TouchableOpacity onPress={onBack}>
+        <TouchableOpacity 
+          onPress={onBack}
+          className="w-8 h-8 items-center justify-center"
+          accessibilityRole="button"
+          accessibilityLabel="Kembali"
+        >
           <IconSymbol name="chevron.left" size={24} color="#fff" />
         </TouchableOpacity>
-        <View className="flex-1 items-center">
-          <Text 
-            className="text-white text-2xl font-bold"
-            style={{ fontFamily: 'Inter' }}
-          >
+        <View className="flex-1 items-center mx-4">
+          <Text className="text-white text-xl font-semibold" style={{ fontFamily: 'Inter_600SemiBold' }}>
             Ubah Password
           </Text>
         </View>
-        <View className="w-6 h-6" />
+        <View className="w-8 h-8" />
       </View>
     </View>
   );
@@ -57,14 +58,11 @@ const LoadingScreen = React.memo(function LoadingScreen({
   onBack: () => void;
 }) {
   return (
-    <View className="flex-1 bg-white dark:bg-gray-900">
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header onBack={onBack} colors={colors} />
-      <View className="flex-1 justify-center items-center">
+      <View className="flex-1 justify-center items-center px-6">
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text 
-          className="text-base mt-4 text-gray-600 dark:text-gray-400"
-          style={{ fontFamily: 'Inter' }}
-        >
+        <Text className="mt-4 text-base" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
           Memperbarui password...
         </Text>
       </View>
@@ -74,35 +72,45 @@ const LoadingScreen = React.memo(function LoadingScreen({
 
 const SecurityTips = React.memo(function SecurityTips({ colors }: { colors: any }) {
   return (
-    <Card className="p-4 mb-4 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-      <View className="flex-row items-start mb-3">
-        <IconSymbol name="shield.fill" size={20} color={colors.primary} />
-        <Text className="text-base font-bold ml-2 text-gray-900 dark:text-white" style={{ fontFamily: 'Inter' }}>
+    <TouchableOpacity 
+      className="rounded-lg border p-4 mb-4 shadow-sm"
+      style={{ 
+        backgroundColor: colors.card,
+        borderColor: colors.border,
+        minHeight: 48 
+      }}
+      activeOpacity={1}
+    >
+      <View className="flex-row items-center mb-4">
+        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
+          <IconSymbol name="shield.fill" size={18} color={colors.primary} />
+        </View>
+        <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
           Tips Keamanan Password
         </Text>
       </View>
       
-      <View className="gap-2">
+      <View className="gap-3">
         <View className="flex-row items-start">
-          <Text style={{ fontFamily: 'Inter', color: colors.primary }} className="text-sm mr-2">•</Text>
-          <Text className="text-sm flex-1 text-gray-600 dark:text-gray-400" style={{ fontFamily: 'Inter' }}>
+          <View className="w-2 h-2 rounded-full mt-1.5 mr-3" style={{ backgroundColor: colors.primary }} />
+          <Text className="text-sm flex-1" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
             Minimal 8 karakter
           </Text>
         </View>
         <View className="flex-row items-start">
-          <Text style={{ fontFamily: 'Inter', color: colors.primary }} className="text-sm mr-2">•</Text>
-          <Text className="text-sm flex-1 text-gray-600 dark:text-gray-400" style={{ fontFamily: 'Inter' }}>
+          <View className="w-2 h-2 rounded-full mt-1.5 mr-3" style={{ backgroundColor: colors.primary }} />
+          <Text className="text-sm flex-1" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
             Kombinasi huruf besar, kecil, angka, dan simbol
           </Text>
         </View>
         <View className="flex-row items-start">
-          <Text style={{ fontFamily: 'Inter', color: colors.primary }} className="text-sm mr-2">•</Text>
-          <Text className="text-sm flex-1 text-gray-600 dark:text-gray-400" style={{ fontFamily: 'Inter' }}>
+          <View className="w-2 h-2 rounded-full mt-1.5 mr-3" style={{ backgroundColor: colors.primary }} />
+          <Text className="text-sm flex-1" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
             Hindari informasi pribadi seperti nama atau tanggal lahir
           </Text>
         </View>
       </View>
-    </Card>
+    </TouchableOpacity>
   );
 });
 
@@ -193,16 +201,29 @@ export default function ChangePasswordScreen() {
   }
 
   return (
-    <View className="flex-1 bg-white dark:bg-gray-900">
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header onBack={handleBack} colors={colors} />
       
       <ScrollView className="flex-1 px-4">
         <View className="pt-4 pb-8">
           {/* Change Password Form Card */}
-          <Card className="p-4 mb-4 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-            <Text className="text-base font-bold mb-4 text-gray-900 dark:text-white" style={{ fontFamily: 'Inter' }}>
-              Ubah Password
-            </Text>
+          <TouchableOpacity 
+            className="rounded-lg border p-4 mb-4 shadow-sm"
+            style={{ 
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              minHeight: 48 
+            }}
+            activeOpacity={1}
+          >
+            <View className="flex-row items-center mb-4">
+              <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
+                <IconSymbol name="lock.fill" size={18} color={colors.primary} />
+              </View>
+              <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
+                Ubah Password
+              </Text>
+            </View>
             
             <View className="gap-4">
               <Input
@@ -212,7 +233,6 @@ export default function ChangePasswordScreen() {
                 placeholder="Masukkan password saat ini"
                 secureTextEntry={!showCurrentPassword}
                 error={errors.currentPassword}
-                className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
                 rightIcon={
                   <TouchableOpacity onPress={() => setShowCurrentPassword(!showCurrentPassword)}>
                     <IconSymbol 
@@ -231,7 +251,6 @@ export default function ChangePasswordScreen() {
                 placeholder="Masukkan password baru"
                 secureTextEntry={!showNewPassword}
                 error={errors.newPassword}
-                className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
                 rightIcon={
                   <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)}>
                     <IconSymbol 
@@ -250,7 +269,6 @@ export default function ChangePasswordScreen() {
                 placeholder="Konfirmasi password baru"
                 secureTextEntry={!showConfirmPassword}
                 error={errors.confirmPassword}
-                className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
                 rightIcon={
                   <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
                     <IconSymbol 
@@ -262,7 +280,7 @@ export default function ChangePasswordScreen() {
                 }
               />
             </View>
-          </Card>
+          </TouchableOpacity>
 
           {/* Security Tips */}
           <SecurityTips colors={colors} />

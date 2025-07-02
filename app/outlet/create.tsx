@@ -39,20 +39,22 @@ const Header = React.memo(function Header({
   const insets = useSafeAreaInsets();
   
   return (
-    <View className="bg-primary-500 px-4 pb-4" style={{ paddingTop: insets.top + 8 }}>
+    <View className="px-4 pb-4" style={{ paddingTop: insets.top + 12, backgroundColor: colors.primary }}>
       <View className="flex-row justify-between items-center">
-        <TouchableOpacity onPress={onBack}>
+        <TouchableOpacity 
+          onPress={onBack}
+          className="w-8 h-8 items-center justify-center"
+          accessibilityRole="button"
+          accessibilityLabel="Kembali"
+        >
           <IconSymbol name="chevron.left" size={24} color="#fff" />
         </TouchableOpacity>
-        <View className="flex-1 items-center">
-          <Text 
-            className="text-white text-2xl font-bold"
-            style={{ fontFamily: 'Inter' }}
-          >
+        <View className="flex-1 items-center mx-4">
+          <Text className="text-white text-xl font-semibold" style={{ fontFamily: 'Inter_600SemiBold' }}>
             Register Outlet
           </Text>
         </View>
-        <View className="w-6 h-6" />
+        <View className="w-8 h-8" />
       </View>
     </View>
   );
@@ -72,18 +74,25 @@ const FormSection = React.memo(function FormSection({
   colors: any;
 }) {
   return (
-    <View 
-      className="rounded-xl p-4 mb-4 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950"
-      style={{ backgroundColor: colors.card, borderColor: colors.border }}
+    <TouchableOpacity 
+      className="rounded-lg border p-4 mb-4 shadow-sm"
+      style={{ 
+        backgroundColor: colors.card,
+        borderColor: colors.border,
+        minHeight: 48 
+      }}
+      activeOpacity={1}
     >
       <View className="flex-row items-center mb-4">
-        <IconSymbol name={icon} size={18} color={colors.primary} />
-        <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base font-semibold ml-2">
+        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
+          <IconSymbol name={icon} size={18} color={colors.primary} />
+        </View>
+        <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
           {title}
         </Text>
       </View>
       {children}
-    </View>
+    </TouchableOpacity>
   );
 });
 
@@ -346,25 +355,37 @@ const LeadNooTabs = React.memo(function LeadNooTabs({
 }) {
   return (
     <View className="px-4 mb-4">
-      <View className="flex-row bg-neutral-100 dark:bg-neutral-800 rounded-lg p-1">
+      <View className="flex-row rounded-lg p-1" style={{ backgroundColor: colors.inputBackground }}>
         <TouchableOpacity
-          className={`flex-1 py-2 rounded-md items-center ${activeTab === 'LEAD' ? 'bg-primary-500' : ''}`}
+          className="flex-1 py-3 rounded-lg items-center"
+          style={{ backgroundColor: activeTab === 'LEAD' ? colors.primary : 'transparent' }}
           onPress={() => onTabChange('LEAD')}
+          accessibilityRole="button"
+          accessibilityLabel="Tab LEAD"
         >
           <Text 
-            className={`font-semibold ${activeTab === 'LEAD' ? 'text-white' : 'text-neutral-500 dark:text-neutral-300'}`}
-            style={{ fontFamily: 'Inter' }}
+            className="font-semibold"
+            style={{ 
+              fontFamily: 'Inter_600SemiBold',
+              color: activeTab === 'LEAD' ? '#fff' : colors.textSecondary
+            }}
           >
             LEAD
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          className={`flex-1 py-2 rounded-md items-center ${activeTab === 'NOO' ? 'bg-primary-500' : ''}`}
+          className="flex-1 py-3 rounded-lg items-center"
+          style={{ backgroundColor: activeTab === 'NOO' ? colors.primary : 'transparent' }}
           onPress={() => onTabChange('NOO')}
+          accessibilityRole="button"
+          accessibilityLabel="Tab NOO"
         >
           <Text 
-            className={`font-semibold ${activeTab === 'NOO' ? 'text-white' : 'text-neutral-500 dark:text-neutral-300'}`}
-            style={{ fontFamily: 'Inter' }}
+            className="font-semibold"
+            style={{ 
+              fontFamily: 'Inter_600SemiBold',
+              color: activeTab === 'NOO' ? '#fff' : colors.textSecondary
+            }}
           >
             NOO
           </Text>
@@ -451,16 +472,20 @@ const DynamicFormSection = React.memo(function DynamicFormSection({ section, for
   colors: any;
 }) {
   return (
-    <View 
-      className="rounded-xl p-4 mb-4 border" 
+    <TouchableOpacity 
+      className="rounded-lg border p-4 mb-4 shadow-sm"
       style={{ 
-        backgroundColor: colors.cardBackground || colors.background, 
-        borderColor: colors.border + '40' 
+        backgroundColor: colors.card,
+        borderColor: colors.border,
+        minHeight: 48 
       }}
+      activeOpacity={1}
     >
       <View className="flex-row items-center mb-4">
-        <IconSymbol name="building.2.fill" size={18} color={colors.primary} />
-        <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base font-semibold ml-2">
+        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
+          <IconSymbol name="building.2.fill" size={18} color={colors.primary} />
+        </View>
+        <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
           {section.name}
         </Text>
       </View>
@@ -473,7 +498,7 @@ const DynamicFormSection = React.memo(function DynamicFormSection({ section, for
           colors={colors}
         />
       ))}
-    </View>
+    </TouchableOpacity>
   );
 });
 
@@ -522,10 +547,7 @@ export default function RegisterOutletScreen() {
   }, [showTypeDropdown, setShowTypeDropdown]);
 
   return (
-    <View 
-      className="flex-1 bg-white" 
-      style={{ backgroundColor: colors.background }}
-    >
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header 
         onBack={handleBack}
         colors={colors}
@@ -542,15 +564,15 @@ export default function RegisterOutletScreen() {
           {loading && (
             <Text 
               className="text-center text-base my-8" 
-              style={{ fontFamily: 'Inter', color: colors.textSecondary }}
+              style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}
             >
               Memuat form...
             </Text>
           )}
           {error && (
             <Text 
-              className="text-center text-base my-8 text-red-500"
-              style={{ fontFamily: 'Inter' }}
+              className="text-center text-base my-8"
+              style={{ fontFamily: 'Inter_400Regular', color: colors.danger }}
             >
               {error}
             </Text>

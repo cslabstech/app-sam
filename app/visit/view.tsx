@@ -15,14 +15,8 @@ interface StatusBadgeProps {
 
 const StatusBadge = React.memo(function StatusBadge({ status, color }: StatusBadgeProps) {
   return (
-    <View 
-      className="px-2 py-1 rounded-md" 
-      style={{ backgroundColor: color + '15' }}
-    >
-      <Text 
-        className="text-[13px] font-semibold" 
-        style={{ fontFamily: 'Inter', color }}
-      >
+    <View className="px-2 py-1 rounded-md" style={{ backgroundColor: color + '15' }}>
+      <Text className="text-xs font-medium" style={{ fontFamily: 'Inter_500Medium', color }}>
         {status}
       </Text>
     </View>
@@ -39,22 +33,21 @@ const ErrorScreen = React.memo(function ErrorScreen({
   onBack: () => void;
 }) {
   return (
-    <View 
-      className="flex-1 bg-white" 
-      style={{ backgroundColor: colors.background }}
-    >
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header
         colors={colors}
         visitName="Detail Visit"
         onBack={onBack}
       />
       
-      <View className="flex-1 justify-center items-center px-4">
-        <IconSymbol name="exclamationmark.triangle" size={48} color={colors.danger} />
-        <Text 
-          className="my-5 text-center text-base" 
-          style={{ fontFamily: 'Inter', color: colors.danger }}
-        >
+      <View className="flex-1 justify-center items-center px-6">
+        <View className="w-16 h-16 rounded-full items-center justify-center mb-4" style={{ backgroundColor: colors.danger + '20' }}>
+          <IconSymbol name="exclamationmark.triangle" size={32} color={colors.danger} />
+        </View>
+        <Text className="text-lg font-semibold text-center mb-2" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
+          Data Tidak Ditemukan
+        </Text>
+        <Text className="text-sm text-center mb-6" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
           {error}
         </Text>
         <Button title="Kembali" variant="primary" onPress={onBack} />
@@ -69,23 +62,17 @@ const LoadingScreen = React.memo(function LoadingScreen({
   colors: any;
 }) {
   return (
-    <View 
-      className="flex-1 bg-white" 
-      style={{ backgroundColor: colors.background }}
-    >
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header
         colors={colors}
         visitName="Detail Visit"
         onBack={() => {}}
       />
       
-      <View className="flex-1 justify-center items-center">
+      <View className="flex-1 justify-center items-center px-6">
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text 
-          className="mt-4 text-base" 
-          style={{ fontFamily: 'Inter', color: colors.textSecondary }}
-        >
-          Memuat...
+        <Text className="mt-4 text-base" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
+          Memuat data kunjungan...
         </Text>
       </View>
     </View>
@@ -104,20 +91,22 @@ const Header = React.memo(function Header({
   const insets = useSafeAreaInsets();
   
   return (
-    <View className="bg-primary-500 px-4 pb-4" style={{ paddingTop: insets.top + 8 }}>
+    <View className="px-4 pb-4" style={{ paddingTop: insets.top + 12, backgroundColor: colors.primary }}>
       <View className="flex-row justify-between items-center">
-        <TouchableOpacity onPress={onBack}>
+        <TouchableOpacity 
+          onPress={onBack}
+          className="w-8 h-8 items-center justify-center"
+          accessibilityRole="button"
+          accessibilityLabel="Kembali"
+        >
           <IconSymbol name="chevron.left" size={24} color="#fff" />
         </TouchableOpacity>
-        <View className="flex-1 items-center">
-          <Text 
-            className="text-white text-2xl font-bold"
-            style={{ fontFamily: 'Inter' }}
-          >
+        <View className="flex-1 items-center mx-4">
+          <Text className="text-white text-xl font-semibold" style={{ fontFamily: 'Inter_600SemiBold' }}>
             {visitName}
           </Text>
         </View>
-        <View className="w-6 h-6" />
+        <View className="w-8 h-8" />
       </View>
     </View>
   );
@@ -134,31 +123,20 @@ const InfoRow = React.memo(function InfoRow({
   colors: any;
   isLast?: boolean;
 }) {
-  const baseClasses = "flex-row justify-between items-center py-2";
-  const borderClasses = !isLast ? "border-b border-b-[0.5px]" : "";
-  const containerClasses = `${baseClasses} ${borderClasses}`.trim();
-
   return (
-    <View 
-      className={containerClasses}
-      style={{ borderBottomColor: 'rgba(150,150,150,0.2)' }}
-    >
-      <Text 
-        className="text-sm flex-1" 
-        style={{ fontFamily: 'Inter', color: colors.textSecondary }}
-      >
+    <View className={`flex-row justify-between items-center py-3 ${!isLast ? 'border-b' : ''}`} style={{ borderBottomColor: !isLast ? colors.border + '40' : 'transparent' }}>
+      <Text className="text-sm flex-1" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
         {label}
       </Text>
-      {typeof value === 'string' ? (
-        <Text 
-          className="text-[15px] font-medium text-right" 
-          style={{ fontFamily: 'Inter', color: colors.text }}
-        >
-          {value}
-        </Text>
-      ) : (
-        value
-      )}
+      <View className="text-right">
+        {typeof value === 'string' ? (
+          <Text className="text-base font-medium text-right" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
+            {value}
+          </Text>
+        ) : (
+          value
+        )}
+      </View>
     </View>
   );
 });
@@ -178,16 +156,32 @@ const VisitDetailsCard = React.memo(function VisitDetailsCard({
   const outletRadius = (visit?.outlet as any)?.radius || '-';
 
   return (
-    <View 
-      className="rounded-xl mb-4 p-4 border"
+    <TouchableOpacity 
+      className="rounded-lg border p-4 mb-4 shadow-sm"
       style={{ 
-        backgroundColor: colors.cardBackground || colors.background,
-        borderColor: colors.border + '40'
+        backgroundColor: colors.card,
+        borderColor: colors.border,
+        minHeight: 48 
       }}
+      activeOpacity={1}
     >
+      <View className="flex-row items-center mb-4">
+        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
+          <IconSymbol name="info.circle" size={18} color={colors.primary} />
+        </View>
+        <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
+          Detail Kunjungan
+        </Text>
+      </View>
+
       <InfoRow
         label="Tanggal Kunjungan"
-        value={visit?.visit_date || '-'}
+        value={visit?.visit_date ? new Date(visit.visit_date).toLocaleDateString('id-ID', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        }) : '-'}
         colors={colors}
       />
       <InfoRow
@@ -232,11 +226,11 @@ const VisitDetailsCard = React.memo(function VisitDetailsCard({
       />
       <InfoRow
         label="Radius Outlet"
-        value={outletRadius}
+        value={outletRadius !== '-' ? `${outletRadius} m` : '-'}
         colors={colors}
         isLast={true}
       />
-    </View>
+    </TouchableOpacity>
   );
 });
 
@@ -308,10 +302,7 @@ export default function VisitViewPage() {
   }
 
   return (
-    <View 
-      className="flex-1 bg-white" 
-      style={{ backgroundColor: colors.background }}
-    >
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header
         colors={colors}
         visitName={visit?.outlet?.name || 'Detail Visit'}

@@ -80,16 +80,17 @@ const QuickActionButton = React.memo(function QuickActionButton({
 }) {
   return (
     <TouchableOpacity
-      className="flex-1 p-4 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 items-center"
+      className="flex-1 p-4 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 items-center min-h-[48px]"
       onPress={onPress}
       accessibilityLabel={accessibilityLabel}
       activeOpacity={0.85}
     >
-      <View className={`w-12 h-12 rounded-full ${bgColor} items-center justify-center mb-2`}>
-        <IconSymbol size={24} name={iconName} color={iconColor} />
+      <View className={`w-9 h-9 rounded-lg ${bgColor} items-center justify-center mb-2 border`} 
+           style={{ borderColor: iconColor + '40' }}>
+        <IconSymbol size={20} name={iconName} color={iconColor} />
       </View>
-      <Text style={{ fontFamily: 'Inter' }} className="text-base font-semibold text-neutral-900 dark:text-neutral-100">{title}</Text>
-      <Text style={{ fontFamily: 'Inter' }} className="text-xs text-slate-500 dark:text-slate-400 text-center mt-1">{subtitle}</Text>
+      <Text style={{ fontFamily: 'Inter' }} className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{title}</Text>
+      <Text style={{ fontFamily: 'Inter' }} className="text-xs text-neutral-600 dark:text-neutral-400 text-center mt-1">{subtitle}</Text>
     </TouchableOpacity>
   );
 });
@@ -131,55 +132,53 @@ const VisitCard = React.memo(function VisitCard({
     }
     
     return (
-      <View className="flex-row items-center px-3 py-1 rounded-full bg-success-100 dark:bg-success-900 shadow">
+      <View className="flex-row items-center px-2 py-1 rounded-lg border"
+            style={{ backgroundColor: colors.success + '20', borderColor: colors.success }}>
         <IconSymbol name="checkmark.circle.fill" size={16} color={colors.success} />
-        <Text style={{ fontFamily: 'Inter' }} className="text-xs font-semibold text-success-700 dark:text-success-300 ml-1">Selesai</Text>
+        <Text style={{ fontFamily: 'Inter', color: colors.success }} className="text-xs font-semibold ml-1">Selesai</Text>
       </View>
     );
   }, [visit.checkin_time, visit.checkout_time, onStartPress, onCheckOutPress, colors]);
 
   return (
     <Pressable
-      className="mb-2 rounded-lg border-2 border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 active:bg-primary-50 dark:active:bg-primary-900"
+      className="mb-2 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 min-h-[48px]"
       onPress={() => {}}
-      android_ripple={{ color: colors.primary + '10' }}
-      style={{ overflow: 'hidden' }}
+      android_ripple={{ color: colors.primary + '20' }}
+      accessibilityRole="button"
     >
-      <View className="flex-row items-center p-4">
-        {/* Left: Outlet Info */}
+      <View className="flex-row items-center p-3">
+        {/* Left: Icon Container */}
+        <View 
+          className="w-9 h-9 rounded-lg justify-center items-center mr-3 border"
+          style={{ 
+            backgroundColor: colors.primary + '20', 
+            borderColor: colors.primary 
+          }}
+        >
+          <IconSymbol name="building.2.fill" size={20} color={colors.primary} />
+        </View>
+        
+        {/* Center: Outlet Info */}
         <View className="flex-1">
-          {/* Code & Name Side by Side */}
-          <View className="flex-row items-center mb-2">
-            <IconSymbol size={18} name="building.2.fill" color={colors.primary} />
-            <Text style={{ fontFamily: 'Inter' }} className="text-base font-bold text-neutral-900 dark:text-neutral-100 ml-2">
-              {visit.outlet?.code}
+          <Text style={{ fontFamily: 'Inter' }} className="text-base font-medium text-neutral-900 dark:text-neutral-100" numberOfLines={1}>
+            {visit.outlet?.code}
+          </Text>
+          <Text style={{ fontFamily: 'Inter' }} className="text-sm text-neutral-600 dark:text-neutral-400" numberOfLines={1}>
+            {visit.outlet?.name}
+          </Text>
+          <View className="flex-row items-center mt-1">
+            <Text style={{ fontFamily: 'Inter' }} className="text-xs text-neutral-600 dark:text-neutral-400">
+              IN: {visit.checkin_time ? new Date(visit.checkin_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
             </Text>
-            <Text
-              style={{ fontFamily: 'Inter' }}
-              className="text-xs text-slate-500 dark:text-slate-400 ml-3 flex-1 truncate"
-              numberOfLines={1}
-            >
-              {visit.outlet?.name}
+            <Text style={{ fontFamily: 'Inter' }} className="text-xs text-neutral-600 dark:text-neutral-400 ml-3">
+              OUT: {visit.checkout_time ? new Date(visit.checkout_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
             </Text>
-          </View>
-          {/* Time Status */}
-          <View className="flex-row space-x-2 mt-2">
-            <View className="flex-row items-center px-2 py-0.5 rounded-full bg-success-50 dark:bg-success-900">
-              <IconSymbol size={14} name="clock.fill" color={colors.success} />
-              <Text style={{ fontFamily: 'Inter' }} className="text-xs text-success-600 ml-1">
-                IN: {visit.checkin_time ? new Date(visit.checkin_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
-              </Text>
-            </View>
-            <View className="flex-row items-center px-2 py-0.5 rounded-full bg-warning-50 dark:bg-warning-900">
-              <IconSymbol size={14} name="clock.fill" color={colors.warning} />
-              <Text style={{ fontFamily: 'Inter' }} className="text-xs text-warning-600 ml-1">
-                OUT: {visit.checkout_time ? new Date(visit.checkout_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
-              </Text>
-            </View>
           </View>
         </View>
+        
         {/* Right: Action/Status */}
-        <View className="ml-4 min-w-[100px] flex items-end">
+        <View className="ml-3">
           {renderActionButton()}
         </View>
       </View>

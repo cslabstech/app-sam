@@ -1,8 +1,7 @@
 import { router } from 'expo-router';
 import React, { useCallback } from 'react';
-import { Platform, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
-import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { OutletAPI } from '@/hooks/data/useOutlet';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
@@ -57,133 +56,89 @@ const useOutletItemLogic = (outlet: OutletAPI) => {
 
 // 3. Main component
 const OutletItem: React.FC<OutletItemProps> = React.memo(function OutletItem({ outlet }) {
-  // Debug log untuk memastikan data outlet yang diterima
-  console.log('OutletItem props:', outlet);
-
   const colorScheme = useColorScheme();
   const { handlePress, getStatusColor, getStatusBgColor } = useOutletItemLogic(outlet);
   
+  // Get colors object for consistency
+  const colors = {
+    primary: '#FF6B35',
+    textSecondary: colorScheme === 'dark' ? '#a3a3a3' : '#737373',
+    success: '#22c55e',
+    warning: '#f59e0b',
+    danger: '#ef4444',
+  };
+  
   return (
     <TouchableOpacity
+      className="mb-2 p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 min-h-[48px]"
       onPress={handlePress}
-      className="mb-3 mx-0.5"
-      activeOpacity={0.92}
+      activeOpacity={0.7}
+      accessibilityRole="button"
     >
-      <Card 
-        noPadding
-        variant="elevated"
-        className="rounded-2xl overflow-hidden border-0"
+      <View className="flex-row items-center">
+        {/* Left: Icon Container */}
+        <View 
+          className="w-9 h-9 rounded-lg justify-center items-center mr-3 border"
         style={{
-          // ⚠️ SECONDARY - Complex shadow for elevated card
-          ...Platform.select({
-            ios: {
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.1,
-              shadowRadius: 8,
-            },
-            android: {
-              elevation: 4,
-            },
-          }),
+            backgroundColor: colors.primary + '20', 
+            borderColor: colors.primary 
         }}
       >
-        <View className="flex-row justify-between items-center">
-          <View className="flex-1 p-4">
-            {/* Header with Status Badge */}
-            <View className="flex-row justify-between items-center mb-2">
-              <Text 
-                className="flex-1 text-lg font-bold text-neutral-900 dark:text-white mr-2" 
-                style={{ letterSpacing: -0.3 }}
-                numberOfLines={2} 
-                ellipsizeMode="tail"
-              >
+          <IconSymbol name="building.2.fill" size={20} color={colors.primary} />
+        </View>
+        
+        {/* Center: Outlet Info */}
+        <View className="flex-1">
+          <View className="flex-row items-center justify-between">
+            <Text style={{ fontFamily: 'Inter' }} className="text-base font-medium text-neutral-900 dark:text-neutral-100 flex-1" numberOfLines={1}>
                 {outlet.name || '-'}
               </Text>
+            {outlet.status && (
               <View 
-                className={`px-2 py-1 ml-2 rounded-lg border ${getStatusBgColor(outlet.status)}`}
+                className="ml-2 px-2 py-0.5 rounded-lg border"
+                style={{ 
+                  backgroundColor: outlet.status === 'maintain' ? colors.success + '20' : 
+                                   outlet.status === 'unproductive' ? colors.danger + '20' : 
+                                   outlet.status === 'unmaintain' ? colors.warning + '20' : '#f3f4f6',
+                  borderColor: outlet.status === 'maintain' ? colors.success : 
+                              outlet.status === 'unproductive' ? colors.danger : 
+                              outlet.status === 'unmaintain' ? colors.warning : '#d1d5db'
+                }}
               >
                 <Text 
-                  className={`text-xs font-semibold ${getStatusColor(outlet.status)}`}
-                  style={{ letterSpacing: -0.2 }}
-                > 
-                  {outlet.status ? outlet.status.charAt(0).toUpperCase() + outlet.status.slice(1) : '-'}
+                  style={{ 
+                    fontFamily: 'Inter',
+                    color: outlet.status === 'maintain' ? colors.success : 
+                           outlet.status === 'unproductive' ? colors.danger : 
+                           outlet.status === 'unmaintain' ? colors.warning : colors.textSecondary
+                  }}
+                  className="text-xs font-semibold"
+                >
+                  {outlet.status.charAt(0).toUpperCase() + outlet.status.slice(1)}
                 </Text>
               </View>
+            )}
             </View>
-            
-            {/* Outlet Code */}
-            <View className="flex-row items-center mb-2.5">
-              <View className="flex-row items-center mr-3">
-                <IconSymbol name="qrcode" size={14} color="#FF6B35" />
-                <Text 
-                  className="text-sm font-semibold text-primary-500 ml-1" 
-                  numberOfLines={1} 
-                  ellipsizeMode="tail"
-                >
+          <Text style={{ fontFamily: 'Inter' }} className="text-sm text-neutral-600 dark:text-neutral-400" numberOfLines={1}>
                   {outlet.code || '-'}
                 </Text>
-              </View>
-            </View>
-
-            {/* Location Info */}
-            <View className="mt-1">
-              <View className="flex-row items-start mb-2">
-                <IconSymbol 
-                  name="mappin.and.ellipse" 
-                  size={14} 
-                  color={colorScheme === 'dark' ? '#a3a3a3' : '#737373'} 
-                  style={{ marginTop: 2 }} 
-                />
-                <Text 
-                  className="flex-1 text-sm font-medium text-neutral-900 dark:text-white ml-1" 
-                  style={{ lineHeight: 18 }}
-                  numberOfLines={2} 
-                  ellipsizeMode="tail"
-                >
+          <View className="flex-row items-center mt-1">
+            <Text style={{ fontFamily: 'Inter' }} className="text-xs text-neutral-600 dark:text-neutral-400">
                   {outlet.district || '-'}
                 </Text>
-              </View>
-
-              {/* Location Details */}
-              <View className="flex-row flex-wrap mt-1">
                 {outlet.region?.name && (
-                  <View className="flex-row items-center mr-3 mb-1">
-                    <IconSymbol 
-                      name="map.fill" 
-                      size={12} 
-                      color={colorScheme === 'dark' ? '#a3a3a3' : '#737373'} 
-                    />
-                    <Text className="text-sm font-medium text-neutral-600 dark:text-neutral-400 ml-1">
+              <Text style={{ fontFamily: 'Inter' }} className="text-xs text-neutral-600 dark:text-neutral-400 ml-3">
                       {outlet.region.name}
                     </Text>
-                  </View>
-                )}
-
-                {outlet.cluster?.name && (
-                  <View className="flex-row items-center mr-3 mb-1">
-                    <IconSymbol 
-                      name="location.circle.fill" 
-                      size={14} 
-                      color={colorScheme === 'dark' ? '#a3a3a3' : '#737373'} 
-                    />
-                    <Text className="text-sm font-medium text-neutral-600 dark:text-neutral-400 ml-1">
-                      {outlet.cluster.name}
-                    </Text>
-                  </View>
                 )}
               </View>
             </View>
-          </View>
-          <View className="px-3">
-            <IconSymbol 
-              name="chevron.right" 
-              size={22} 
-              color={colorScheme === 'dark' ? '#a3a3a3' : '#737373'} 
-            />
-          </View>
+        
+        {/* Right: Chevron */}
+        <View className="ml-3">
+          <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
         </View>
-      </Card>
+      </View>
     </TouchableOpacity>
   );
 });

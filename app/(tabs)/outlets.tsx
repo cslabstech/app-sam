@@ -134,23 +134,19 @@ const FilterChip = React.memo(function FilterChip({
 }) {
   return (
     <TouchableOpacity
-      className={`px-3 py-1.5 rounded-md border mr-1 mb-1 min-w-[40px] items-center ${
-        isActive 
-          ? 'border-primary-500' 
-          : 'border-neutral-200 dark:border-neutral-700'
-      }`}
+      className="px-3 py-1.5 rounded-lg border mr-1 mb-1 min-w-[40px] items-center"
       style={{
         backgroundColor: isActive ? colors.primary : 'transparent',
+        borderColor: isActive ? colors.primary : 'rgba(156, 163, 175, 0.3)',
       }}
       onPress={onPress}
     >
       <Text 
-        style={{ fontFamily: 'Inter' }}
-        className={`font-normal ${
-          isActive 
-            ? 'text-white font-semibold' 
-            : 'text-neutral-600 dark:text-neutral-400'
-        }`}
+        style={{ 
+          fontFamily: 'Inter',
+          color: isActive ? '#fff' : colors.textSecondary
+        }}
+        className={isActive ? 'font-semibold' : 'font-normal'}
       >
         {label}
       </Text>
@@ -170,10 +166,19 @@ const SearchBar = React.memo(function SearchBar({
   colors: any;
 }) {
   return (
-    <View className="flex-row items-center p-3 rounded-lg mb-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700">
-      <IconSymbol name="magnifyingglass" size={20} color={colors.primary} />
+    <View className="flex-row items-center p-3 rounded-lg mb-3 border bg-white dark:bg-neutral-950"
+          style={{ borderColor: 'rgba(156, 163, 175, 0.3)' }}>
+      <View 
+        className="w-9 h-9 rounded-lg justify-center items-center mr-3 border"
+        style={{ 
+          backgroundColor: colors.primary + '20', 
+          borderColor: colors.primary 
+        }}
+      >
+        <IconSymbol name="magnifyingglass" size={20} color={colors.primary} />
+      </View>
       <TextInput
-        className="flex-1 h-9 ml-2 text-base text-neutral-900 dark:text-neutral-100"
+        className="flex-1 text-base text-neutral-900 dark:text-neutral-100"
         style={{ fontFamily: 'Inter' }}
         placeholder="Search outlets..."
         placeholderTextColor={colors.textSecondary}

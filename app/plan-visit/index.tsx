@@ -219,18 +219,28 @@ const Header = React.memo(function Header({
   onCreate: () => void;
 }) {
   return (
-    <View className="bg-primary-500 px-4 pb-4" style={{ paddingTop: insets.top + 8 }} >
+    <View className="px-4 pb-4" style={{ paddingTop: insets.top + 12, backgroundColor: colors.primary }}>
       <View className="flex-row items-center justify-between">
-        <Pressable onPress={onBack} className="p-1" accessibilityRole="button">
-          <IconSymbol name="chevron.left" size={24} color={colors.textInverse} />
+        <Pressable 
+          onPress={onBack} 
+          className="w-8 h-8 items-center justify-center" 
+          accessibilityRole="button"
+          accessibilityLabel="Kembali"
+        >
+          <IconSymbol name="chevron.left" size={24} color="#fff" />
         </Pressable>
-        <View className="flex-1 items-center">
-          <Text className="text-white text-xl font-bold">
+        <View className="flex-1 items-center mx-4">
+          <Text className="text-white text-xl font-semibold" style={{ fontFamily: 'Inter_600SemiBold' }}>
             Plan Visit
           </Text>
         </View>
-        <Pressable onPress={onCreate} className="p-1" accessibilityRole="button">
-          <IconSymbol name="plus" size={24} color={colors.textInverse} />
+        <Pressable 
+          onPress={onCreate} 
+          className="w-8 h-8 items-center justify-center" 
+          accessibilityRole="button"
+          accessibilityLabel="Tambah plan visit"
+        >
+          <IconSymbol name="plus" size={24} color="#fff" />
         </Pressable>
       </View>
     </View>
@@ -239,11 +249,13 @@ const Header = React.memo(function Header({
 
 const LoadingScreen = React.memo(function LoadingScreen({ colors }: { colors: any }) {
   return (
-    <View className="flex-1 justify-center items-center" style={{ backgroundColor: colors.background }}>
-      <ActivityIndicator size="large" color={colors.primary} />
-      <Text style={{ fontFamily: 'Inter', color: colors.textSecondary }} className="mt-4 text-base">
-        Memuat...
-      </Text>
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
+      <View className="flex-1 justify-center items-center px-6">
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text className="mt-4 text-base" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
+          Memuat plan visit...
+        </Text>
+      </View>
     </View>
   );
 });
@@ -260,14 +272,8 @@ const ErrorDisplay = React.memo(function ErrorDisplay({
   if (!error && !fetchError) return null;
 
   return (
-    <View 
-      className="rounded-lg p-3 mb-4 border"
-      style={{ 
-        backgroundColor: colors.danger + '20', 
-        borderColor: colors.danger + '40' 
-      }}
-    >
-      <Text style={{ fontFamily: 'Inter', color: colors.danger }} className="text-sm">
+    <View className="rounded-lg p-3 mb-4 border" style={{ backgroundColor: colors.danger + '10', borderColor: colors.danger + '30' }}>
+      <Text className="text-sm" style={{ fontFamily: 'Inter_400Regular', color: colors.danger }}>
         {error || fetchError}
       </Text>
     </View>
@@ -303,13 +309,13 @@ const ListHeader = React.memo(function ListHeader({
 }) {
   return (
     <View className="flex-row items-center justify-between mb-4">
-      <Text style={{ fontFamily: 'Inter', color: colors.textSecondary }} className="text-sm">
+      <Text className="text-sm" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
         {planVisits.length} dari {meta?.total || planVisits.length} plan visit
       </Text>
       {currentFilters.filterType !== 'all' && (
         <View className="flex-row items-center">
           <IconSymbol name="line.3.horizontal.decrease.circle" size={16} color={colors.primary} />
-          <Text style={{ fontFamily: 'Inter', color: colors.primary }} className="text-xs ml-1 font-medium">
+          <Text className="text-xs ml-1 font-medium" style={{ fontFamily: 'Inter_500Medium', color: colors.primary }}>
             Terfilter
           </Text>
         </View>
@@ -330,34 +336,36 @@ const PlanVisitItem = React.memo(function PlanVisitItem({
   styles: any;
 }) {
   return (
-    <View 
-      className="rounded-xl mb-3 p-4 border"
-      style={[themeStyles.card.default]}
-    >
+    <View className="rounded-lg border p-3 mb-3 shadow-sm" style={{ backgroundColor: colors.card, borderColor: colors.border, minHeight: 48 }}>
       <View className="flex-row justify-between items-start">
-        <View className="flex-1">
-          <Text style={[{ fontFamily: 'Inter' }, themeStyles.text.primary]} className="text-lg font-bold mb-1">
-            {item.outlet?.name || 'Unknown Outlet'}
-          </Text>
-          <Text style={[{ fontFamily: 'Inter' }, themeStyles.text.secondary]} className="text-sm mb-1">
-            {item.outlet?.code} • {item.outlet?.district || 'No District'}
-          </Text>
-          <Text style={[{ fontFamily: 'Inter' }, themeStyles.text.primary]} className="text-base mb-2">
-            📅 {new Date(item.visit_date).toLocaleDateString('id-ID', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })}
-          </Text>
+        <View className="flex-1 flex-row items-center">
+          <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
+            <IconSymbol name="building.2" size={18} color={colors.primary} />
+          </View>
+          <View className="flex-1">
+            <Text className="text-sm font-medium mb-0.5" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
+              {item.outlet?.name || 'Unknown Outlet'}
+            </Text>
+            <Text className="text-xs" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
+              {item.outlet?.code} • {item.outlet?.district || 'No District'}
+            </Text>
+            <Text className="text-xs mt-1" style={{ fontFamily: 'Inter_400Regular', color: colors.text }}>
+              {new Date(item.visit_date).toLocaleDateString('id-ID', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </Text>
+          </View>
         </View>
         <Pressable
-          className="p-2"
+          className="w-8 h-8 items-center justify-center"
           onPress={() => onDelete(item)}
           accessibilityRole="button"
           accessibilityLabel={`Hapus plan visit ${item.outlet?.name}`}
         >
-          <IconSymbol name="trash" size={20} color={colors.danger} />
+          <IconSymbol name="trash" size={18} color={colors.danger} />
         </Pressable>
       </View>
     </View>
@@ -372,15 +380,17 @@ const EmptyState = React.memo(function EmptyState({
   colors: any;
 }) {
   return (
-    <View className="flex-1 justify-center items-center">
-      <IconSymbol name="calendar" size={60} color={colors.textSecondary} />
-      <Text style={{ fontFamily: 'Inter', color: colors.textSecondary }} className="text-lg font-semibold mt-4">
+    <View className="flex-1 justify-center items-center px-6">
+      <View className="w-16 h-16 rounded-full items-center justify-center mb-4" style={{ backgroundColor: colors.textSecondary + '20' }}>
+        <IconSymbol name="calendar" size={32} color={colors.textSecondary} />
+      </View>
+      <Text className="text-lg font-semibold text-center mb-2" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
         {currentFilters.filterType === 'all' 
           ? 'Belum ada plan visit'
           : 'Tidak ada plan visit'
         }
       </Text>
-      <Text style={{ fontFamily: 'Inter', color: colors.textTertiary }} className="text-base mt-2 text-center">
+      <Text className="text-sm text-center" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
         {currentFilters.filterType === 'all' 
           ? 'Tap tombol + untuk menambah plan visit baru'
           : 'Tidak ditemukan plan visit untuk filter yang dipilih'
@@ -489,7 +499,7 @@ export default function PlanVisitListScreen() {
   }
 
   return (
-    <View className="flex-1 bg-neutral-50 dark:bg-neutral-900" style={{ backgroundColor: colors.background }}>
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header
         colors={colors}
         insets={insets}

@@ -1,7 +1,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { OutletDropdown } from '@/components/OutletDropdown';
@@ -166,17 +166,22 @@ const Header = React.memo(function Header({
   onBack: () => void;
 }) {
   return (
-    <View className="bg-primary-500 px-4 pb-4" style={{ paddingTop: insets.top + 8 }} >
+    <View className="px-4 pb-4" style={{ paddingTop: insets.top + 12, backgroundColor: colors.primary }}>
       <View className="flex-row items-center justify-between">
-        <Pressable onPress={onBack} className="p-1" accessibilityRole="button">
-          <IconSymbol name="chevron.left" size={24} color={colors.textInverse} />
+        <Pressable 
+          onPress={onBack} 
+          className="w-8 h-8 items-center justify-center" 
+          accessibilityRole="button"
+          accessibilityLabel="Kembali"
+        >
+          <IconSymbol name="chevron.left" size={24} color="#fff" />
         </Pressable>
-        <View className="flex-1 items-center">
-          <Text className="text-white text-xl font-bold">
+        <View className="flex-1 items-center mx-4">
+          <Text className="text-white text-xl font-semibold" style={{ fontFamily: 'Inter_600SemiBold' }}>
             Buat Plan Visit
           </Text>
         </View>
-        <View className="w-6 h-6" />
+        <View className="w-8 h-8" />
       </View>
     </View>
   );
@@ -204,31 +209,50 @@ const OutletSection = React.memo(function OutletSection({
   colors: any;
 }) {
   return (
-    <View className="mb-6">
-      <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base mb-3 font-medium">
-        Pilih Outlet <Text className="text-red-500">*</Text>
-      </Text>
-      <View className={fieldErrors.outlet_id ? 'border border-red-500 rounded-lg' : ''}>
-        <OutletDropdown
-          outlets={outlets}
-          selectedOutletId={selectedOutletId || null}
-          onSelect={onSelect}
-          showDropdown={showDropdown}
-          setShowDropdown={onToggleDropdown}
-          loading={outletsLoading}
-          disabled={loading}
-        />
-      </View>
-      {fieldErrors.outlet_id && (
-        <View className="mt-2">
-          {fieldErrors.outlet_id.map((error, index) => (
-            <Text key={index} style={{ fontFamily: 'Inter', color: colors.danger }} className="text-xs">
-              {error}
-            </Text>
-          ))}
+    <TouchableOpacity 
+      className="rounded-lg border p-4 mb-4 shadow-sm"
+      style={{ 
+        backgroundColor: colors.card,
+        borderColor: colors.border,
+        minHeight: 48 
+      }}
+      activeOpacity={1}
+    >
+      <View className="flex-row items-center mb-4">
+        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
+          <IconSymbol name="building.2" size={18} color={colors.primary} />
         </View>
-      )}
-    </View>
+        <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
+          Pilih Outlet
+        </Text>
+      </View>
+      
+      <View className="mb-3">
+        <Text className="mb-3 text-base font-medium" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
+          Outlet <Text style={{ color: colors.danger }}>*</Text>
+        </Text>
+        <View className={fieldErrors.outlet_id ? 'border rounded-lg' : ''} style={{ borderColor: fieldErrors.outlet_id ? colors.danger : 'transparent' }}>
+          <OutletDropdown
+            outlets={outlets}
+            selectedOutletId={selectedOutletId || null}
+            onSelect={onSelect}
+            showDropdown={showDropdown}
+            setShowDropdown={onToggleDropdown}
+            loading={outletsLoading}
+            disabled={loading}
+          />
+        </View>
+        {fieldErrors.outlet_id && (
+          <View className="mt-2">
+            {fieldErrors.outlet_id.map((error, index) => (
+              <Text key={index} className="text-xs" style={{ fontFamily: 'Inter_400Regular', color: colors.danger }}>
+                {error}
+              </Text>
+            ))}
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>
   );
 });
 
@@ -246,39 +270,56 @@ const DateSection = React.memo(function DateSection({
   formatDate: (date: Date) => string;
 }) {
   return (
-    <View className="mb-6">
-      <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-base mb-3 font-medium">
-        Tanggal Plan Visit <Text className="text-red-500">*</Text>
-      </Text>
-      <Pressable
-        className={`rounded-lg border px-3 py-3 flex-row items-center justify-between ${
-          fieldErrors.visit_date ? 'border-red-500' : 'border-neutral-300 dark:border-neutral-600'
-        }`}
-        style={{ 
-          borderColor: fieldErrors.visit_date ? colors.danger : colors.border,
-          backgroundColor: colors.card,
-        }}
-        onPress={onPress}
-        accessibilityRole="button"
-      >
-        <View className="flex-row items-center">
-          <IconSymbol name="calendar" size={20} color={colors.primary} />
-          <Text style={{ fontFamily: 'Inter', color: colors.text }} className="ml-3 text-base">
-            {formatDate(planDate)}
-          </Text>
+    <TouchableOpacity 
+      className="rounded-lg border p-4 mb-4 shadow-sm"
+      style={{ 
+        backgroundColor: colors.card,
+        borderColor: colors.border,
+        minHeight: 48 
+      }}
+      activeOpacity={1}
+    >
+      <View className="flex-row items-center mb-4">
+        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
+          <IconSymbol name="calendar" size={18} color={colors.primary} />
         </View>
-        <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
-      </Pressable>
-      {fieldErrors.visit_date && (
-        <View className="mt-2">
-          {fieldErrors.visit_date.map((error, index) => (
-            <Text key={index} style={{ fontFamily: 'Inter', color: colors.danger }} className="text-xs">
-              {error}
+        <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
+          Tanggal Kunjungan
+        </Text>
+      </View>
+      
+      <View className="mb-3">
+        <Text className="mb-3 text-base font-medium" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
+          Tanggal Plan Visit <Text style={{ color: colors.danger }}>*</Text>
+        </Text>
+        <Pressable
+          className="rounded-lg border px-3 py-3 flex-row items-center justify-between"
+          style={{ 
+            borderColor: fieldErrors.visit_date ? colors.danger : colors.border,
+            backgroundColor: colors.card,
+          }}
+          onPress={onPress}
+          accessibilityRole="button"
+        >
+          <View className="flex-row items-center">
+            <IconSymbol name="calendar" size={20} color={colors.primary} />
+            <Text className="ml-3 text-base" style={{ fontFamily: 'Inter_400Regular', color: colors.text }}>
+              {formatDate(planDate)}
             </Text>
-          ))}
-        </View>
-      )}
-    </View>
+          </View>
+          <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
+        </Pressable>
+        {fieldErrors.visit_date && (
+          <View className="mt-2">
+            {fieldErrors.visit_date.map((error, index) => (
+              <Text key={index} className="text-xs" style={{ fontFamily: 'Inter_400Regular', color: colors.danger }}>
+                {error}
+              </Text>
+            ))}
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>
   );
 });
 
@@ -309,12 +350,12 @@ const DatePickerModal = React.memo(function DatePickerModal({
       {Platform.OS === 'ios' && (
         <View className="flex-row justify-end mt-3 gap-3">
           <Pressable
-            className="px-4 py-2 rounded-lg"
-            style={{ backgroundColor: colors.secondary }}
+            className="px-4 py-2 rounded-lg border"
+            style={{ backgroundColor: colors.card, borderColor: colors.border }}
             onPress={onClose}
             accessibilityRole="button"
           >
-            <Text style={{ fontFamily: 'Inter', color: colors.text }} className="font-semibold">
+            <Text className="font-medium" style={{ fontFamily: 'Inter_500Medium', color: colors.textSecondary }}>
               Batal
             </Text>
           </Pressable>
@@ -324,7 +365,7 @@ const DatePickerModal = React.memo(function DatePickerModal({
             onPress={onClose}
             accessibilityRole="button"
           >
-            <Text style={{ fontFamily: 'Inter', color: colors.textInverse }} className="font-semibold">
+            <Text className="font-medium text-white" style={{ fontFamily: 'Inter_500Medium' }}>
               Selesai
             </Text>
           </Pressable>
@@ -346,12 +387,12 @@ const SubmitButton = React.memo(function SubmitButton({
   return (
     <Pressable
       className="w-full py-4 rounded-lg items-center justify-center mb-8"
-      style={{ backgroundColor: loading ? colors.disabled : colors.primary }}
+      style={{ backgroundColor: loading ? colors.textSecondary + '40' : colors.primary }}
       onPress={onPress}
       disabled={loading}
       accessibilityRole="button"
     >
-      <Text style={{ fontFamily: 'Inter', color: colors.textInverse }} className="text-base font-semibold">
+      <Text className="text-base font-semibold text-white" style={{ fontFamily: 'Inter_600SemiBold' }}>
         {loading ? 'Menyimpan...' : 'Buat Plan Visit'}
       </Text>
     </Pressable>
@@ -489,7 +530,7 @@ export default function CreatePlanVisitScreen() {
   }, [mounted, setErrors, selectedOutletId, planDate, createPlanVisit]);
 
   return (
-    <View className="flex-1 bg-neutral-50 dark:bg-neutral-900" style={{ backgroundColor: colors.background }}>
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header colors={colors} insets={insets} onBack={handleBack} />
 
       <ScrollView 

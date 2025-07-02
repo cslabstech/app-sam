@@ -120,33 +120,49 @@ const FaceDetectionOverlay = () => (
   </View>
 );
 
-const Header = React.memo(function Header({ currentStep, onBack, onRefresh }: { 
+const Header = React.memo(function Header({ currentStep, onBack, onRefresh, colors }: { 
   currentStep: number; 
   onBack: () => void; 
-  onRefresh?: () => void; 
+  onRefresh?: () => void;
+  colors: any;
 }) {
   const insets = useSafeAreaInsets();
   
   const headerStyle = useMemo(() => ({ 
-    paddingTop: insets.top + 8 
-  }), [insets.top]);
+    paddingTop: insets.top + 12,
+    backgroundColor: colors.primary
+  }), [insets.top, colors.primary]);
   
   return (
-    <View className="bg-primary-500 px-4 pb-4" style={headerStyle}>
+    <View className="px-4 pb-4" style={headerStyle}>
       <View className="flex-row justify-between items-center">
-        <TouchableOpacity onPress={onBack} accessibilityRole="button" accessibilityLabel="Kembali">
+        <TouchableOpacity 
+          onPress={onBack} 
+          className="w-8 h-8 items-center justify-center"
+          accessibilityRole="button" 
+          accessibilityLabel="Kembali"
+        >
           <IconSymbol name="chevron.left" size={24} color="#fff" />
         </TouchableOpacity>
-        <View className="flex-1 items-center">
-          <Text className="text-white text-2xl font-bold">Check Out</Text>
-          <Text className="text-white text-sm mt-1">Langkah {currentStep} dari 2</Text>
+        <View className="flex-1 items-center mx-4">
+          <Text className="text-white text-xl font-semibold" style={{ fontFamily: 'Inter_600SemiBold' }}>
+            Check Out
+          </Text>
+          <Text className="text-white/80 text-sm mt-0.5" style={{ fontFamily: 'Inter_400Regular' }}>
+            Langkah {currentStep} dari 2
+          </Text>
         </View>
         {currentStep === 1 && onRefresh ? (
-          <TouchableOpacity onPress={onRefresh} accessibilityRole="button" accessibilityLabel="Refresh data">
-            <Ionicons name="refresh" size={22} color="#fff" />
+          <TouchableOpacity 
+            onPress={onRefresh} 
+            className="w-8 h-8 items-center justify-center"
+            accessibilityRole="button" 
+            accessibilityLabel="Refresh data"
+          >
+            <IconSymbol name="arrow.clockwise" size={20} color="#fff" />
           </TouchableOpacity>
         ) : (
-          <View className="w-6 h-6" />
+          <View className="w-8 h-8" />
         )}
       </View>
     </View>
@@ -170,77 +186,61 @@ const TransactionSelector = React.memo(function TransactionSelector({
   const handleYesPress = useCallback(() => onTransactionChange('YES'), [onTransactionChange]);
   const handleNoPress = useCallback(() => onTransactionChange('NO'), [onTransactionChange]);
   
-  const yesButtonStyle = useMemo(() =>
-    `flex-row items-center py-2.5 px-4 rounded-lg mr-2 ${
-      selectedTransaction === 'YES' ? 'bg-primary-500' : 'bg-neutral-100'
-    }`,
-    [selectedTransaction]
-  );
-  
-  const noButtonStyle = useMemo(() =>
-    `flex-row items-center py-2.5 px-4 rounded-lg mr-2 ${
-      selectedTransaction === 'NO' ? 'bg-primary-500' : 'bg-neutral-100'
-    }`,
-    [selectedTransaction]
-  );
-  
-  const yesTextStyle = useMemo(() =>
-    `ml-2 font-semibold ${
-      selectedTransaction === 'YES' ? 'text-white' : 'text-primary-500'
-    }`,
-    [selectedTransaction]
-  );
-  
-  const noTextStyle = useMemo(() =>
-    `ml-2 font-semibold ${
-      selectedTransaction === 'NO' ? 'text-white' : 'text-primary-500'
-    }`,
-    [selectedTransaction]
-  );
-  
-  const yesIconColor = useMemo(() => 
-    selectedTransaction === 'YES' ? '#fff' : '#f97316',
-    [selectedTransaction]
-  );
-  
-  const noIconColor = useMemo(() => 
-    selectedTransaction === 'NO' ? '#fff' : '#f97316',
-    [selectedTransaction]
-  );
-
   return (
     <View className="mb-4">
-      <Text className="text-base font-semibold mb-2 text-black">Transaksi</Text>
-      <View className="flex-row gap-4">
+      <Text className="text-base font-semibold mb-3 text-neutral-800" style={{ fontFamily: 'Inter_500Medium' }}>
+        Status Transaksi
+      </Text>
+      <View className="flex-row gap-3">
         <TouchableOpacity
-          className={yesButtonStyle}
+          className={`flex-1 flex-row items-center justify-center py-3 px-4 rounded-lg border ${
+            selectedTransaction === 'YES' 
+              ? 'bg-primary-500 border-primary-500' 
+              : 'bg-white border-neutral-200'
+          }`}
           onPress={handleYesPress}
           accessibilityRole="button"
           accessibilityLabel="Pilih transaksi YES"
         >
-          <IconSymbol 
-            name="checkmark.circle.fill" 
-            size={20} 
-            color={yesIconColor} 
-          />
-          <Text className={yesTextStyle}>
-            YES
+          <View className={`w-6 h-6 rounded-full mr-2 items-center justify-center ${
+            selectedTransaction === 'YES' ? 'bg-white' : 'bg-neutral-100'
+          }`}>
+            <IconSymbol 
+              name="checkmark" 
+              size={14} 
+              color={selectedTransaction === 'YES' ? '#f97316' : '#9CA3AF'} 
+            />
+          </View>
+          <Text className={`font-medium ${
+            selectedTransaction === 'YES' ? 'text-white' : 'text-neutral-700'
+          }`} style={{ fontFamily: 'Inter_500Medium' }}>
+            Ada Transaksi
           </Text>
         </TouchableOpacity>
         
         <TouchableOpacity
-          className={noButtonStyle}
+          className={`flex-1 flex-row items-center justify-center py-3 px-4 rounded-lg border ${
+            selectedTransaction === 'NO' 
+              ? 'bg-primary-500 border-primary-500' 
+              : 'bg-white border-neutral-200'
+          }`}
           onPress={handleNoPress}
           accessibilityRole="button"
           accessibilityLabel="Pilih transaksi NO"
         >
-          <IconSymbol 
-            name="xmark.circle.fill" 
-            size={20} 
-            color={noIconColor} 
-          />
-          <Text className={noTextStyle}>
-            NO
+          <View className={`w-6 h-6 rounded-full mr-2 items-center justify-center ${
+            selectedTransaction === 'NO' ? 'bg-white' : 'bg-neutral-100'
+          }`}>
+            <IconSymbol 
+              name="xmark" 
+              size={14} 
+              color={selectedTransaction === 'NO' ? '#f97316' : '#9CA3AF'} 
+            />
+          </View>
+          <Text className={`font-medium ${
+            selectedTransaction === 'NO' ? 'text-white' : 'text-neutral-700'
+          }`} style={{ fontFamily: 'Inter_500Medium' }}>
+            Tidak Ada
           </Text>
         </TouchableOpacity>
       </View>
@@ -258,23 +258,33 @@ const NotesInput = React.memo(function NotesInput({
   const handleSubmitEditing = useCallback(() => Keyboard.dismiss(), []);
   
   return (
-    <View className="mb-4">
-      <Text className="text-base font-semibold mb-2 text-black">Catatan</Text>
-      <TextInput
-        className="bg-white rounded-lg border border-neutral-200 p-3 min-h-20 text-black"
-        placeholder="Tambahkan catatan untuk kunjungan ini..."
-        placeholderTextColor="#7B8FA1"
-        multiline
-        value={notes}
-        onChangeText={onNotesChange}
-        style={{ textAlignVertical: 'top' }}
-        blurOnSubmit={true}
-        returnKeyType="done"
-        onSubmitEditing={handleSubmitEditing}
-        maxLength={500}
-        accessibilityLabel="Input catatan kunjungan"
-        accessibilityHint="Masukkan catatan atau keterangan untuk kunjungan ini"
-      />
+    <View className="mb-6">
+      <Text className="text-base font-semibold mb-3 text-neutral-800" style={{ fontFamily: 'Inter_500Medium' }}>
+        Catatan Kunjungan
+      </Text>
+      <View className="bg-white rounded-lg border border-neutral-200">
+        <TextInput
+          className="p-3 min-h-[100px] text-neutral-800 text-base leading-5"
+          placeholder="Tuliskan catatan atau keterangan kunjungan Anda di sini..."
+          placeholderTextColor="#9CA3AF"
+          multiline
+          value={notes}
+          onChangeText={onNotesChange}
+          style={{ 
+            textAlignVertical: 'top',
+            fontFamily: 'Inter_400Regular'
+          }}
+          blurOnSubmit={true}
+          returnKeyType="done"
+          onSubmitEditing={handleSubmitEditing}
+          maxLength={500}
+          accessibilityLabel="Input catatan kunjungan"
+          accessibilityHint="Masukkan catatan atau keterangan untuk kunjungan ini"
+        />
+      </View>
+      <Text className="text-xs text-neutral-500 mt-2" style={{ fontFamily: 'Inter_400Regular' }}>
+        {notes.length}/500 karakter
+      </Text>
     </View>
   );
 });
@@ -313,21 +323,25 @@ const SimpleCameraScreenCheckout = ({
     <View className="flex-1 bg-black">
     {/* Back button */}
     <TouchableOpacity 
-      className="absolute left-6 bg-black/50 rounded-full p-2 z-30 items-center justify-center" 
+      className="absolute left-4 bg-black/60 rounded-full p-3 z-30 items-center justify-center" 
       style={{ top: insets.top + 16 }}
       onPress={onGoBack}
+      accessibilityRole="button"
+      accessibilityLabel="Kembali"
     >
-      <Ionicons name="arrow-back" size={24} color="#fff" />
+      <Ionicons name="arrow-back" size={20} color="#fff" />
     </TouchableOpacity>
     
     {/* Flash toggle */}
     {hasCameraPermission?.status === 'granted' && (
       <TouchableOpacity 
-        className="absolute right-6 bg-black/50 rounded-full p-2 z-30 items-center justify-center" 
+        className="absolute right-4 bg-black/60 rounded-full p-3 z-30 items-center justify-center" 
         style={{ top: insets.top + 16 }}
         onPress={() => setIsFlashOn(!isFlashOn)}
+        accessibilityRole="button"
+        accessibilityLabel={isFlashOn ? 'Matikan flash' : 'Nyalakan flash'}
       >
-        <Ionicons name={isFlashOn ? 'flash' : 'flash-off'} size={24} color="#fff" />
+        <Ionicons name={isFlashOn ? 'flash' : 'flash-off'} size={20} color="#fff" />
       </TouchableOpacity>
     )}
     
@@ -396,34 +410,48 @@ const SimpleCameraScreenCheckout = ({
   const LoadingState = () => {
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? 'light'];
+    const insets = useSafeAreaInsets();
     
     return (
-      <View className="flex-1 justify-center items-center" style={{ backgroundColor: colors.background }}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text className="mt-4 text-base" style={{ color: colors.textSecondary }}>Memuat...</Text>
+      <View className="flex-1" style={{ backgroundColor: colors.background }}>
+        <Header currentStep={1} onBack={() => router.back()} colors={colors} />
+        <View className="flex-1 justify-center items-center px-6">
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text className="mt-4 text-base" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
+            Memuat data kunjungan...
+          </Text>
+        </View>
       </View>
     );
   };
 
   const ErrorState = ({ onBack }: { onBack: () => void }) => {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
-  
-  return (
-    <View className="flex-1 justify-center items-center" style={{ backgroundColor: colors.background }}>
-      <IconSymbol name="exclamationmark.triangle" size={60} color={colors.danger} />
-      <Text className="text-lg font-semibold mt-4" style={{ color: colors.text }}>
-        Data kunjungan tidak ditemukan.
-      </Text>
-      <Button
-        title="Kembali"
-        variant="primary"
-        onPress={onBack}
-        style={{ marginTop: 24 }}
-      />
-    </View>
-  );
-};
+    const colorScheme = useColorScheme();
+    const colors = Colors[colorScheme ?? 'light'];
+    
+    return (
+      <View className="flex-1" style={{ backgroundColor: colors.background }}>
+        <Header currentStep={1} onBack={onBack} colors={colors} />
+        <View className="flex-1 justify-center items-center px-6">
+          <View className="w-16 h-16 rounded-full items-center justify-center mb-4" style={{ backgroundColor: colors.danger + '20' }}>
+            <IconSymbol name="exclamationmark.triangle" size={32} color={colors.danger} />
+          </View>
+          <Text className="text-lg font-semibold text-center mb-2" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
+            Data Tidak Ditemukan
+          </Text>
+          <Text className="text-sm text-center mb-6" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
+            Data kunjungan tidak dapat ditemukan atau sudah tidak valid
+          </Text>
+          <Button
+            title="Kembali"
+            variant="primary"
+            onPress={onBack}
+            style={{ marginTop: 8 }}
+          />
+        </View>
+      </View>
+    );
+  };
 
 export default function CheckOutScreen() {
   // CRITICAL: All hooks must be at the top level and in consistent order
@@ -769,8 +797,8 @@ export default function CheckOutScreen() {
   if (currentStep === 2) {
     return (
       <ErrorBoundary>
-        <View className="flex-1 bg-white">
-          <Header currentStep={currentStep} onBack={() => changeStep(1)} />
+        <View className="flex-1" style={{ backgroundColor: colors.background }}>
+          <Header currentStep={currentStep} onBack={() => changeStep(1)} colors={colors} />
           
           <SimpleCameraScreenCheckout
             hasCameraPermission={hasCameraPermission}
@@ -816,11 +844,12 @@ export default function CheckOutScreen() {
   
   return (
     <ErrorBoundary>
-      <Animated.View className="flex-1 bg-white" style={{ opacity: fadeAnim }}>
+      <Animated.View className="flex-1" style={{ opacity: fadeAnim, backgroundColor: colors.background }}>
         <Header 
           currentStep={currentStep} 
           onBack={() => router.back()} 
           onRefresh={getCurrentLocation}
+          colors={colors}
         />
         
         <View className="flex-1">
@@ -849,18 +878,18 @@ export default function CheckOutScreen() {
                 description={visit.outlet.district ?? ''}
               >
                 <View className="items-center justify-center">
-                  <View className="bg-white rounded-full p-1.5 border-2 border-red-700 shadow-md">
-                    <Ionicons name="business" size={28} color="#C62828" />
+                  <View className="rounded-full p-2 border-2 shadow-lg" style={{ backgroundColor: colors.card, borderColor: colors.primary }}>
+                    <IconSymbol name="building.2" size={24} color={colors.primary} />
                   </View>
                   <View 
                     className="w-0 h-0 -mt-0.5"
                     style={{
-                      borderLeftWidth: 10,
-                      borderRightWidth: 10,
-                      borderTopWidth: 18,
+                      borderLeftWidth: 8,
+                      borderRightWidth: 8,
+                      borderTopWidth: 12,
                       borderLeftColor: 'transparent',
                       borderRightColor: 'transparent',
-                      borderTopColor: '#C62828',
+                      borderTopColor: colors.primary,
                     }}
                   />
                 </View>
@@ -869,15 +898,33 @@ export default function CheckOutScreen() {
           </MapView>
           
           {/* Outlet Info Card Overlay */}
-          <View className="absolute left-4 right-4 z-10" style={{ top: insets.top + 16 }}>
-            <View className="bg-white rounded-xl p-4 shadow-sm">
-              <Text className="text-sm text-neutral-400 mb-1">Informasi Outlet</Text>
-              <Text className="text-primary-500 text-lg font-bold mb-1">{visit!.outlet.name} ({visit!.outlet.code})</Text>
-              <View className="flex-row items-center mt-0.5">
-                <IconSymbol name="mappin.and.ellipse" size={18} color="#222B45" style={{ marginRight: 8 }} />
-                <Text className="text-primary-500 text-base">{visit!.outlet.district || visit!.outlet.address}</Text>
+          <View className="absolute left-4 right-4 z-10" style={{ top: 16 }}>
+            <TouchableOpacity 
+              className="rounded-lg border p-3 shadow-sm"
+              style={{ 
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                minHeight: 48 
+              }}
+              activeOpacity={0.7}
+            >
+              <View className="flex-row items-center">
+                <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
+                  <IconSymbol name="building.2" size={18} color={colors.primary} />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-xs mb-0.5" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
+                    Outlet Check Out
+                  </Text>
+                  <Text className="text-sm font-medium" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
+                    {visit!.outlet.name}
+                  </Text>
+                  <Text className="text-xs" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
+                    {visit!.outlet.code} • {visit!.outlet.district || 'Tidak ada distrik'}
+                  </Text>
+                </View>
               </View>
-            </View>
+            </TouchableOpacity>
           </View>
           
           {/* Bottom Sheet for Step 1 */}
@@ -902,7 +949,9 @@ export default function CheckOutScreen() {
                     height: bottomSheetIndex >= 1 ? 'auto' : 0,
                     overflow: 'hidden'
                   }}>
-                    <Text className="font-bold text-lg mb-4 text-black">Catatan & Transaksi</Text>
+                    <Text className="text-lg font-semibold mb-4 text-neutral-800" style={{ fontFamily: 'Inter_600SemiBold' }}>
+                      Data Check Out
+                    </Text>
                     
                     <TransactionSelector
                       selectedTransaction={formManager.formData.transaction}

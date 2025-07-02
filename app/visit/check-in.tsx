@@ -48,9 +48,16 @@ interface OutletDisplayData {
 }
 
 function parseLatLong(latlong: string): { latitude: number; longitude: number } | null {
-  if (!latlong) return null;
+  if (!latlong) {
+    console.log('[PARSE_LATLONG] No latlong provided');
+    return null;
+  }
   const [lat, lng] = latlong.split(',').map(Number);
-  if (isNaN(lat) || isNaN(lng)) return null;
+  if (isNaN(lat) || isNaN(lng)) {
+    console.log(`[PARSE_LATLONG] Invalid coordinates: ${latlong} -> lat: ${lat}, lng: ${lng}`);
+    return null;
+  }
+  console.log(`[PARSE_LATLONG] Parsed successfully: ${latlong} -> lat: ${lat}, lng: ${lng}`);
   return { latitude: lat, longitude: lng };
 }
 
@@ -207,19 +214,21 @@ const useOutletManager = () => {
   };
 };
 
-const Header = React.memo(function Header({ currentStep, onBack, onRefresh }: { 
+const Header = React.memo(function Header({ currentStep, onBack, onRefresh, colors }: { 
   currentStep: number; 
   onBack: () => void; 
-  onRefresh: () => void; 
+  onRefresh: () => void;
+  colors: any;
 }) {
   const insets = useSafeAreaInsets();
   
   const headerStyle = useMemo(() => ({ 
-    paddingTop: insets.top + 8 
-  }), [insets.top]);
+    paddingTop: insets.top + 8,
+    backgroundColor: colors.primary
+  }), [insets.top, colors.primary]);
   
   return (
-    <View className="bg-primary-500 px-4 pb-4" style={headerStyle}>
+    <View className="px-4 pb-4" style={headerStyle}>
       <View className="flex-row justify-between items-center">
         <TouchableOpacity onPress={onBack} accessibilityRole="button" accessibilityLabel="Kembali">
           <IconSymbol name="chevron.left" size={24} color="#fff" />
@@ -229,8 +238,8 @@ const Header = React.memo(function Header({ currentStep, onBack, onRefresh }: {
           <Text className="text-white text-sm mt-1">Langkah {currentStep} dari 2</Text>
         </View>
         {currentStep === 1 ? (
-          <TouchableOpacity onPress={onRefresh} accessibilityRole="button" accessibilityLabel="Refresh data">
-            <Ionicons name="refresh" size={22} color="#fff" />
+          <TouchableOpacity onPress={onRefresh} accessibilityRole="button" accessibilityLabel="Reset dan refresh data">
+            <IconSymbol name="arrow.clockwise" size={22} color="#fff" />
           </TouchableOpacity>
         ) : (
           <View className="w-6 h-6" />
@@ -353,13 +362,6 @@ const OutletListItem = React.memo(function OutletListItem({
     onSelect(String(item.id), item.planVisitId || undefined);
   }, [onSelect, item.id, item.planVisitId]);
 
-  const itemStyle = useMemo(() =>
-    `py-2 px-3 border-b border-neutral-200 rounded bg-white mb-0.5 ${
-      isSelected ? 'bg-primary-50' : ''
-    }`,
-    [isSelected]
-  );
-
   const visitDateText = useMemo(() => {
     if (visitType === 'planned' && item.visitDate) {
       return new Date(item.visitDate).toLocaleDateString('id-ID');
@@ -367,31 +369,56 @@ const OutletListItem = React.memo(function OutletListItem({
     return null;
   }, [visitType, item.visitDate]);
 
+  const visitTimeText = useMemo(() => {
+    if (visitType === 'planned' && item.visitDate) {
+      return new Date(item.visitDate).toLocaleTimeString('id-ID', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false 
+      });
+    }
+    return null;
+  }, [visitType, item.visitDate]);
+
   return (
     <TouchableOpacity
       onPress={handlePress}
-      className={itemStyle}
+      className={`py-2 px-3 border-b border-neutral-200 rounded bg-white mb-0.5 ${
+        isSelected ? 'bg-primary-50' : ''
+      }`}
       accessibilityRole="button"
       accessibilityLabel={`Pilih outlet ${item.name}`}
       accessibilityHint={`Outlet ${item.code} di ${item.district || 'lokasi tidak diketahui'}`}
     >
-      <Text className="font-semibold text-base text-black" numberOfLines={1}>
-        {item.name}
-      </Text>
-      <View className="flex-row items-center mt-0.5">
-        <Text className="text-xs text-neutral-500 mr-2" numberOfLines={1}>
-          {item.code}
-        </Text>
-        {item.district && (
-          <Text className="text-xs text-neutral-400" numberOfLines={1}>
-            {item.district}
+      <View className="flex-row items-center">
+        {/* Checkbox */}
+        <View className="mr-3">
+          {isSelected ? (
+            <View className="w-5 h-5 bg-primary-500 rounded border-2 border-primary-500 items-center justify-center">
+              <IconSymbol name="checkmark" size={12} color="#fff" />
+            </View>
+          ) : (
+            <View className="w-5 h-5 rounded border-2 border-neutral-300" />
+          )}
+        </View>
+        
+        {/* Content */}
+        <View className="flex-1">
+          <Text className="font-semibold text-base text-black" numberOfLines={1}>
+            {item.name}
           </Text>
-        )}
-        {visitDateText && (
-          <Text className="text-xs text-blue-600 ml-auto" numberOfLines={1}>
-            📅 {visitDateText}
-          </Text>
-        )}
+          <View className="flex-row items-center mt-0.5">
+            <Text className="text-xs text-neutral-500 mr-2" numberOfLines={1}>
+              {item.code}
+            </Text>
+            {item.district && (
+              <Text className="text-xs text-neutral-400" numberOfLines={1}>
+                {item.district}
+              </Text>
+            )}
+            
+          </View>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -762,27 +789,38 @@ export default function CheckInScreen() {
     }
   }, [outletManager.selectedOutlet, locationManager.currentLocation]);
 
-  // Map region update
+  // Map region update - prioritize user location, then outlet
   useEffect(() => {
+    // If outlet is selected, focus on outlet location
     if (outletManager.selectedOutlet?.location) {
       const coords = parseLatLong(outletManager.selectedOutlet.location);
       if (coords) {
-        setMapRegion((prevRegion: any) => {
-          if (prevRegion && 
-              Math.abs(prevRegion.latitude - coords.latitude) < 0.0001 && 
-              Math.abs(prevRegion.longitude - coords.longitude) < 0.0001) {
-            return prevRegion;
-          }
-          return {
-            latitude: coords.latitude,
-            longitude: coords.longitude,
-            latitudeDelta: 0.005,
-            longitudeDelta: 0.005,
-          };
+        console.log(`[MAP] Focusing on outlet: ${outletManager.selectedOutlet.name} at ${coords.latitude}, ${coords.longitude}`);
+        setMapRegion({
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          latitudeDelta: 0.005,
+          longitudeDelta: 0.005,
         });
+        return;
       }
     }
-  }, [outletManager.selectedOutlet?.id, outletManager.selectedOutlet?.location]);
+
+    // If no outlet selected, focus on user location when available
+    if (locationManager.currentLocation && !outletManager.selectedOutlet) {
+      console.log(`[MAP] Focusing on user location: ${locationManager.currentLocation.latitude}, ${locationManager.currentLocation.longitude}`);
+      setMapRegion({
+        latitude: locationManager.currentLocation.latitude,
+        longitude: locationManager.currentLocation.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      });
+    }
+  }, [
+    outletManager.selectedOutlet?.id, 
+    outletManager.selectedOutlet?.location,
+    locationManager.currentLocation
+  ]);
 
   // Handlers
   const changeStep = useCallback((newStep: number) => {
@@ -804,6 +842,17 @@ export default function CheckInScreen() {
     outletManager.setSelectedOutletId(id);
     if (outletManager.visitType === 'planned' && planVisitId) {
       outletManager.setSelectedPlanVisitId(planVisitId);
+    }
+    
+    // Debug: Log selected outlet location
+    const selectedOutlet = outletManager.displayData.find(o => String(o.id) === id);
+    if (selectedOutlet) {
+      console.log(`[OUTLET_SELECT] Selected outlet: ${selectedOutlet.name}`);
+      console.log(`[OUTLET_SELECT] Location: ${selectedOutlet.location}`);
+      const coords = parseLatLong(selectedOutlet.location);
+      if (coords) {
+        console.log(`[OUTLET_SELECT] Parsed coordinates: lat=${coords.latitude}, lng=${coords.longitude}`);
+      }
     }
   }, [outletManager]);
 
@@ -999,6 +1048,24 @@ export default function CheckInScreen() {
     router
   ]);
 
+  const handleHeaderRefresh = useCallback(() => {
+    // Reset selected outlet and refresh data
+    outletManager.setSelectedOutletId(null);
+    outletManager.setSelectedPlanVisitId(null);
+    locationManager.getLocation();
+    outletManager.fetchData();
+    
+    // Reset map to user location if available
+    if (locationManager.currentLocation) {
+      setMapRegion({
+        latitude: locationManager.currentLocation.latitude,
+        longitude: locationManager.currentLocation.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      });
+    }
+  }, [outletManager, locationManager]);
+
   const handleBottomSheetAction = useCallback(() => {
     handleContinue();
   }, [handleContinue]);
@@ -1014,8 +1081,8 @@ export default function CheckInScreen() {
   // Render early returns
   if (currentStep === 1 && locationBlocked) {
     return (
-      <View className="flex-1 bg-white">
-        <Header currentStep={currentStep} onBack={() => router.back()} onRefresh={locationManager.getLocation} />
+      <View className="flex-1" style={{ backgroundColor: colors.background }}>
+        <Header currentStep={currentStep} onBack={() => router.back()} onRefresh={handleHeaderRefresh} colors={colors} />
         <LocationBlocked selectedOutlet={outletManager.selectedOutlet} router={router} />
       </View>
     );
@@ -1023,8 +1090,8 @@ export default function CheckInScreen() {
 
   if (currentStep === 2) {
     return (
-      <View className="flex-1 bg-white">
-        <Header currentStep={currentStep} onBack={() => changeStep(1)} onRefresh={locationManager.getLocation} />
+      <View className="flex-1" style={{ backgroundColor: colors.background }}>
+        <Header currentStep={currentStep} onBack={() => changeStep(1)} onRefresh={handleHeaderRefresh} colors={colors} />
         
         <SimpleCameraScreen
           hasCameraPermission={hasCameraPermission}
@@ -1067,8 +1134,8 @@ export default function CheckInScreen() {
 
   // Main render - Step 1 with Bottom Sheet
   return (
-    <View className="flex-1 bg-white">
-      <Header currentStep={currentStep} onBack={() => router.back()} onRefresh={locationManager.getLocation} />
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
+      <Header currentStep={currentStep} onBack={() => router.back()} onRefresh={handleHeaderRefresh} colors={colors} />
       
       <View className="flex-1">
         <MapView
@@ -1088,6 +1155,7 @@ export default function CheckInScreen() {
         >
           {outletManager.selectedOutlet && outletManager.selectedOutlet.location && (
             <Marker
+              key={`marker-${outletManager.selectedOutlet.id}`}
               coordinate={{
                 latitude: Number(outletManager.selectedOutlet.location.split(',')[0]),
                 longitude: Number(outletManager.selectedOutlet.location.split(',')[1]),
@@ -1125,6 +1193,8 @@ export default function CheckInScreen() {
             />
           </View>
         )}
+        
+
         
         {/* Bottom Sheet for Step 1 */}
         <BottomSheet

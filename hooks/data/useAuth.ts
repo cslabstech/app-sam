@@ -28,6 +28,7 @@ export interface User {
     name: string;
     email?: string;
     phone?: string | null;
+    photo?: string; // tambah photo field
     role_id: string | number;
     tm_id?: string | null;
     notif_id: string;
@@ -36,11 +37,16 @@ export interface User {
         name: string;
         scope_required_fields?: any;
         permissions: Array<{
-            id: string | number;
-            name: string;
+            name: string; // update: hanya name yang diperlukan berdasarkan API baru
         }>;
     };
-    user_scopes: {
+    user_scopes: Array<{
+        id?: number;
+        badan_usaha_id?: number | null;
+        division_id?: number | null;
+        region_id?: number | null;
+        cluster_id?: number | null;
+    }> | {
         id?: number;
         badan_usaha_id?: number | null;
         division_id?: number | null;
