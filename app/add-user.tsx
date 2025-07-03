@@ -7,7 +7,7 @@ import { useAddUser } from '@/hooks/data/useAddUser';
 import { useReference } from '@/hooks/data/useReference';
 import { useThemeStyles } from '@/hooks/utils/useThemeStyles';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -135,7 +135,7 @@ const useFieldDependencies = (
   };
 };
 
-const Header = React.memo(function Header({ 
+const Header = memo(function Header({ 
   onBack, 
   colors 
 }: { 
@@ -144,8 +144,13 @@ const Header = React.memo(function Header({
 }) {
   const insets = useSafeAreaInsets();
   
+  const headerStyle = useMemo(() => ({ 
+    paddingTop: insets.top + 12, 
+    backgroundColor: colors.primary 
+  }), [insets.top, colors.primary]);
+  
   return (
-    <View className="px-4 pb-4" style={{ paddingTop: insets.top + 12, backgroundColor: colors.primary }}>
+    <View className="px-4 pb-4" style={headerStyle}>
       <View className="flex-row justify-between items-center">
         <TouchableOpacity 
           onPress={onBack}
@@ -166,7 +171,7 @@ const Header = React.memo(function Header({
   );
 });
 
-const LoadingScreen = React.memo(function LoadingScreen({ 
+const LoadingScreen = memo(function LoadingScreen({ 
   colors, 
   onBack 
 }: { 
@@ -186,7 +191,7 @@ const LoadingScreen = React.memo(function LoadingScreen({
   );
 });
 
-const ErrorScreen = React.memo(function ErrorScreen({ 
+const ErrorScreen = memo(function ErrorScreen({ 
   error, 
   onBack, 
   colors 
@@ -218,7 +223,7 @@ const ErrorScreen = React.memo(function ErrorScreen({
   );
 });
 
-const SelectField = React.memo(function SelectField({ 
+const SelectField = memo(function SelectField({ 
   label, 
   value, 
   onValueChange, 
@@ -248,7 +253,209 @@ const SelectField = React.memo(function SelectField({
   );
 });
 
-export default function AddUserScreen() {
+const PersonalInfoCard = memo(function PersonalInfoCard({ 
+  formData, 
+  colors, 
+  updateField 
+}: {
+  formData: FormData;
+  colors: any;
+  updateField: (field: keyof FormData, value: string) => void;
+}) {
+  const cardStyle = useMemo(() => ({ 
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    minHeight: 48 
+  }), [colors.card, colors.border]);
+
+  const iconBackgroundStyle = useMemo(() => ({ 
+    backgroundColor: colors.primary + '20' 
+  }), [colors.primary]);
+
+  return (
+    <TouchableOpacity 
+      className="rounded-lg border p-4 mb-4 shadow-sm"
+      style={cardStyle}
+      activeOpacity={1}
+    >
+      <View className="flex-row items-center mb-4">
+        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={iconBackgroundStyle}>
+          <IconSymbol name="person.fill" size={18} color={colors.primary} />
+        </View>
+        <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
+          Informasi Personal
+        </Text>
+      </View>
+      
+      <View className="gap-4">
+        <Input
+          label="Nama Lengkap"
+          value={formData.name}
+          onChangeText={(value) => updateField('name', value)}
+          placeholder="Masukkan nama lengkap"
+          maxLength={50}
+        />
+
+        <Input
+          label="Username"
+          value={formData.username}
+          onChangeText={(value) => updateField('username', value)}
+          placeholder="Masukkan username"
+          autoCapitalize="none"
+          maxLength={30}
+        />
+
+        <Input
+          label="No. HP"
+          value={formData.phone}
+          onChangeText={(value) => updateField('phone', value)}
+          placeholder="Masukkan nomor HP"
+          keyboardType="phone-pad"
+          maxLength={15}
+        />
+      </View>
+    </TouchableOpacity>
+  );
+});
+
+const RoleOrganizationCard = memo(function RoleOrganizationCard({ 
+  formData, 
+  colors, 
+  roles, 
+  badanUsaha, 
+  divisions, 
+  regions, 
+  clusters, 
+  roleScope, 
+  handleRoleChange, 
+  handleBadanUsahaChange, 
+  handleDivisiChange, 
+  handleRegionChange, 
+  handleClusterChange 
+}: {
+  formData: FormData;
+  colors: any;
+  roles: any[];
+  badanUsaha: any[];
+  divisions: any[];
+  regions: any[];
+  clusters: any[];
+  roleScope: any;
+  handleRoleChange: (value: string) => void;
+  handleBadanUsahaChange: (value: string) => void;
+  handleDivisiChange: (value: string) => void;
+  handleRegionChange: (value: string) => void;
+  handleClusterChange: (value: string) => void;
+}) {
+  const cardStyle = useMemo(() => ({ 
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    minHeight: 48 
+  }), [colors.card, colors.border]);
+
+  const iconBackgroundStyle = useMemo(() => ({ 
+    backgroundColor: colors.primary + '20' 
+  }), [colors.primary]);
+
+  const roleOptions = useMemo(() => 
+    roles.map((r) => ({ label: r.name, value: String(r.id) })),
+    [roles]
+  );
+
+  const badanUsahaOptions = useMemo(() => 
+    badanUsaha.map((item) => ({ label: item.name, value: String(item.id) })),
+    [badanUsaha]
+  );
+
+  const divisionOptions = useMemo(() => 
+    divisions.map((item) => ({ label: item.name, value: String(item.id) })),
+    [divisions]
+  );
+
+  const regionOptions = useMemo(() => 
+    regions.map((item) => ({ label: item.name, value: String(item.id) })),
+    [regions]
+  );
+
+  const clusterOptions = useMemo(() => 
+    clusters.map((item) => ({ label: item.name, value: String(item.id) })),
+    [clusters]
+  );
+
+  return (
+    <TouchableOpacity 
+      className="rounded-lg border p-4 mb-4 shadow-sm"
+      style={cardStyle}
+      activeOpacity={1}
+    >
+      <View className="flex-row items-center mb-4">
+        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={iconBackgroundStyle}>
+          <IconSymbol name="building.2" size={18} color={colors.primary} />
+        </View>
+        <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
+          Role & Organisasi
+        </Text>
+      </View>
+      
+      <View className="gap-4">
+        <SelectField
+          label="Role"
+          value={formData.role}
+          onValueChange={handleRoleChange}
+          options={roleOptions}
+          placeholder="Pilih Role"
+          colors={colors}
+        />
+
+        {roleScope.required.includes('badan_usaha_id') && (
+          <SelectField
+            label="Badan Usaha"
+            value={formData.badanusaha}
+            onValueChange={handleBadanUsahaChange}
+            options={badanUsahaOptions}
+            placeholder="Pilih Badan Usaha"
+            colors={colors}
+          />
+        )}
+
+        {roleScope.required.includes('division_id') && (
+          <SelectField
+            label="Divisi"
+            value={formData.divisi}
+            onValueChange={handleDivisiChange}
+            options={divisionOptions}
+            placeholder="Pilih Divisi"
+            colors={colors}
+          />
+        )}
+
+        {roleScope.required.includes('region_id') && (
+          <SelectField
+            label="Region"
+            value={formData.region}
+            onValueChange={handleRegionChange}
+            options={regionOptions}
+            placeholder="Pilih Region"
+            colors={colors}
+          />
+        )}
+
+        {roleScope.required.includes('cluster_id') && (
+          <SelectField
+            label="Cluster"
+            value={formData.cluster}
+            onValueChange={handleClusterChange}
+            options={clusterOptions}
+            placeholder="Pilih Cluster"
+            colors={colors}
+          />
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+});
+
+export default memo(function AddUserScreen() {
   const router = useRouter();
   const { isConnected } = useNetwork();
   const { loading, error, addUser } = useAddUser();
@@ -298,6 +505,13 @@ export default function AddUserScreen() {
     }
   }, [error]);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      resetForm();
+    };
+  }, [resetForm]);
+
   if (error) {
     return (
       <ErrorScreen 
@@ -325,127 +539,33 @@ export default function AddUserScreen() {
           <ScrollView 
             className="flex-1 px-4"
             showsVerticalScrollIndicator={false}
+            removeClippedSubviews={true}
+            keyboardShouldPersistTaps="handled"
           >
             <View className="pt-4 pb-8">
               {/* Personal Information Card */}
-              <TouchableOpacity 
-                className="rounded-lg border p-4 mb-4 shadow-sm"
-                style={{ 
-                  backgroundColor: colors.card,
-                  borderColor: colors.border,
-                  minHeight: 48 
-                }}
-                activeOpacity={1}
-              >
-                <View className="flex-row items-center mb-4">
-                  <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
-                    <IconSymbol name="person.fill" size={18} color={colors.primary} />
-                  </View>
-                  <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
-                    Informasi Personal
-                  </Text>
-                </View>
-                
-                <View className="gap-4">
-                  <Input
-                    label="Nama Lengkap"
-                    value={formData.name}
-                    onChangeText={(value) => updateField('name', value)}
-                    placeholder="Masukkan nama lengkap"
-                  />
-
-                  <Input
-                    label="Username"
-                    value={formData.username}
-                    onChangeText={(value) => updateField('username', value)}
-                    placeholder="Masukkan username"
-                    autoCapitalize="none"
-                  />
-
-                  <Input
-                    label="No. HP"
-                    value={formData.phone}
-                    onChangeText={(value) => updateField('phone', value)}
-                    placeholder="Masukkan nomor HP"
-                    keyboardType="phone-pad"
-                  />
-                </View>
-              </TouchableOpacity>
+              <PersonalInfoCard
+                formData={formData}
+                colors={colors}
+                updateField={updateField}
+              />
 
               {/* Role & Organization Card */}
-              <TouchableOpacity 
-                className="rounded-lg border p-4 mb-4 shadow-sm"
-                style={{ 
-                  backgroundColor: colors.card,
-                  borderColor: colors.border,
-                  minHeight: 48 
-                }}
-                activeOpacity={1}
-              >
-                <View className="flex-row items-center mb-4">
-                  <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
-                    <IconSymbol name="building.2" size={18} color={colors.primary} />
-                  </View>
-                  <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
-                    Role & Organisasi
-                  </Text>
-                </View>
-                
-                <View className="gap-4">
-                  <SelectField
-                    label="Role"
-                    value={formData.role}
-                    onValueChange={handleRoleChange}
-                    options={roles.map((r) => ({ label: r.name, value: String(r.id) }))}
-                    placeholder="Pilih Role"
-                    colors={colors}
-                  />
-
-                  {roleScope.required.includes('badan_usaha_id') && (
-                    <SelectField
-                      label="Badan Usaha"
-                      value={formData.badanusaha}
-                      onValueChange={handleBadanUsahaChange}
-                      options={badanUsaha.map((item) => ({ label: item.name, value: String(item.id) }))}
-                      placeholder="Pilih Badan Usaha"
-                      colors={colors}
-                    />
-                  )}
-
-                  {roleScope.required.includes('division_id') && (
-                    <SelectField
-                      label="Divisi"
-                      value={formData.divisi}
-                      onValueChange={handleDivisiChange}
-                      options={divisions.map((item) => ({ label: item.name, value: String(item.id) }))}
-                      placeholder="Pilih Divisi"
-                      colors={colors}
-                    />
-                  )}
-
-                  {roleScope.required.includes('region_id') && (
-                    <SelectField
-                      label="Region"
-                      value={formData.region}
-                      onValueChange={handleRegionChange}
-                      options={regions.map((item) => ({ label: item.name, value: String(item.id) }))}
-                      placeholder="Pilih Region"
-                      colors={colors}
-                    />
-                  )}
-
-                  {roleScope.required.includes('cluster_id') && (
-                    <SelectField
-                      label="Cluster"
-                      value={formData.cluster}
-                      onValueChange={handleClusterChange}
-                      options={clusters.map((item) => ({ label: item.name, value: String(item.id) }))}
-                      placeholder="Pilih Cluster"
-                      colors={colors}
-                    />
-                  )}
-                </View>
-              </TouchableOpacity>
+              <RoleOrganizationCard
+                formData={formData}
+                colors={colors}
+                roles={roles}
+                badanUsaha={badanUsaha}
+                divisions={divisions}
+                regions={regions}
+                clusters={clusters}
+                roleScope={roleScope}
+                handleRoleChange={handleRoleChange}
+                handleBadanUsahaChange={handleBadanUsahaChange}
+                handleDivisiChange={handleDivisiChange}
+                handleRegionChange={handleRegionChange}
+                handleClusterChange={handleClusterChange}
+              />
 
               <Button
                 title={loading ? 'Menyimpan...' : 'Simpan User'}
@@ -462,4 +582,4 @@ export default function AddUserScreen() {
       </KeyboardAvoidingView>
     </View>
   );
-}
+});

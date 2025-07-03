@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -218,8 +218,13 @@ const Header = React.memo(function Header({
   onBack: () => void;
   onCreate: () => void;
 }) {
+  const headerStyle = useMemo(() => ({ 
+    paddingTop: insets.top + 12, 
+    backgroundColor: colors.primary 
+  }), [insets.top, colors.primary]);
+
   return (
-    <View className="px-4 pb-4" style={{ paddingTop: insets.top + 12, backgroundColor: colors.primary }}>
+    <View className="px-4 pb-4" style={headerStyle}>
       <View className="flex-row items-center justify-between">
         <Pressable 
           onPress={onBack} 
@@ -269,10 +274,15 @@ const ErrorDisplay = React.memo(function ErrorDisplay({
   fetchError: string | null; 
   colors: any;
 }) {
+  const errorStyle = useMemo(() => ({ 
+    backgroundColor: colors.danger + '10', 
+    borderColor: colors.danger + '30' 
+  }), [colors.danger]);
+
   if (!error && !fetchError) return null;
 
   return (
-    <View className="rounded-lg p-3 mb-4 border" style={{ backgroundColor: colors.danger + '10', borderColor: colors.danger + '30' }}>
+    <View className="rounded-lg p-3 mb-4 border" style={errorStyle}>
       <Text className="text-sm" style={{ fontFamily: 'Inter_400Regular', color: colors.danger }}>
         {error || fetchError}
       </Text>
@@ -307,12 +317,22 @@ const ListHeader = React.memo(function ListHeader({
   currentFilters: FilterParams;
   colors: any;
 }) {
+  const isFiltered = useMemo(() => 
+    currentFilters.filterType !== 'all',
+    [currentFilters.filterType]
+  );
+
+  const totalText = useMemo(() => 
+    `${planVisits.length} dari ${meta?.total || planVisits.length} plan visit`,
+    [planVisits.length, meta?.total]
+  );
+
   return (
     <View className="flex-row items-center justify-between mb-4">
       <Text className="text-sm" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
-        {planVisits.length} dari {meta?.total || planVisits.length} plan visit
+        {totalText}
       </Text>
-      {currentFilters.filterType !== 'all' && (
+      {isFiltered && (
         <View className="flex-row items-center">
           <IconSymbol name="line.3.horizontal.decrease.circle" size={16} color={colors.primary} />
           <Text className="text-xs ml-1 font-medium" style={{ fontFamily: 'Inter_500Medium', color: colors.primary }}>
@@ -335,11 +355,35 @@ const PlanVisitItem = React.memo(function PlanVisitItem({
   colors: any;
   styles: any;
 }) {
+  const cardStyle = useMemo(() => ({ 
+    backgroundColor: colors.card, 
+    borderColor: colors.border, 
+    minHeight: 48 
+  }), [colors.card, colors.border]);
+
+  const iconBackgroundStyle = useMemo(() => ({ 
+    backgroundColor: colors.primary + '20' 
+  }), [colors.primary]);
+
+  const visitDate = useMemo(() => 
+    new Date(item.visit_date).toLocaleDateString('id-ID', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    }),
+    [item.visit_date]
+  );
+
+  const handleDeletePress = useCallback(() => {
+    onDelete(item);
+  }, [onDelete, item]);
+
   return (
-    <View className="rounded-lg border p-3 mb-3 shadow-sm" style={{ backgroundColor: colors.card, borderColor: colors.border, minHeight: 48 }}>
+    <View className="rounded-lg border p-3 mb-3 shadow-sm" style={cardStyle}>
       <View className="flex-row justify-between items-start">
         <View className="flex-1 flex-row items-center">
-          <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
+          <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={iconBackgroundStyle}>
             <IconSymbol name="building.2" size={18} color={colors.primary} />
           </View>
           <View className="flex-1">
@@ -350,18 +394,13 @@ const PlanVisitItem = React.memo(function PlanVisitItem({
               {item.outlet?.code} • {item.outlet?.district || 'No District'}
             </Text>
             <Text className="text-xs mt-1" style={{ fontFamily: 'Inter_400Regular', color: colors.text }}>
-              {new Date(item.visit_date).toLocaleDateString('id-ID', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}
+              {visitDate}
             </Text>
           </View>
         </View>
         <Pressable
           className="w-8 h-8 items-center justify-center"
-          onPress={() => onDelete(item)}
+          onPress={handleDeletePress}
           accessibilityRole="button"
           accessibilityLabel={`Hapus plan visit ${item.outlet?.name}`}
         >
@@ -379,22 +418,37 @@ const EmptyState = React.memo(function EmptyState({
   currentFilters: FilterParams; 
   colors: any;
 }) {
+  const emptyIconStyle = useMemo(() => ({ 
+    backgroundColor: colors.textSecondary + '20' 
+  }), [colors.textSecondary]);
+
+  const isFilteredView = useMemo(() => 
+    currentFilters.filterType === 'all',
+    [currentFilters.filterType]
+  );
+
+  const title = useMemo(() => 
+    isFilteredView ? 'Belum ada plan visit' : 'Tidak ada plan visit',
+    [isFilteredView]
+  );
+
+  const subtitle = useMemo(() => 
+    isFilteredView 
+      ? 'Tap tombol + untuk menambah plan visit baru'
+      : 'Tidak ditemukan plan visit untuk filter yang dipilih',
+    [isFilteredView]
+  );
+
   return (
     <View className="flex-1 justify-center items-center px-6">
-      <View className="w-16 h-16 rounded-full items-center justify-center mb-4" style={{ backgroundColor: colors.textSecondary + '20' }}>
+      <View className="w-16 h-16 rounded-full items-center justify-center mb-4" style={emptyIconStyle}>
         <IconSymbol name="calendar" size={32} color={colors.textSecondary} />
       </View>
       <Text className="text-lg font-semibold text-center mb-2" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
-        {currentFilters.filterType === 'all' 
-          ? 'Belum ada plan visit'
-          : 'Tidak ada plan visit'
-        }
+        {title}
       </Text>
       <Text className="text-sm text-center" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
-        {currentFilters.filterType === 'all' 
-          ? 'Tap tombol + untuk menambah plan visit baru'
-          : 'Tidak ditemukan plan visit untuk filter yang dipilih'
-        }
+        {subtitle}
       </Text>
     </View>
   );
@@ -404,7 +458,7 @@ const EmptyState = React.memo(function EmptyState({
  * Plan Visit List Screen - Daftar rencana kunjungan
  * Mengikuti best practice: UI-only components, custom hooks untuk logic
  */
-export default function PlanVisitListScreen() {
+export default React.memo(function PlanVisitListScreen() {
   const { planVisits, loading, error, meta, fetchPlanVisits } = usePlanVisit();
   const { colors, styles: themeStyles } = useThemeStyles();
   const insets = useSafeAreaInsets();
@@ -437,7 +491,7 @@ export default function PlanVisitListScreen() {
       if (mounted.current) {
         fetchData(1, filters, true);
       }
-    }, 200);
+    }, 50); // Reduced timeout for better performance
   }, [mounted, updateFilters, fetchData]);
 
   const handleRefresh = useCallback(async () => {
@@ -471,6 +525,26 @@ export default function PlanVisitListScreen() {
     />
   ), [handleItemDelete, colors, themeStyles]);
 
+  const keyExtractor = useCallback((item: PlanVisit, index: number) => 
+    String(item.id || `plan-visit-${index}`),
+    []
+  );
+
+  const getItemLayout = useCallback((data: any, index: number) => ({
+    length: 120,
+    offset: 120 * index,
+    index,
+  }), []);
+
+  const refreshControl = useMemo(() => (
+    <RefreshControl 
+      refreshing={refreshing} 
+      onRefresh={handleRefresh}
+      colors={[colors.primary]}
+      tintColor={colors.primary}
+    />
+  ), [refreshing, handleRefresh, colors.primary]);
+
   // Effects
   useEffect(() => {
     if (mounted.current && page > 1) {
@@ -493,10 +567,22 @@ export default function PlanVisitListScreen() {
     }, [page, currentFilters, fetchData])
   );
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
   // Render loading screen
   if (loading && !refreshing && planVisits.length === 0 && !fetchState.loading) {
     return <LoadingScreen colors={colors} />;
   }
+
+  const hasData = useMemo(() => 
+    planVisits && planVisits.length > 0,
+    [planVisits]
+  );
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
@@ -524,7 +610,7 @@ export default function PlanVisitListScreen() {
           colors={colors}
         />
         
-        {planVisits && planVisits.length > 0 ? (
+        {hasData ? (
           <>
             <ListHeader
               planVisits={planVisits}
@@ -535,25 +621,14 @@ export default function PlanVisitListScreen() {
             <FlatList
               data={planVisits}
               renderItem={renderPlanVisitItem}
-              keyExtractor={(item, index) => String(item.id || `plan-visit-${index}`)}
-              refreshControl={
-                <RefreshControl 
-                  refreshing={refreshing} 
-                  onRefresh={handleRefresh}
-                  colors={[colors.primary]}
-                  tintColor={colors.primary}
-                />
-              }
+              keyExtractor={keyExtractor}
+              refreshControl={refreshControl}
               showsVerticalScrollIndicator={false}
               removeClippedSubviews={true}
-              initialNumToRender={10}
+              initialNumToRender={8}
               maxToRenderPerBatch={5}
-              windowSize={10}
-              getItemLayout={(data, index) => ({
-                length: 120,
-                offset: 120 * index,
-                index,
-              })}
+              windowSize={8}
+              getItemLayout={getItemLayout}
             />
           </>
         ) : (
@@ -562,4 +637,4 @@ export default function PlanVisitListScreen() {
       </View>
     </View>
   );
-} 
+}); 

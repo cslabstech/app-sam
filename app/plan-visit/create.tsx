@@ -1,6 +1,6 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -94,11 +94,14 @@ const useOutletManagement = () => {
     };
   }, [loadOutlets]);
 
-  const formattedOutlets: OutletData[] = outlets.map(outlet => ({
-    id: outlet.id.toString(),
-    name: outlet.name,
-    code: outlet.code,
-  }));
+  const formattedOutlets: OutletData[] = useMemo(() => 
+    outlets.map(outlet => ({
+      id: outlet.id.toString(),
+      name: outlet.name,
+      code: outlet.code,
+    })),
+    [outlets]
+  );
 
   const handleDropdownToggle = useCallback((show: boolean) => {
     setShowDropdown(show);
@@ -165,8 +168,13 @@ const Header = React.memo(function Header({
   insets: any; 
   onBack: () => void;
 }) {
+  const headerStyle = useMemo(() => ({ 
+    paddingTop: insets.top + 12, 
+    backgroundColor: colors.primary 
+  }), [insets.top, colors.primary]);
+
   return (
-    <View className="px-4 pb-4" style={{ paddingTop: insets.top + 12, backgroundColor: colors.primary }}>
+    <View className="px-4 pb-4" style={headerStyle}>
       <View className="flex-row items-center justify-between">
         <Pressable 
           onPress={onBack} 
@@ -208,18 +216,28 @@ const OutletSection = React.memo(function OutletSection({
   fieldErrors: FormErrors;
   colors: any;
 }) {
+  const cardStyle = useMemo(() => ({ 
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    minHeight: 48 
+  }), [colors.card, colors.border]);
+
+  const iconBackgroundStyle = useMemo(() => ({ 
+    backgroundColor: colors.primary + '20' 
+  }), [colors.primary]);
+
+  const errorBorderStyle = useMemo(() => ({ 
+    borderColor: fieldErrors.outlet_id ? colors.danger : 'transparent' 
+  }), [fieldErrors.outlet_id, colors.danger]);
+
   return (
     <TouchableOpacity 
       className="rounded-lg border p-4 mb-4 shadow-sm"
-      style={{ 
-        backgroundColor: colors.card,
-        borderColor: colors.border,
-        minHeight: 48 
-      }}
+      style={cardStyle}
       activeOpacity={1}
     >
       <View className="flex-row items-center mb-4">
-        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
+        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={iconBackgroundStyle}>
           <IconSymbol name="building.2" size={18} color={colors.primary} />
         </View>
         <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
@@ -231,7 +249,7 @@ const OutletSection = React.memo(function OutletSection({
         <Text className="mb-3 text-base font-medium" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
           Outlet <Text style={{ color: colors.danger }}>*</Text>
         </Text>
-        <View className={fieldErrors.outlet_id ? 'border rounded-lg' : ''} style={{ borderColor: fieldErrors.outlet_id ? colors.danger : 'transparent' }}>
+        <View className={fieldErrors.outlet_id ? 'border rounded-lg' : ''} style={errorBorderStyle}>
           <OutletDropdown
             outlets={outlets}
             selectedOutletId={selectedOutletId || null}
@@ -269,18 +287,34 @@ const DateSection = React.memo(function DateSection({
   colors: any;
   formatDate: (date: Date) => string;
 }) {
+  const cardStyle = useMemo(() => ({ 
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    minHeight: 48 
+  }), [colors.card, colors.border]);
+
+  const iconBackgroundStyle = useMemo(() => ({ 
+    backgroundColor: colors.primary + '20' 
+  }), [colors.primary]);
+
+  const inputStyle = useMemo(() => ({ 
+    borderColor: fieldErrors.visit_date ? colors.danger : colors.border,
+    backgroundColor: colors.card,
+  }), [fieldErrors.visit_date, colors.danger, colors.border, colors.card]);
+
+  const formattedDateText = useMemo(() => 
+    formatDate(planDate),
+    [formatDate, planDate]
+  );
+
   return (
     <TouchableOpacity 
       className="rounded-lg border p-4 mb-4 shadow-sm"
-      style={{ 
-        backgroundColor: colors.card,
-        borderColor: colors.border,
-        minHeight: 48 
-      }}
+      style={cardStyle}
       activeOpacity={1}
     >
       <View className="flex-row items-center mb-4">
-        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
+        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={iconBackgroundStyle}>
           <IconSymbol name="calendar" size={18} color={colors.primary} />
         </View>
         <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
@@ -294,17 +328,14 @@ const DateSection = React.memo(function DateSection({
         </Text>
         <Pressable
           className="rounded-lg border px-3 py-3 flex-row items-center justify-between"
-          style={{ 
-            borderColor: fieldErrors.visit_date ? colors.danger : colors.border,
-            backgroundColor: colors.card,
-          }}
+          style={inputStyle}
           onPress={onPress}
           accessibilityRole="button"
         >
           <View className="flex-row items-center">
             <IconSymbol name="calendar" size={20} color={colors.primary} />
             <Text className="ml-3 text-base" style={{ fontFamily: 'Inter_400Regular', color: colors.text }}>
-              {formatDate(planDate)}
+              {formattedDateText}
             </Text>
           </View>
           <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
@@ -336,6 +367,11 @@ const DatePickerModal = React.memo(function DatePickerModal({
   onClose: () => void;
   colors: any;
 }) {
+  const cancelButtonStyle = useMemo(() => ({ 
+    backgroundColor: colors.card, 
+    borderColor: colors.border 
+  }), [colors.card, colors.border]);
+
   if (!show) return null;
 
   return (
@@ -351,7 +387,7 @@ const DatePickerModal = React.memo(function DatePickerModal({
         <View className="flex-row justify-end mt-3 gap-3">
           <Pressable
             className="px-4 py-2 rounded-lg border"
-            style={{ backgroundColor: colors.card, borderColor: colors.border }}
+            style={cancelButtonStyle}
             onPress={onClose}
             accessibilityRole="button"
           >
@@ -384,22 +420,31 @@ const SubmitButton = React.memo(function SubmitButton({
   loading: boolean; 
   colors: any;
 }) {
+  const buttonStyle = useMemo(() => ({ 
+    backgroundColor: loading ? colors.textSecondary + '40' : colors.primary 
+  }), [loading, colors.textSecondary, colors.primary]);
+
+  const buttonText = useMemo(() => 
+    loading ? 'Menyimpan...' : 'Buat Plan Visit',
+    [loading]
+  );
+
   return (
     <Pressable
       className="w-full py-4 rounded-lg items-center justify-center mb-8"
-      style={{ backgroundColor: loading ? colors.textSecondary + '40' : colors.primary }}
+      style={buttonStyle}
       onPress={onPress}
       disabled={loading}
       accessibilityRole="button"
     >
       <Text className="text-base font-semibold text-white" style={{ fontFamily: 'Inter_600SemiBold' }}>
-        {loading ? 'Menyimpan...' : 'Buat Plan Visit'}
+        {buttonText}
       </Text>
     </Pressable>
   );
 });
 
-export default function CreatePlanVisitScreen() {
+export default React.memo(function CreatePlanVisitScreen() {
   const { createPlanVisit, loading } = usePlanVisit();
   const { colors } = useThemeStyles();
   const insets = useSafeAreaInsets();
@@ -529,6 +574,13 @@ export default function CreatePlanVisitScreen() {
     }
   }, [mounted, setErrors, selectedOutletId, planDate, createPlanVisit]);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header colors={colors} insets={insets} onBack={handleBack} />
@@ -538,6 +590,7 @@ export default function CreatePlanVisitScreen() {
         onTouchStart={handleScreenPress}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
       >
         <OutletSection
           outlets={outlets}
@@ -575,4 +628,4 @@ export default function CreatePlanVisitScreen() {
       </ScrollView>
     </View>
   );
-} 
+}); 

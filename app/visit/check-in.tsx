@@ -4,7 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Keyboard, Linking, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -214,7 +214,7 @@ const useOutletManager = () => {
   };
 };
 
-const Header = React.memo(function Header({ currentStep, onBack, onRefresh, colors }: { 
+const Header = memo(function Header({ currentStep, onBack, onRefresh, colors }: { 
   currentStep: number; 
   onBack: () => void; 
   onRefresh: () => void;
@@ -249,7 +249,7 @@ const Header = React.memo(function Header({ currentStep, onBack, onRefresh, colo
   );
 });
 
-const OutletTypeToggle = React.memo(function OutletTypeToggle({ visitType, onTypeChange }: { 
+const OutletTypeToggle = memo(function OutletTypeToggle({ visitType, onTypeChange }: { 
   visitType: 'planned' | 'extracall'; 
   onTypeChange: (type: 'planned' | 'extracall') => void; 
 }) {
@@ -305,7 +305,7 @@ const OutletTypeToggle = React.memo(function OutletTypeToggle({ visitType, onTyp
   );
 });
 
-const OutletSearchInput = React.memo(function OutletSearchInput({ 
+const OutletSearchInput = memo(function OutletSearchInput({ 
   visitType, 
   searchValue, 
   onSearchChange, 
@@ -347,7 +347,7 @@ const OutletSearchInput = React.memo(function OutletSearchInput({
 });
 
 // Memoized outlet item component for better performance
-const OutletListItem = React.memo(function OutletListItem({ 
+const OutletListItem = memo(function OutletListItem({ 
   item,
   visitType,
   isSelected,
@@ -424,7 +424,7 @@ const OutletListItem = React.memo(function OutletListItem({
   );
 });
 
-const OutletList = React.memo(function OutletList({ 
+const OutletList = memo(function OutletList({ 
   displayData, 
   dataLoading, 
   visitType, 
@@ -462,13 +462,13 @@ const OutletList = React.memo(function OutletList({
   }
 
   return (
-    <Animated.ScrollView 
-      persistentScrollbar 
-      className="max-h-40"
-      removeClippedSubviews={true}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
-    >
+                <Animated.ScrollView 
+              persistentScrollbar 
+              className="max-h-40"
+              removeClippedSubviews={true}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
       {displayData.map(item => (
         <OutletListItem
           key={item.id}
@@ -540,7 +540,7 @@ const PlanVisitCard = ({ selectedOutlet }: { selectedOutlet: OutletDisplayData |
 };
 
 // Simple camera screen for check-in
-const SimpleCameraScreen = React.memo(function SimpleCameraScreen({ 
+const SimpleCameraScreen = memo(function SimpleCameraScreen({ 
   hasCameraPermission, 
   requestCameraPermission,
   cameraRef,
@@ -687,7 +687,7 @@ const SimpleCameraScreen = React.memo(function SimpleCameraScreen({
   );
 });
 
-export default function CheckInScreen() {
+export default memo(function CheckInScreen() {
   const colorScheme = useColorScheme();
   const colors = useMemo(() => Colors[colorScheme ?? 'light'], [colorScheme]);
   const router = useRouter();
@@ -919,9 +919,9 @@ export default function CheckInScreen() {
     setIsProcessingPhoto(true);
     
     try {
-      // Step 1: Take photo with higher quality first
+      // Step 1: Take photo with reduced quality for performance
       const photo = await cameraRef.takePictureAsync({ 
-        quality: 0.7,
+        quality: 0.5, // Reduced quality for low-end devices
         skipProcessing: true,
         mirrorImage: true
       });
@@ -1260,4 +1260,4 @@ export default function CheckInScreen() {
       </View>
     </View>
   );
-}
+})

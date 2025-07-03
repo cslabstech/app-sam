@@ -13,7 +13,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -46,8 +46,13 @@ const Header = React.memo(function Header({
 }) {
   const insets = useSafeAreaInsets();
   
+  const headerStyle = useMemo(() => ({ 
+    paddingTop: insets.top + 12, 
+    backgroundColor: colors.primary 
+  }), [insets.top, colors.primary]);
+
   return (
-    <View className="px-4 pb-4" style={{ paddingTop: insets.top + 12, backgroundColor: colors.primary }}>
+    <View className="px-4 pb-4" style={headerStyle}>
       <View className="flex-row justify-between items-center">
         <TouchableOpacity 
           onPress={onBack}
@@ -151,8 +156,8 @@ const useMediaManager = () => {
   const compressImage = useCallback(async (uri: string) => {
     let compressed = { uri };
     try {
-      let quality = 0.7;
-      for (let i = 0; i < 5; i++) {
+      let quality = 0.5; // Reduced from 0.7 for better performance
+      for (let i = 0; i < 3; i++) { // Reduced iterations from 5 to 3
         compressed = await ImageManipulator.manipulateAsync(
           uri,
           [{ resize: { width: 800 } }],
@@ -184,7 +189,7 @@ const useMediaManager = () => {
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
       allowsEditing: false,
-      quality: 0.7,
+      quality: 0.5, // Reduced from 0.7 for better performance
     });
     if (!result.canceled && result.assets[0]) {
       const compressedUri = await compressImage(result.assets[0].uri);
@@ -204,7 +209,7 @@ const useMediaManager = () => {
       mediaTypes: ['videos'],
       allowsEditing: false,
       videoMaxDuration: 8,
-      quality: 0.3,
+      quality: 0.2, // Reduced from 0.3 for better performance
     });
     if (!result.canceled && result.assets[0]) {
       let uri = result.assets[0].uri;
@@ -275,11 +280,15 @@ const ErrorScreen = React.memo(function ErrorScreen({
   colors: any; 
   onGoBack: () => void; 
 }) {
+  const errorIconStyle = useMemo(() => ({ 
+    backgroundColor: colors.danger + '20' 
+  }), [colors.danger]);
+
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header title="Edit Outlet" colors={colors} onBack={onGoBack} />
       <View className="flex-1 justify-center items-center px-6">
-        <View className="w-16 h-16 rounded-full items-center justify-center mb-4" style={{ backgroundColor: colors.danger + '20' }}>
+        <View className="w-16 h-16 rounded-full items-center justify-center mb-4" style={errorIconStyle}>
           <IconSymbol name="exclamationmark.triangle" size={32} color={colors.danger} />
         </View>
         <Text className="text-lg font-semibold text-center mb-2" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
@@ -313,6 +322,13 @@ const FormField = React.memo(function FormField({
   editable?: boolean;
   colors: any;
 }) {
+  const inputStyle = useMemo(() => ({ 
+    fontFamily: 'Inter_400Regular',
+    color: editable ? colors.text : colors.textSecondary, 
+    borderColor: colors.border,
+    backgroundColor: editable ? colors.card : colors.inputBackground,
+  }), [editable, colors.text, colors.textSecondary, colors.border, colors.card, colors.inputBackground]);
+
   return (
     <View className="mb-4">
       <Text className="text-base font-medium mb-3" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
@@ -320,17 +336,13 @@ const FormField = React.memo(function FormField({
       </Text>
       <TextInput
         className="border rounded-lg p-3 text-base"
-        style={{ 
-          fontFamily: 'Inter_400Regular',
-          color: editable ? colors.text : colors.textSecondary, 
-          borderColor: colors.border,
-          backgroundColor: editable ? colors.card : colors.inputBackground,
-        }}
+        style={inputStyle}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
         keyboardType={keyboardType}
         editable={editable}
+        maxLength={100}
         placeholderTextColor={colors.textSecondary}
       />
       {error && (
@@ -359,6 +371,21 @@ const MediaField = React.memo(function MediaField({
   onRemove: () => void;
   colors: any;
 }) {
+  const buttonStyle = useMemo(() => ({ 
+    borderColor: colors.border, 
+    backgroundColor: colors.inputBackground 
+  }), [colors.border, colors.inputBackground]);
+
+  const buttonText = useMemo(() => 
+    hasMedia ? `Ubah ${mediaType === 'image' ? 'Foto' : 'Video'}` : `Ambil ${mediaType === 'image' ? 'Foto' : 'Video'}`,
+    [hasMedia, mediaType]
+  );
+
+  const labelText = useMemo(() => 
+    mediaType === 'video' ? mediaUri.split('/').pop()?.substring(0, 30) + '...' : undefined,
+    [mediaType, mediaUri]
+  );
+
   return (
     <View className="mb-4">
       <Text className="text-base font-medium mb-3" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
@@ -366,13 +393,13 @@ const MediaField = React.memo(function MediaField({
       </Text>
       <TouchableOpacity
         className="border rounded-lg p-3 items-center"
-        style={{ borderColor: colors.border, backgroundColor: colors.inputBackground }}
+        style={buttonStyle}
         onPress={onTake}
         accessibilityRole="button"
         accessibilityLabel={`${hasMedia ? 'Ubah' : 'Ambil'} ${mediaType === 'image' ? 'foto' : 'video'}`}
       >
         <Text className="text-base" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
-          {hasMedia ? `Ubah ${mediaType === 'image' ? 'Foto' : 'Video'}` : `Ambil ${mediaType === 'image' ? 'Foto' : 'Video'}`}
+          {buttonText}
         </Text>
       </TouchableOpacity>
       {hasMedia && (
@@ -380,7 +407,7 @@ const MediaField = React.memo(function MediaField({
           <MediaPreview
             uri={mediaUri}
             type={mediaType}
-            label={mediaType === 'video' ? mediaUri.split('/').pop()?.substring(0, 30) + '...' : undefined}
+            label={labelText}
             onRemove={onRemove}
           />
         </View>
@@ -389,7 +416,7 @@ const MediaField = React.memo(function MediaField({
   );
 });
 
-export default function OutletEditPage() {
+export default React.memo(function OutletEditPage() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
@@ -449,7 +476,7 @@ export default function OutletEditPage() {
         const manipulated = await ImageManipulator.manipulateAsync(
           uri,
           [{ resize: { width: 900 } }],
-          { compress: 0.7, format: name.endsWith('.png') ? ImageManipulator.SaveFormat.PNG : ImageManipulator.SaveFormat.JPEG }
+          { compress: 0.5, format: name.endsWith('.png') ? ImageManipulator.SaveFormat.PNG : ImageManipulator.SaveFormat.JPEG } // Reduced from 0.7
         );
         processedUri = manipulated.uri;
       } catch (e) {
@@ -550,6 +577,44 @@ export default function OutletEditPage() {
     }
   }, [outlet, validateForm, form, prepareFormData, updateOutletWithFile, updateOutlet, router]);
 
+  // Memoized card styles
+  const basicInfoCardStyle = useMemo(() => ({ 
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    minHeight: 48 
+  }), [colors.card, colors.border]);
+
+  const mediaCardStyle = useMemo(() => ({ 
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    minHeight: 48 
+  }), [colors.card, colors.border]);
+
+  const basicInfoIconStyle = useMemo(() => ({ 
+    backgroundColor: colors.primary + '20' 
+  }), [colors.primary]);
+
+  const mediaIconStyle = useMemo(() => ({ 
+    backgroundColor: colors.primary + '20' 
+  }), [colors.primary]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      setForm({
+        code: '',
+        location: '',
+        owner_name: '',
+        owner_phone: '',
+        photo_shop_sign: '',
+        photo_front: '',
+        photo_left: '',
+        photo_right: '',
+        video: '',
+      });
+    };
+  }, [setForm]);
+
   if (loading) {
     return <LoadingScreen colors={colors} onGoBack={handleGoBack} />;
   }
@@ -562,20 +627,21 @@ export default function OutletEditPage() {
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header title="Edit Outlet" colors={colors} onBack={handleGoBack} />
       
-      <ScrollView className="flex-1 px-4">
+      <ScrollView 
+        className="flex-1 px-4"
+        showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        keyboardShouldPersistTaps="handled"
+      >
         <View className="pt-4 pb-8">
           {/* Basic Information Card */}
           <TouchableOpacity 
             className="rounded-lg border p-4 mb-4 shadow-sm"
-            style={{ 
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-              minHeight: 48 
-            }}
+            style={basicInfoCardStyle}
             activeOpacity={1}
           >
             <View className="flex-row items-center mb-4">
-              <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
+              <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={basicInfoIconStyle}>
                 <IconSymbol name="info.circle" size={18} color={colors.primary} />
               </View>
               <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
@@ -615,15 +681,11 @@ export default function OutletEditPage() {
           {/* Media Card */}
           <TouchableOpacity 
             className="rounded-lg border p-4 mb-4 shadow-sm"
-            style={{ 
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-              minHeight: 48 
-            }}
+            style={mediaCardStyle}
             activeOpacity={1}
           >
             <View className="flex-row items-center mb-4">
-              <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
+              <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={mediaIconStyle}>
                 <IconSymbol name="photo" size={18} color={colors.primary} />
               </View>
               <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
@@ -697,5 +759,4 @@ export default function OutletEditPage() {
       </ScrollView>
     </View>
   );
-}
-
+}); 

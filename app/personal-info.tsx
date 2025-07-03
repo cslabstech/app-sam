@@ -4,7 +4,7 @@ import { useAuth } from '@/context/auth-context';
 import { useThemeStyles } from '@/hooks/utils/useThemeStyles';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { memo, useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -16,7 +16,7 @@ interface PersonalInfoForm {
   photo: string;
 }
 
-const Header = React.memo(function Header({ 
+const Header = memo(function Header({ 
   onBack, 
   colors,
   editing,
@@ -35,8 +35,23 @@ const Header = React.memo(function Header({
 }) {
   const insets = useSafeAreaInsets();
   
+  const headerStyle = useMemo(() => ({ 
+    paddingTop: insets.top + 12, 
+    backgroundColor: colors.primary 
+  }), [insets.top, colors.primary]);
+
+  const editButtonStyle = useMemo(() => ({ 
+    backgroundColor: loading ? 'rgba(255,255,255,0.3)' : '#fff',
+    opacity: loading ? 0.7 : 1
+  }), [loading]);
+
+  const editButtonTextStyle = useMemo(() => ({ 
+    fontFamily: 'Inter_500Medium', 
+    color: loading ? '#fff' : colors.primary 
+  }), [loading, colors.primary]);
+  
   return (
-    <View className="px-4 pb-4" style={{ paddingTop: insets.top + 12, backgroundColor: colors.primary }}>
+    <View className="px-4 pb-4" style={headerStyle}>
       <View className="flex-row justify-between items-center">
         <TouchableOpacity 
           onPress={onBack}
@@ -71,21 +86,12 @@ const Header = React.memo(function Header({
               <TouchableOpacity
                 onPress={onSave}
                 className="px-3 py-1.5 rounded-lg"
-                style={{ 
-                  backgroundColor: loading ? 'rgba(255,255,255,0.3)' : '#fff',
-                  opacity: loading ? 0.7 : 1
-                }}
+                style={editButtonStyle}
                 disabled={loading}
                 accessibilityRole="button"
                 accessibilityLabel="Simpan perubahan"
               >
-                <Text 
-                  style={{ 
-                    fontFamily: 'Inter_500Medium', 
-                    color: loading ? '#fff' : colors.primary 
-                  }} 
-                  className="text-sm"
-                >
+                <Text style={editButtonTextStyle} className="text-sm">
                   {loading ? 'Menyimpan...' : 'Simpan'}
                 </Text>
               </TouchableOpacity>
@@ -109,7 +115,7 @@ const Header = React.memo(function Header({
   );
 });
 
-const LoadingScreen = React.memo(function LoadingScreen({ 
+const LoadingScreen = memo(function LoadingScreen({ 
   colors, 
   onBack 
 }: { 
@@ -129,7 +135,7 @@ const LoadingScreen = React.memo(function LoadingScreen({
   );
 });
 
-const ProfilePhoto = React.memo(function ProfilePhoto({
+const ProfilePhoto = memo(function ProfilePhoto({
   photoUri,
   editing,
   onPhotoChange,
@@ -140,7 +146,7 @@ const ProfilePhoto = React.memo(function ProfilePhoto({
   onPhotoChange: (uri: string) => void;
   colors: any;
 }) {
-  const defaultImage = 'https://i.pravatar.cc/300';
+  const defaultImage = useMemo(() => 'https://i.pravatar.cc/300', []);
 
   const handlePhotoPress = useCallback(async () => {
     if (!editing) return;
@@ -168,7 +174,7 @@ const ProfilePhoto = React.memo(function ProfilePhoto({
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8,
+        quality: 0.5, // Reduced quality for performance
       });
 
       if (!result.canceled && result.assets[0]) {
@@ -191,7 +197,7 @@ const ProfilePhoto = React.memo(function ProfilePhoto({
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8,
+        quality: 0.5, // Reduced quality for performance
       });
 
       if (!result.canceled && result.assets[0]) {
@@ -201,6 +207,9 @@ const ProfilePhoto = React.memo(function ProfilePhoto({
       Alert.alert('Error', 'Gagal memilih foto dari galeri.');
     }
   }, [onPhotoChange]);
+
+  const borderStyle = useMemo(() => ({ borderColor: colors.primary }), [colors.primary]);
+  const cameraButtonStyle = useMemo(() => ({ backgroundColor: colors.primary }), [colors.primary]);
 
   return (
     <View className="items-center mb-6">
@@ -213,7 +222,7 @@ const ProfilePhoto = React.memo(function ProfilePhoto({
       >
         <View 
           className="w-28 h-28 rounded-full border-4 overflow-hidden shadow-lg"
-          style={{ borderColor: colors.primary }}
+          style={borderStyle}
         >
           <Image 
             source={{ uri: photoUri || defaultImage }} 
@@ -225,7 +234,7 @@ const ProfilePhoto = React.memo(function ProfilePhoto({
         {editing && (
           <View 
             className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full border-3 border-white items-center justify-center shadow-lg"
-            style={{ backgroundColor: colors.primary }}
+            style={cameraButtonStyle}
           >
             <IconSymbol name="camera.fill" size={18} color="#fff" />
           </View>
@@ -244,7 +253,172 @@ const ProfilePhoto = React.memo(function ProfilePhoto({
   );
 });
 
-export default function PersonalInfoScreen() {
+const PersonalInfoCard = memo(function PersonalInfoCard({ 
+  formData, 
+  editing, 
+  colors, 
+  updateField 
+}: {
+  formData: PersonalInfoForm;
+  editing: boolean;
+  colors: any;
+  updateField: (field: keyof PersonalInfoForm, value: string) => void;
+}) {
+  const cardStyle = useMemo(() => ({ 
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    minHeight: 48 
+  }), [colors.card, colors.border]);
+
+  const iconBackgroundStyle = useMemo(() => ({ 
+    backgroundColor: colors.primary + '20' 
+  }), [colors.primary]);
+
+  const getInputStyle = useCallback((editable: boolean) => ({ 
+    backgroundColor: editable ? 'transparent' : colors.backgroundAlt,
+    color: editable ? colors.text : colors.textSecondary
+  }), [colors.backgroundAlt, colors.text, colors.textSecondary]);
+
+  return (
+    <TouchableOpacity 
+      className="rounded-lg border p-4 mb-4 shadow-sm"
+      style={cardStyle}
+      activeOpacity={1}
+    >
+      <View className="flex-row items-center mb-4">
+        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={iconBackgroundStyle}>
+          <IconSymbol name="person.fill" size={18} color={colors.primary} />
+        </View>
+        <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
+          Data Personal
+        </Text>
+      </View>
+      
+      <View className="gap-4">
+        <Input
+          label="Nama Lengkap"
+          value={formData.name}
+          onChangeText={(value) => updateField('name', value)}
+          placeholder="Masukkan nama lengkap"
+          editable={editing}
+          style={getInputStyle(editing)}
+          maxLength={50}
+        />
+
+        <Input
+          label="Username"
+          value={formData.username}
+          onChangeText={(value) => updateField('username', value)}
+          placeholder="Masukkan username"
+          autoCapitalize="none"
+          editable={editing}
+          style={getInputStyle(editing)}
+          maxLength={30}
+        />
+
+        <Input
+          label="No. HP"
+          value={formData.phone}
+          onChangeText={(value) => updateField('phone', value)}
+          placeholder="Masukkan nomor HP"
+          keyboardType="phone-pad"
+          editable={editing}
+          style={getInputStyle(editing)}
+          maxLength={15}
+        />
+
+        <Input
+          label="Email"
+          value={formData.email}
+          onChangeText={(value) => updateField('email', value)}
+          placeholder="Masukkan email"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          editable={editing}
+          style={getInputStyle(editing)}
+          maxLength={50}
+        />
+      </View>
+    </TouchableOpacity>
+  );
+});
+
+const AccountInfoCard = memo(function AccountInfoCard({ 
+  user, 
+  colors 
+}: {
+  user: any;
+  colors: any;
+}) {
+  const cardStyle = useMemo(() => ({ 
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    minHeight: 48 
+  }), [colors.card, colors.border]);
+
+  const iconBackgroundStyle = useMemo(() => ({ 
+    backgroundColor: colors.primary + '20' 
+  }), [colors.primary]);
+
+  const readOnlyStyle = useMemo(() => ({ 
+    fontFamily: 'Inter_400Regular',
+    backgroundColor: colors.backgroundAlt,
+    borderColor: colors.border,
+    color: colors.textSecondary
+  }), [colors.backgroundAlt, colors.border, colors.textSecondary]);
+
+  const roleText = useMemo(() => 
+    typeof user?.role === 'string' ? user.role : user?.role?.name || 'User',
+    [user?.role]
+  );
+
+  return (
+    <TouchableOpacity 
+      className="rounded-lg border p-4 mb-4 shadow-sm"
+      style={cardStyle}
+      activeOpacity={1}
+    >
+      <View className="flex-row items-center mb-4">
+        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={iconBackgroundStyle}>
+          <IconSymbol name="person.badge.key.fill" size={18} color={colors.primary} />
+        </View>
+        <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
+          Informasi Akun
+        </Text>
+      </View>
+      
+      <View className="gap-4">
+        <View>
+          <Text className="text-base font-medium mb-3" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
+            Role
+          </Text>
+          <Text 
+            className="text-base px-4 py-3 rounded-lg border"
+            style={readOnlyStyle}
+            numberOfLines={1}
+          >
+            {roleText}
+          </Text>
+        </View>
+
+        <View>
+          <Text className="text-base font-medium mb-3" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
+            User ID
+          </Text>
+          <Text 
+            className="text-base px-4 py-3 rounded-lg border"
+            style={readOnlyStyle}
+            numberOfLines={1}
+          >
+            {user?.id || '-'}
+          </Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+});
+
+export default memo(function PersonalInfoScreen() {
   const { colors } = useThemeStyles();
   const router = useRouter();
   const { user } = useAuth();
@@ -305,9 +479,22 @@ export default function PersonalInfoScreen() {
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Header onBack={handleBack} colors={colors} editing={editing} loading={loading} onEdit={handleEdit} onSave={handleSave} onCancel={handleCancel} />
+      <Header 
+        onBack={handleBack} 
+        colors={colors} 
+        editing={editing} 
+        loading={loading} 
+        onEdit={handleEdit} 
+        onSave={handleSave} 
+        onCancel={handleCancel} 
+      />
       
-      <ScrollView className="flex-1 px-4">
+      <ScrollView 
+        className="flex-1 px-4"
+        removeClippedSubviews={true}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View className="pt-4 pb-8">
           {/* Profile Photo */}
           <ProfilePhoto
@@ -318,138 +505,20 @@ export default function PersonalInfoScreen() {
           />
 
           {/* Personal Information Card */}
-          <TouchableOpacity 
-            className="rounded-lg border p-4 mb-4 shadow-sm"
-            style={{ 
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-              minHeight: 48 
-            }}
-            activeOpacity={1}
-          >
-            <View className="flex-row items-center mb-4">
-              <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
-                <IconSymbol name="person.fill" size={18} color={colors.primary} />
-              </View>
-              <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
-                Data Personal
-              </Text>
-            </View>
-            
-            <View className="gap-4">
-              <Input
-                label="Nama Lengkap"
-                value={formData.name}
-                onChangeText={(value) => updateField('name', value)}
-                placeholder="Masukkan nama lengkap"
-                editable={editing}
-                style={{ 
-                  backgroundColor: editing ? 'transparent' : colors.backgroundAlt,
-                  color: editing ? colors.text : colors.textSecondary
-                }}
-              />
-
-              <Input
-                label="Username"
-                value={formData.username}
-                onChangeText={(value) => updateField('username', value)}
-                placeholder="Masukkan username"
-                autoCapitalize="none"
-                editable={editing}
-                style={{ 
-                  backgroundColor: editing ? 'transparent' : colors.backgroundAlt,
-                  color: editing ? colors.text : colors.textSecondary
-                }}
-              />
-
-              <Input
-                label="No. HP"
-                value={formData.phone}
-                onChangeText={(value) => updateField('phone', value)}
-                placeholder="Masukkan nomor HP"
-                keyboardType="phone-pad"
-                editable={editing}
-                style={{ 
-                  backgroundColor: editing ? 'transparent' : colors.backgroundAlt,
-                  color: editing ? colors.text : colors.textSecondary
-                }}
-              />
-
-              <Input
-                label="Email"
-                value={formData.email}
-                onChangeText={(value) => updateField('email', value)}
-                placeholder="Masukkan email"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                editable={editing}
-                style={{ 
-                  backgroundColor: editing ? 'transparent' : colors.backgroundAlt,
-                  color: editing ? colors.text : colors.textSecondary
-                }}
-              />
-            </View>
-          </TouchableOpacity>
+          <PersonalInfoCard
+            formData={formData}
+            editing={editing}
+            colors={colors}
+            updateField={updateField}
+          />
 
           {/* Account Information Card */}
-          <TouchableOpacity 
-            className="rounded-lg border p-4 mb-4 shadow-sm"
-            style={{ 
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-              minHeight: 48 
-            }}
-            activeOpacity={1}
-          >
-            <View className="flex-row items-center mb-4">
-              <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
-                <IconSymbol name="person.badge.key.fill" size={18} color={colors.primary} />
-              </View>
-              <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
-                Informasi Akun
-              </Text>
-            </View>
-            
-            <View className="gap-4">
-              <View>
-                <Text className="text-base font-medium mb-3" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
-                  Role
-                </Text>
-                <Text 
-                  className="text-base px-4 py-3 rounded-lg border"
-                  style={{ 
-                    fontFamily: 'Inter_400Regular',
-                    backgroundColor: colors.backgroundAlt,
-                    borderColor: colors.border,
-                    color: colors.textSecondary
-                  }}
-                  numberOfLines={1}
-                >
-                  {typeof user?.role === 'string' ? user.role : user?.role?.name || 'User'}
-                </Text>
-              </View>
-
-              <View>
-                <Text className="text-base font-medium mb-3" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
-                  User ID
-                </Text>
-                <Text 
-                  className="text-base px-4 py-3 rounded-lg border"
-                  style={{ 
-                    fontFamily: 'Inter_400Regular',
-                    backgroundColor: colors.backgroundAlt,
-                    borderColor: colors.border,
-                    color: colors.textSecondary
-                  }}
-                  numberOfLines={1}
-                >
-                  {user?.id || '-'}
-                </Text>
-              </View>
-            </View>
-          </TouchableOpacity>
+          <AccountInfoCard
+            user={user}
+            colors={colors}
+          />
         </View>
       </ScrollView>
     </View>
   );
-} 
+}); 

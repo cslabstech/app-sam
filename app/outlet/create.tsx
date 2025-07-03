@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -38,8 +38,13 @@ const Header = React.memo(function Header({
 }) {
   const insets = useSafeAreaInsets();
   
+  const headerStyle = useMemo(() => ({ 
+    paddingTop: insets.top + 12, 
+    backgroundColor: colors.primary 
+  }), [insets.top, colors.primary]);
+
   return (
-    <View className="px-4 pb-4" style={{ paddingTop: insets.top + 12, backgroundColor: colors.primary }}>
+    <View className="px-4 pb-4" style={headerStyle}>
       <View className="flex-row justify-between items-center">
         <TouchableOpacity 
           onPress={onBack}
@@ -73,18 +78,24 @@ const FormSection = React.memo(function FormSection({
   styles: any;
   colors: any;
 }) {
+  const cardStyle = useMemo(() => ({ 
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    minHeight: 48 
+  }), [colors.card, colors.border]);
+
+  const iconBackgroundStyle = useMemo(() => ({ 
+    backgroundColor: colors.primary + '20' 
+  }), [colors.primary]);
+
   return (
     <TouchableOpacity 
       className="rounded-lg border p-4 mb-4 shadow-sm"
-      style={{ 
-        backgroundColor: colors.card,
-        borderColor: colors.border,
-        minHeight: 48 
-      }}
+      style={cardStyle}
       activeOpacity={1}
     >
       <View className="flex-row items-center mb-4">
-        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
+        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={iconBackgroundStyle}>
           <IconSymbol name={icon} size={18} color={colors.primary} />
         </View>
         <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
@@ -115,6 +126,20 @@ const OutletTypeDropdown = React.memo(function OutletTypeDropdown({
   styles: any;
   colors: any;
 }) {
+  const inputStyle = useMemo(() => ({
+    borderColor: errors.type ? colors.danger : colors.inputBorder
+  }), [errors.type, colors.danger, colors.inputBorder]);
+
+  const dropdownStyle = useMemo(() => ({ 
+    backgroundColor: colors.card, 
+    borderColor: colors.border 
+  }), [colors.card, colors.border]);
+
+  const placeholderText = useMemo(() => 
+    selectedType || 'Pilih tipe outlet',
+    [selectedType]
+  );
+
   return (
     <View className="mb-4 relative z-10">
       <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-sm font-medium mb-1.5">
@@ -124,7 +149,7 @@ const OutletTypeDropdown = React.memo(function OutletTypeDropdown({
         className={`flex-row justify-between items-center h-11 rounded-lg px-3 border ${
           errors.type ? 'border-red-500' : 'border-neutral-200 dark:border-neutral-700'
         }`}
-        style={{ borderColor: errors.type ? colors.danger : colors.inputBorder }}
+        style={inputStyle}
         onPress={onToggle}
       >
         <View className="flex-row items-center">
@@ -133,7 +158,7 @@ const OutletTypeDropdown = React.memo(function OutletTypeDropdown({
             fontFamily: 'Inter',
             color: selectedType ? colors.text : colors.textSecondary
           }} className="ml-2 text-base">
-            {selectedType || 'Pilih tipe outlet'}
+            {placeholderText}
           </Text>
         </View>
         <IconSymbol
@@ -146,7 +171,7 @@ const OutletTypeDropdown = React.memo(function OutletTypeDropdown({
       {showTypeDropdown && (
         <View 
           className="mt-1 rounded-lg absolute top-18 left-0 right-0 z-20 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950"
-          style={{ backgroundColor: colors.card, borderColor: colors.border }}
+          style={dropdownStyle}
         >
           {outletTypes.map((type, index) => (
             <TouchableOpacity
@@ -201,6 +226,16 @@ const OutletInformationSection = React.memo(function OutletInformationSection({
   styles: any;
   colors: any;
 }) {
+  const nameInputStyle = useMemo(() => ({ height: 80, textAlignVertical: 'top' as const }), []);
+
+  const handleNameChange = useCallback((value: string) => {
+    onInputChange('name', value);
+  }, [onInputChange]);
+
+  const handleAddressChange = useCallback((value: string) => {
+    onInputChange('address', value);
+  }, [onInputChange]);
+
   return (
     <FormSection 
       title="Informasi Outlet" 
@@ -213,8 +248,9 @@ const OutletInformationSection = React.memo(function OutletInformationSection({
           label="Nama Outlet"
           placeholder="Masukkan nama outlet"
           value={formData.name}
-          onChangeText={(value) => onInputChange('name', value)}
+          onChangeText={handleNameChange}
           error={errors.name}
+          maxLength={100}
           leftIcon={<IconSymbol name="building.2.fill" size={18} color={colors.textSecondary} />}
         />
       </View>
@@ -235,11 +271,12 @@ const OutletInformationSection = React.memo(function OutletInformationSection({
           label="Alamat"
           placeholder="Masukkan alamat outlet"
           value={formData.address}
-          onChangeText={(value) => onInputChange('address', value)}
+          onChangeText={handleAddressChange}
           error={errors.address}
           multiline
           numberOfLines={3}
-          style={{ height: 80, textAlignVertical: 'top' }}
+          style={nameInputStyle}
+          maxLength={500}
           leftIcon={<IconSymbol name="mappin.and.ellipse" size={18} color={colors.textSecondary} />}
         />
       </View>
@@ -260,6 +297,20 @@ const ContactInformationSection = React.memo(function ContactInformationSection(
   styles: any;
   colors: any;
 }) {
+  const notesInputStyle = useMemo(() => ({ height: 80, textAlignVertical: 'top' as const }), []);
+
+  const handleContactNameChange = useCallback((value: string) => {
+    onInputChange('contactName', value);
+  }, [onInputChange]);
+
+  const handleContactPhoneChange = useCallback((value: string) => {
+    onInputChange('contactPhone', value);
+  }, [onInputChange]);
+
+  const handleNotesChange = useCallback((value: string) => {
+    onInputChange('notes', value);
+  }, [onInputChange]);
+
   return (
     <FormSection 
       title="Informasi Kontak" 
@@ -272,8 +323,9 @@ const ContactInformationSection = React.memo(function ContactInformationSection(
           label="Nama Contact Person"
           placeholder="Masukkan nama contact person"
           value={formData.contactName}
-          onChangeText={(value) => onInputChange('contactName', value)}
+          onChangeText={handleContactNameChange}
           error={errors.contactName}
+          maxLength={50}
           leftIcon={<IconSymbol name="person.fill" size={18} color={colors.textSecondary} />}
         />
       </View>
@@ -283,9 +335,10 @@ const ContactInformationSection = React.memo(function ContactInformationSection(
           label="Nomor Telepon"
           placeholder="Masukkan nomor telepon"
           value={formData.contactPhone}
-          onChangeText={(value) => onInputChange('contactPhone', value)}
+          onChangeText={handleContactPhoneChange}
           error={errors.contactPhone}
           keyboardType="phone-pad"
+          maxLength={15}
           leftIcon={<IconSymbol name="phone.fill" size={18} color={colors.textSecondary} />}
         />
       </View>
@@ -295,10 +348,11 @@ const ContactInformationSection = React.memo(function ContactInformationSection(
           label="Catatan (Opsional)"
           placeholder="Masukkan catatan tambahan"
           value={formData.notes}
-          onChangeText={(value) => onInputChange('notes', value)}
+          onChangeText={handleNotesChange}
           multiline
           numberOfLines={3}
-          style={{ height: 80, textAlignVertical: 'top' }}
+          style={notesInputStyle}
+          maxLength={300}
           leftIcon={<IconSymbol name="text.alignleft" size={18} color={colors.textSecondary} />}
         />
       </View>
@@ -317,11 +371,15 @@ const ActionButtons = React.memo(function ActionButtons({
   onSubmit: () => void;
   colors: any;
 }) {
+  const locationButtonStyle = useMemo(() => ({ 
+    borderColor: colors.primary 
+  }), [colors.primary]);
+
   return (
     <View className="gap-3 mt-2 mb-6">
       <TouchableOpacity
         className="flex-row items-center justify-center py-3 rounded-lg border border-primary-500"
-        style={{ borderColor: colors.primary }}
+        style={locationButtonStyle}
         onPress={onLocationSet}
       >
         <IconSymbol name="mappin.and.ellipse" size={20} color={colors.primary} />
@@ -353,13 +411,43 @@ const LeadNooTabs = React.memo(function LeadNooTabs({
   onTabChange: (tab: 'LEAD' | 'NOO') => void;
   colors: any;
 }) {
+  const tabContainerStyle = useMemo(() => ({ 
+    backgroundColor: colors.inputBackground 
+  }), [colors.inputBackground]);
+
+  const leadTabStyle = useMemo(() => ({ 
+    backgroundColor: activeTab === 'LEAD' ? colors.primary : 'transparent' 
+  }), [activeTab, colors.primary]);
+
+  const nooTabStyle = useMemo(() => ({ 
+    backgroundColor: activeTab === 'NOO' ? colors.primary : 'transparent' 
+  }), [activeTab, colors.primary]);
+
+  const leadTextColor = useMemo(() => 
+    activeTab === 'LEAD' ? '#fff' : colors.textSecondary,
+    [activeTab, colors.textSecondary]
+  );
+
+  const nooTextColor = useMemo(() => 
+    activeTab === 'NOO' ? '#fff' : colors.textSecondary,
+    [activeTab, colors.textSecondary]
+  );
+
+  const handleLeadPress = useCallback(() => {
+    onTabChange('LEAD');
+  }, [onTabChange]);
+
+  const handleNooPress = useCallback(() => {
+    onTabChange('NOO');
+  }, [onTabChange]);
+
   return (
     <View className="px-4 mb-4">
-      <View className="flex-row rounded-lg p-1" style={{ backgroundColor: colors.inputBackground }}>
+      <View className="flex-row rounded-lg p-1" style={tabContainerStyle}>
         <TouchableOpacity
           className="flex-1 py-3 rounded-lg items-center"
-          style={{ backgroundColor: activeTab === 'LEAD' ? colors.primary : 'transparent' }}
-          onPress={() => onTabChange('LEAD')}
+          style={leadTabStyle}
+          onPress={handleLeadPress}
           accessibilityRole="button"
           accessibilityLabel="Tab LEAD"
         >
@@ -367,7 +455,7 @@ const LeadNooTabs = React.memo(function LeadNooTabs({
             className="font-semibold"
             style={{ 
               fontFamily: 'Inter_600SemiBold',
-              color: activeTab === 'LEAD' ? '#fff' : colors.textSecondary
+              color: leadTextColor
             }}
           >
             LEAD
@@ -375,8 +463,8 @@ const LeadNooTabs = React.memo(function LeadNooTabs({
         </TouchableOpacity>
         <TouchableOpacity
           className="flex-1 py-3 rounded-lg items-center"
-          style={{ backgroundColor: activeTab === 'NOO' ? colors.primary : 'transparent' }}
-          onPress={() => onTabChange('NOO')}
+          style={nooTabStyle}
+          onPress={handleNooPress}
           accessibilityRole="button"
           accessibilityLabel="Tab NOO"
         >
@@ -384,7 +472,7 @@ const LeadNooTabs = React.memo(function LeadNooTabs({
             className="font-semibold"
             style={{ 
               fontFamily: 'Inter_600SemiBold',
-              color: activeTab === 'NOO' ? '#fff' : colors.textSecondary
+              color: nooTextColor
             }}
           >
             NOO
@@ -402,6 +490,15 @@ const DynamicField = React.memo(function DynamicField({ field, value, onChange, 
   onChange: (val: string) => void;
   colors: any;
 }) {
+  const textareaStyle = useMemo(() => ({ 
+    height: 80, 
+    textAlignVertical: 'top' as const 
+  }), []);
+
+  const handleInputChange = useCallback((val: string) => {
+    onChange(val);
+  }, [onChange]);
+
   // Tentukan komponen input berdasarkan type
   if (field.type === 'textarea') {
     return (
@@ -414,11 +511,12 @@ const DynamicField = React.memo(function DynamicField({ field, value, onChange, 
         </Text>
         <Input
           value={value}
-          onChangeText={onChange}
+          onChangeText={handleInputChange}
           placeholder={field.name}
           multiline
           numberOfLines={3}
-          style={{ height: 80, textAlignVertical: 'top' }}
+          style={textareaStyle}
+          maxLength={500}
         />
       </View>
     );
@@ -446,6 +544,13 @@ const DynamicField = React.memo(function DynamicField({ field, value, onChange, 
       </View>
     );
   }
+
+  const maxLength = useMemo(() => {
+    if (field.type === 'number') return 15;
+    if (field.type === 'phone') return 15;
+    return 100;
+  }, [field.type]);
+
   return (
     <View className="mb-4">
       <Text 
@@ -456,8 +561,9 @@ const DynamicField = React.memo(function DynamicField({ field, value, onChange, 
       </Text>
       <Input
         value={value}
-        onChangeText={onChange}
+        onChangeText={handleInputChange}
         placeholder={field.name}
+        maxLength={maxLength}
         keyboardType={field.type === 'number' ? 'numeric' : (field.type === 'phone' ? 'phone-pad' : 'default')}
       />
     </View>
@@ -471,18 +577,28 @@ const DynamicFormSection = React.memo(function DynamicFormSection({ section, for
   setForm: (f: Record<string, string>) => void;
   colors: any;
 }) {
+  const cardStyle = useMemo(() => ({ 
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    minHeight: 48 
+  }), [colors.card, colors.border]);
+
+  const iconBackgroundStyle = useMemo(() => ({ 
+    backgroundColor: colors.primary + '20' 
+  }), [colors.primary]);
+
+  const handleFieldChange = useCallback((fieldCode: string) => (val: string) => {
+    setForm({ ...form, [fieldCode]: val });
+  }, [form, setForm]);
+
   return (
     <TouchableOpacity 
       className="rounded-lg border p-4 mb-4 shadow-sm"
-      style={{ 
-        backgroundColor: colors.card,
-        borderColor: colors.border,
-        minHeight: 48 
-      }}
+      style={cardStyle}
       activeOpacity={1}
     >
       <View className="flex-row items-center mb-4">
-        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
+        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={iconBackgroundStyle}>
           <IconSymbol name="building.2.fill" size={18} color={colors.primary} />
         </View>
         <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
@@ -494,7 +610,7 @@ const DynamicFormSection = React.memo(function DynamicFormSection({ section, for
           key={field.code}
           field={field}
           value={form[field.code] || ''}
-          onChange={val => setForm({ ...form, [field.code]: val })}
+          onChange={handleFieldChange(field.code)}
           colors={colors}
         />
       ))}
@@ -506,7 +622,7 @@ const DynamicFormSection = React.memo(function DynamicFormSection({ section, for
  * Register Outlet Screen - Form untuk mendaftarkan outlet baru
  * Mengikuti best practice: UI-only components, custom hooks untuk logic
  */
-export default function RegisterOutletScreen() {
+export default React.memo(function RegisterOutletScreen() {
   const { colors, styles } = useThemeStyles();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -546,6 +662,28 @@ export default function RegisterOutletScreen() {
     setShowTypeDropdown(!showTypeDropdown);
   }, [showTypeDropdown, setShowTypeDropdown]);
 
+  const handleTabChange = useCallback((tab: 'LEAD' | 'NOO') => {
+    setActiveTab(tab);
+  }, []);
+
+  // Memoized loading and error states
+  const loadingText = useMemo(() => 
+    loading ? 'Memuat form...' : null,
+    [loading]
+  );
+
+  const errorText = useMemo(() => 
+    error ? error : null,
+    [error]
+  );
+
+  // Cleanup on unmount
+  React.useEffect(() => {
+    return () => {
+      setForm({});
+    };
+  }, []);
+
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header 
@@ -554,27 +692,29 @@ export default function RegisterOutletScreen() {
       />
       
       {/* Tabs LEAD/NOO */}
-      <LeadNooTabs activeTab={activeTab} onTabChange={setActiveTab} colors={colors} />
+      <LeadNooTabs activeTab={activeTab} onTabChange={handleTabChange} colors={colors} />
       
       <ScrollView 
         className="flex-1 px-4"
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        keyboardShouldPersistTaps="handled"
       >
         <View className="pt-4 pb-8">
-          {loading && (
+          {loadingText && (
             <Text 
               className="text-center text-base my-8" 
               style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}
             >
-              Memuat form...
+              {loadingText}
             </Text>
           )}
-          {error && (
+          {errorText && (
             <Text 
               className="text-center text-base my-8"
               style={{ fontFamily: 'Inter_400Regular', color: colors.danger }}
             >
-              {error}
+              {errorText}
             </Text>
           )}
           {sections && sections.map(section => (
@@ -596,5 +736,5 @@ export default function RegisterOutletScreen() {
       </ScrollView>
     </View>
   );
-}
+});
 

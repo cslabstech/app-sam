@@ -1,5 +1,5 @@
 // React & React Native
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -46,15 +46,21 @@ const useOutletView = (id: string | undefined) => {
 };
 
 const useMediaData = (outlet: any) => {
-  const imageList: MediaImage[] = outlet?.photos ? [
-    { label: 'Shop Sign', uri: getImageUrl(outlet.photos.shop_sign) || '' },
-    { label: 'Front View', uri: getImageUrl(outlet.photos.front) || '' },
-    { label: 'Left View', uri: getImageUrl(outlet.photos.left) || '' },
-    { label: 'Right View', uri: getImageUrl(outlet.photos.right) || '' },
-    { label: 'ID Card', uri: getImageUrl(outlet.photos.id_card) || '' },
-  ].filter(img => img.uri) : [];
+  const imageList: MediaImage[] = useMemo(() => 
+    outlet?.photos ? [
+      { label: 'Shop Sign', uri: getImageUrl(outlet.photos.shop_sign) || '' },
+      { label: 'Front View', uri: getImageUrl(outlet.photos.front) || '' },
+      { label: 'Left View', uri: getImageUrl(outlet.photos.left) || '' },
+      { label: 'Right View', uri: getImageUrl(outlet.photos.right) || '' },
+      { label: 'ID Card', uri: getImageUrl(outlet.photos.id_card) || '' },
+    ].filter(img => img.uri) : [],
+    [outlet?.photos]
+  );
   
-  const videoUrl = outlet?.video ? getImageUrl(outlet.video) : null;
+  const videoUrl = useMemo(() => 
+    outlet?.video ? getImageUrl(outlet.video) : null,
+    [outlet?.video]
+  );
 
   return { imageList, videoUrl };
 };
@@ -90,9 +96,20 @@ const StatusBadge = React.memo(function StatusBadge({
   status: string; 
   color: string; 
 }) {
+  const badgeStyle = useMemo(() => ({ 
+    backgroundColor: color + '15' 
+  }), [color]);
+
+  const textStyle = useMemo(() => ({ 
+    fontFamily: 'Inter', 
+    fontSize: 13, 
+    fontWeight: '600' as const, 
+    color 
+  }), [color]);
+
   return (
-    <View className="px-2 py-1 rounded-md" style={{ backgroundColor: color + '15' }}>
-      <Text style={{ fontFamily: 'Inter', fontSize: 13, fontWeight: '600', color }}>
+    <View className="px-2 py-1 rounded-md" style={badgeStyle}>
+      <Text style={textStyle}>
         {status}
       </Text>
     </View>
@@ -101,17 +118,19 @@ const StatusBadge = React.memo(function StatusBadge({
 
 const LoadingScreen = React.memo(function LoadingScreen({ 
   colors, 
-  isConnected 
+  isConnected,
+  onBack 
 }: { 
   colors: any; 
-  isConnected: boolean; 
+  isConnected: boolean;
+  onBack: () => void;
 }) {
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header 
         title="Detail Outlet"
         colors={colors}
-        onBack={() => {}}
+        onBack={onBack}
         onEdit={() => {}}
       />
       <View className="flex-1 justify-center items-center px-6">
@@ -135,6 +154,10 @@ const ErrorScreen = React.memo(function ErrorScreen({
   isConnected: boolean; 
   onGoBack: () => void; 
 }) {
+  const errorIconStyle = useMemo(() => ({ 
+    backgroundColor: colors.danger + '20' 
+  }), [colors.danger]);
+
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <Header 
@@ -144,7 +167,7 @@ const ErrorScreen = React.memo(function ErrorScreen({
         onEdit={() => {}}
       />
       <View className="flex-1 justify-center items-center px-6">
-        <View className="w-16 h-16 rounded-full items-center justify-center mb-4" style={{ backgroundColor: colors.danger + '20' }}>
+        <View className="w-16 h-16 rounded-full items-center justify-center mb-4" style={errorIconStyle}>
           <IconSymbol name="exclamationmark.triangle" size={32} color={colors.danger} />
         </View>
         <Text className="text-lg font-semibold text-center mb-2" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
@@ -172,8 +195,13 @@ const Header = React.memo(function Header({
 }) {
   const insets = useSafeAreaInsets();
   
+  const headerStyle = useMemo(() => ({ 
+    paddingTop: insets.top + 12, 
+    backgroundColor: colors.primary 
+  }), [insets.top, colors.primary]);
+
   return (
-    <View className="px-4 pb-4" style={{ paddingTop: insets.top + 12, backgroundColor: colors.primary }}>
+    <View className="px-4 pb-4" style={headerStyle}>
       <View className="flex-row justify-between items-center">
         <TouchableOpacity 
           onPress={onBack}
@@ -210,38 +238,53 @@ const TabNavigation = React.memo(function TabNavigation({
   onTabChange: (tab: ActiveTab) => void; 
   colors: any; 
 }) {
-  const tabs = [
+  const tabs = useMemo(() => [
     { id: 'info' as ActiveTab, label: 'Info' },
     { id: 'location' as ActiveTab, label: 'Lokasi' },
     { id: 'media' as ActiveTab, label: 'Media' },
-  ];
+  ], []);
+
+  const borderBottomStyle = useMemo(() => ({ 
+    borderBottomColor: colors.border 
+  }), [colors.border]);
+
+  const handleTabPress = useCallback((tabId: ActiveTab) => () => {
+    onTabChange(tabId);
+  }, [onTabChange]);
 
   return (
-    <View className="flex-row mt-2 border-b" style={{ borderBottomColor: colors.border }}>
-      {tabs.map((tab) => (
-        <TouchableOpacity 
-          key={tab.id}
-          className={`py-3 px-4 flex-1 items-center ${
-            activeTab === tab.id ? 'border-b-2' : ''
-          }`}
-          style={{
-            borderBottomColor: activeTab === tab.id ? colors.primary : 'transparent'
-          }}
-          onPress={() => onTabChange(tab.id)}
-          accessibilityRole="button"
-          accessibilityLabel={`Tab ${tab.label}`}
-        >
-          <Text 
-            style={{ 
-              fontFamily: 'Inter_600SemiBold',
-              color: activeTab === tab.id ? colors.primary : colors.textSecondary
-            }}
-            className="text-base"
+    <View className="flex-row mt-2 border-b" style={borderBottomStyle}>
+      {tabs.map((tab) => {
+        const isActive = activeTab === tab.id;
+        const tabStyle = useMemo(() => ({
+          borderBottomColor: isActive ? colors.primary : 'transparent'
+        }), [isActive, colors.primary]);
+
+        const textStyle = useMemo(() => ({ 
+          fontFamily: 'Inter_600SemiBold',
+          color: isActive ? colors.primary : colors.textSecondary
+        }), [isActive, colors.primary, colors.textSecondary]);
+
+        return (
+          <TouchableOpacity 
+            key={tab.id}
+            className={`py-3 px-4 flex-1 items-center ${
+              isActive ? 'border-b-2' : ''
+            }`}
+            style={tabStyle}
+            onPress={handleTabPress(tab.id)}
+            accessibilityRole="button"
+            accessibilityLabel={`Tab ${tab.label}`}
           >
-            {tab.label}
-          </Text>
-        </TouchableOpacity>
-      ))}
+            <Text 
+              style={textStyle}
+              className="text-base"
+            >
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 });
@@ -255,14 +298,16 @@ const InfoCard = React.memo(function InfoCard({
   children: React.ReactNode; 
   colors: any; 
 }) {
+  const cardStyle = useMemo(() => ({ 
+    backgroundColor: colors.card,
+    borderColor: colors.border,
+    minHeight: 48 
+  }), [colors.card, colors.border]);
+
   return (
     <TouchableOpacity 
       className="rounded-lg border p-4 mb-4 shadow-sm"
-      style={{ 
-        backgroundColor: colors.card,
-        borderColor: colors.border,
-        minHeight: 48 
-      }}
+      style={cardStyle}
       activeOpacity={1}
     >
       <Text className="text-lg font-semibold mb-3" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
@@ -284,8 +329,12 @@ const InfoRow = React.memo(function InfoRow({
   colors: any;
   isLast?: boolean;
 }) {
+  const borderStyle = useMemo(() => ({ 
+    borderBottomColor: !isLast ? colors.border + '40' : 'transparent' 
+  }), [isLast, colors.border]);
+
   return (
-    <View className={`flex-row justify-between items-center py-2 ${!isLast ? 'border-b' : ''}`} style={{ borderBottomColor: !isLast ? colors.border + '40' : 'transparent' }}>
+    <View className={`flex-row justify-between items-center py-2 ${!isLast ? 'border-b' : ''}`} style={borderStyle}>
       <Text className="text-sm flex-1" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
         {label}
       </Text>
@@ -331,12 +380,14 @@ const MediaSection = React.memo(function MediaSection({
   emptyMessage: string; 
   colors: any; 
 }) {
+  const hasItems = useMemo(() => items.length > 0, [items.length]);
+
   return (
     <View>
       <Text style={{ fontFamily: 'Inter', color: colors.text }} className="font-bold text-base mb-3">
         {title}
       </Text>
-      {items.length > 0 ? (
+      {hasItems ? (
         items.map((item, index) => (
           <Card key={item.label || index} className="mb-3 items-center p-3">
             <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-sm mb-2 font-semibold">
@@ -357,7 +408,7 @@ const MediaSection = React.memo(function MediaSection({
   );
 });
 
-export default function OutletViewPage() {
+export default React.memo(function OutletViewPage() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
@@ -368,15 +419,38 @@ export default function OutletViewPage() {
   const { outlet, loading, error } = useOutletView(id);
   const { imageList, videoUrl } = useMediaData(outlet);
 
-  const handleGoBack = () => router.back();
-  const handleEdit = () => router.push(`/outlet/${outlet?.id}/edit`);
+  const handleGoBack = useCallback(() => router.back(), [router]);
+  
+  const handleEdit = useCallback(() => 
+    router.push(`/outlet/${outlet?.id}/edit`), 
+    [router, outlet?.id]
+  );
+
+  const handleTabChange = useCallback((tab: ActiveTab) => {
+    setActiveTab(tab);
+  }, []);
+
+  // Memoized status badge
+  const statusBadge = useMemo(() => {
+    if (!outlet?.status) return null;
+    const statusText = outlet.status.charAt(0).toUpperCase() + outlet.status.slice(1);
+    const statusColor = getStatusColor(outlet.status, colors);
+    return <StatusBadge status={statusText} color={statusColor} />;
+  }, [outlet?.status, colors]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      setActiveTab('info');
+    };
+  }, []);
 
   if (error) {
     return <ErrorScreen error={error} colors={colors} isConnected={isConnected} onGoBack={handleGoBack} />;
   }
 
   if (loading) {
-    return <LoadingScreen colors={colors} isConnected={isConnected} />;
+    return <LoadingScreen colors={colors} isConnected={isConnected} onBack={handleGoBack} />;
   }
 
   if (!outlet && !loading) {
@@ -394,11 +468,16 @@ export default function OutletViewPage() {
 
       <TabNavigation 
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         colors={colors}
       />
 
-      <ScrollView className="flex-1 px-4">
+      <ScrollView 
+        className="flex-1 px-4"
+        showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        keyboardShouldPersistTaps="handled"
+      >
         <View className="pt-4 pb-8">
           {activeTab === 'info' && (
             <View>
@@ -409,12 +488,7 @@ export default function OutletViewPage() {
                 <InfoRow label="District" value={outlet!.district || '-'} colors={colors} />
                 <InfoRow 
                   label="Status" 
-                  value={
-                    <StatusBadge
-                      status={outlet!.status ? outlet!.status.charAt(0).toUpperCase() + outlet!.status.slice(1) : '-'}
-                      color={getStatusColor(outlet!.status || '', colors)}
-                    />
-                  } 
+                  value={statusBadge} 
                   colors={colors} 
                 />
                 {(outlet!.radius !== undefined && outlet!.radius !== null) && (
@@ -497,5 +571,5 @@ export default function OutletViewPage() {
       </ScrollView>
     </View>
   );
-}
+});
 
