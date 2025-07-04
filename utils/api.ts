@@ -46,14 +46,16 @@ export async function apiRequest({
     body, 
     logLabel,
     token,
-    timeout = API_CONFIG.timeout
+    timeout = API_CONFIG.timeout,
+    headers: customHeaders
 }: { 
     url: string, 
     method?: string, 
     body?: any, 
     logLabel: string,
     token?: string | null,
-    timeout?: number     // Custom timeout
+    timeout?: number,     // Custom timeout
+    headers?: Record<string, string> // Custom headers
 }): Promise<any> {
     const executeRequest = async (): Promise<any> => {
         log(`[${logLabel}] Request:`, { url, method, bodyType: body instanceof FormData ? 'FormData' : typeof body });
@@ -64,10 +66,11 @@ export async function apiRequest({
         const headers: Record<string, string> = {
             'Accept': 'application/json',
             ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            ...(customHeaders || {}), // Merge custom headers
         };
         
         // Hanya set Content-Type untuk JSON, biarkan browser handle FormData
-        if (!isFormData) {
+        if (!isFormData && !customHeaders?.['Content-Type']) {
             headers['Content-Type'] = 'application/json';
         }
         

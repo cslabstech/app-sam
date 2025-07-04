@@ -1,6 +1,7 @@
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/context/auth-context';
+import { useProfile } from '@/hooks/data/useProfile';
 import { useThemeStyles } from '@/hooks/utils/useThemeStyles';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
@@ -10,7 +11,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface PersonalInfoForm {
   name: string;
-  username: string;
   phone: string;
   email: string;
   photo: string;
@@ -306,17 +306,6 @@ const PersonalInfoCard = memo(function PersonalInfoCard({
         />
 
         <Input
-          label="Username"
-          value={formData.username}
-          onChangeText={(value) => updateField('username', value)}
-          placeholder="Masukkan username"
-          autoCapitalize="none"
-          editable={editing}
-          style={getInputStyle(editing)}
-          maxLength={30}
-        />
-
-        <Input
           label="No. HP"
           value={formData.phone}
           onChangeText={(value) => updateField('phone', value)}
@@ -343,91 +332,15 @@ const PersonalInfoCard = memo(function PersonalInfoCard({
   );
 });
 
-const AccountInfoCard = memo(function AccountInfoCard({ 
-  user, 
-  colors 
-}: {
-  user: any;
-  colors: any;
-}) {
-  const cardStyle = useMemo(() => ({ 
-    backgroundColor: colors.card,
-    borderColor: colors.border,
-    minHeight: 48 
-  }), [colors.card, colors.border]);
-
-  const iconBackgroundStyle = useMemo(() => ({ 
-    backgroundColor: colors.primary + '20' 
-  }), [colors.primary]);
-
-  const readOnlyStyle = useMemo(() => ({ 
-    fontFamily: 'Inter_400Regular',
-    backgroundColor: colors.backgroundAlt,
-    borderColor: colors.border,
-    color: colors.textSecondary
-  }), [colors.backgroundAlt, colors.border, colors.textSecondary]);
-
-  const roleText = useMemo(() => 
-    typeof user?.role === 'string' ? user.role : user?.role?.name || 'User',
-    [user?.role]
-  );
-
-  return (
-    <TouchableOpacity 
-      className="rounded-lg border p-4 mb-4 shadow-sm"
-      style={cardStyle}
-      activeOpacity={1}
-    >
-      <View className="flex-row items-center mb-4">
-        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={iconBackgroundStyle}>
-          <IconSymbol name="person.badge.key.fill" size={18} color={colors.primary} />
-        </View>
-        <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
-          Informasi Akun
-        </Text>
-      </View>
-      
-      <View className="gap-4">
-        <View>
-          <Text className="text-base font-medium mb-3" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
-            Role
-          </Text>
-          <Text 
-            className="text-base px-4 py-3 rounded-lg border"
-            style={readOnlyStyle}
-            numberOfLines={1}
-          >
-            {roleText}
-          </Text>
-        </View>
-
-        <View>
-          <Text className="text-base font-medium mb-3" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
-            User ID
-          </Text>
-          <Text 
-            className="text-base px-4 py-3 rounded-lg border"
-            style={readOnlyStyle}
-            numberOfLines={1}
-          >
-            {user?.id || '-'}
-          </Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-});
-
 export default memo(function PersonalInfoScreen() {
   const { colors } = useThemeStyles();
   const router = useRouter();
   const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const { loading, updateProfile, updatePhoto } = useProfile();
   const [editing, setEditing] = useState(false);
   
   const [formData, setFormData] = useState<PersonalInfoForm>({
     name: user?.name || '',
-    username: user?.username || '',
     phone: user?.phone || '',
     email: user?.email || '',
     photo: user?.photo || '',
@@ -446,7 +359,6 @@ export default memo(function PersonalInfoScreen() {
     // Reset form data to original values
     setFormData({
       name: user?.name || '',
-      username: user?.username || '',
       phone: user?.phone || '',
       email: user?.email || '',
       photo: user?.photo || '',
@@ -454,20 +366,38 @@ export default memo(function PersonalInfoScreen() {
   }, [user]);
 
   const handleSave = useCallback(async () => {
-    setLoading(true);
     try {
-      // TODO: Implement API call to update user info
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      // Prepare payload for profile update
+      const payload: any = {};
+      if (formData.name !== user?.name) payload.name = formData.name;
+      if (formData.email !== user?.email) payload.email = formData.email;
+      if (formData.phone !== user?.phone) payload.phone = formData.phone;
+
+      // Update profile if there are changes
+      if (Object.keys(payload).length > 0) {
+        const result = await updateProfile(payload);
+        if (!result.success) {
+          Alert.alert('Gagal', result.error || 'Terjadi kesalahan saat memperbarui informasi personal.');
+          return;
+        }
+      }
+
+      // Update photo if changed
+      if (formData.photo !== user?.photo && formData.photo && !formData.photo.startsWith('http')) {
+        const photoResult = await updatePhoto({ photo: formData.photo });
+        if (!photoResult.success) {
+          Alert.alert('Gagal', photoResult.error || 'Terjadi kesalahan saat memperbarui foto profil.');
+          return;
+        }
+      }
       
       Alert.alert('Sukses', 'Informasi personal berhasil diperbarui!', [
         { text: 'OK', onPress: () => setEditing(false) }
       ]);
     } catch (error) {
       Alert.alert('Gagal', 'Terjadi kesalahan saat memperbarui informasi personal.');
-    } finally {
-      setLoading(false);
     }
-  }, [formData]);
+  }, [formData, user, updateProfile, updatePhoto]);
 
   const updateField = useCallback((field: keyof PersonalInfoForm, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -510,12 +440,6 @@ export default memo(function PersonalInfoScreen() {
             editing={editing}
             colors={colors}
             updateField={updateField}
-          />
-
-          {/* Account Information Card */}
-          <AccountInfoCard
-            user={user}
-            colors={colors}
           />
         </View>
       </ScrollView>

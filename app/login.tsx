@@ -1,6 +1,6 @@
 import { Colors } from '@/constants/Colors';
 import { useNetwork } from '@/context/network-context';
-import { useLoginForm } from '@/hooks/data/useLoginForm';
+import { useLoginForm } from '@/hooks/form/useLoginForm';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';

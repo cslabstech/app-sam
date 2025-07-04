@@ -1,5 +1,5 @@
 import { useNetwork } from '@/context/network-context';
-import { useOtpLoginForm } from '@/hooks/data/useOtpLoginForm';
+import { useOtpLoginForm } from '@/hooks/form/useOtpLoginForm';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { memo, useCallback, useMemo } from 'react';

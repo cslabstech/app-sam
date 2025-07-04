@@ -3,7 +3,7 @@ import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Keyboard, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -44,14 +44,32 @@ interface LocationCoords {
   accuracy?: number;
 }
 
-const ErrorBoundary = memo(function ErrorBoundary(props: { children: React.ReactNode }) {
-  return (
-    <View className="flex-1 justify-center items-center bg-white">
-      <Text className="text-lg font-bold text-danger-600">Terjadi kesalahan pada aplikasi.</Text>
-      <Text className="text-base text-neutral-500 mt-2">Silakan tutup dan buka ulang aplikasi.</Text>
-    </View>
-  );
-});
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: any, info: any) {
+    console.error('ErrorBoundary caught:', error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View className="flex-1 justify-center items-center bg-white">
+          <Text className="text-lg font-bold text-danger-600">Terjadi kesalahan pada aplikasi.</Text>
+          <Text className="text-base text-neutral-500 mt-2">Silakan tutup dan buka ulang aplikasi.</Text>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const useCheckOutForm = () => {
   const [formData, setFormData] = useState<CheckOutFormData>({
@@ -91,62 +109,44 @@ const useCheckOutForm = () => {
 };
 
 // Face detection overlay component
-const FaceDetectionOverlay = memo(function FaceDetectionOverlay() {
-  return (
-    <View className="absolute inset-0 items-center justify-center">
-      <View 
-        className="w-80 h-80 rounded-full border-4 border-white border-dashed"
-        style={{
-          borderStyle: 'dashed',
-        }}
-      />
-    </View>
-  );
-});
+const FaceDetectionOverlay = () => (
+  <View className="absolute inset-0 items-center justify-center">
+    <View 
+      className="w-80 h-80 rounded-full border-4 border-white border-dashed"
+      style={{
+        borderStyle: 'dashed',
+      }}
+    />
+  </View>
+);
 
-const Header = memo(function Header({ currentStep, onBack, onRefresh, colors }: { 
+const Header = React.memo(function Header({ currentStep, onBack, onRefresh }: { 
   currentStep: number; 
   onBack: () => void; 
-  onRefresh?: () => void;
-  colors: any;
+  onRefresh?: () => void; 
 }) {
   const insets = useSafeAreaInsets();
   
   const headerStyle = useMemo(() => ({ 
-    paddingTop: insets.top + 12,
-    backgroundColor: colors.primary
-  }), [insets.top, colors.primary]);
+    paddingTop: insets.top + 8 
+  }), [insets.top]);
   
   return (
-    <View className="px-4 pb-4" style={headerStyle}>
+    <View className="bg-primary-500 px-4 pb-4" style={headerStyle}>
       <View className="flex-row justify-between items-center">
-        <TouchableOpacity 
-          onPress={onBack} 
-          className="w-8 h-8 items-center justify-center"
-          accessibilityRole="button" 
-          accessibilityLabel="Kembali"
-        >
+        <TouchableOpacity onPress={onBack} accessibilityRole="button" accessibilityLabel="Kembali">
           <IconSymbol name="chevron.left" size={24} color="#fff" />
         </TouchableOpacity>
-        <View className="flex-1 items-center mx-4">
-          <Text className="text-white text-xl font-semibold" style={{ fontFamily: 'Inter_600SemiBold' }}>
-            Check Out
-          </Text>
-          <Text className="text-white/80 text-sm mt-0.5" style={{ fontFamily: 'Inter_400Regular' }}>
-            Langkah {currentStep} dari 2
-          </Text>
+        <View className="flex-1 items-center">
+          <Text className="text-white text-2xl font-bold">Check Out</Text>
+          <Text className="text-white text-sm mt-1">Langkah {currentStep} dari 2</Text>
         </View>
         {currentStep === 1 && onRefresh ? (
-          <TouchableOpacity 
-            onPress={onRefresh} 
-            className="w-8 h-8 items-center justify-center"
-            accessibilityRole="button" 
-            accessibilityLabel="Refresh data"
-          >
-            <IconSymbol name="arrow.clockwise" size={20} color="#fff" />
+          <TouchableOpacity onPress={onRefresh} accessibilityRole="button" accessibilityLabel="Refresh data">
+            <Ionicons name="refresh" size={22} color="#fff" />
           </TouchableOpacity>
         ) : (
-          <View className="w-8 h-8" />
+          <View className="w-6 h-6" />
         )}
       </View>
     </View>
@@ -160,7 +160,7 @@ function parseLatLong(latlong: string): { latitude: number; longitude: number } 
   return { latitude: lat, longitude: lng };
 }
 
-const TransactionSelector = memo(function TransactionSelector({ 
+const TransactionSelector = React.memo(function TransactionSelector({ 
   selectedTransaction, 
   onTransactionChange 
 }: { 
@@ -170,81 +170,77 @@ const TransactionSelector = memo(function TransactionSelector({
   const handleYesPress = useCallback(() => onTransactionChange('YES'), [onTransactionChange]);
   const handleNoPress = useCallback(() => onTransactionChange('NO'), [onTransactionChange]);
   
-  const yesButtonClass = useMemo(() => 
-    `flex-1 flex-row items-center justify-center py-3 px-4 rounded-lg border ${
-      selectedTransaction === 'YES' 
-        ? 'bg-primary-500 border-primary-500' 
-        : 'bg-white border-neutral-200'
-    }`,
-    [selectedTransaction]
-  );
-
-  const noButtonClass = useMemo(() => 
-    `flex-1 flex-row items-center justify-center py-3 px-4 rounded-lg border ${
-      selectedTransaction === 'NO' 
-        ? 'bg-primary-500 border-primary-500' 
-        : 'bg-white border-neutral-200'
-    }`,
-    [selectedTransaction]
-  );
-
-  const yesCircleClass = useMemo(() => 
-    `w-6 h-6 rounded-full mr-2 items-center justify-center ${
-      selectedTransaction === 'YES' ? 'bg-white' : 'bg-neutral-100'
-    }`,
-    [selectedTransaction]
-  );
-
-  const noCircleClass = useMemo(() => 
-    `w-6 h-6 rounded-full mr-2 items-center justify-center ${
-      selectedTransaction === 'NO' ? 'bg-white' : 'bg-neutral-100'
+  const yesButtonStyle = useMemo(() =>
+    `flex-row items-center py-2.5 px-4 rounded-lg mr-2 ${
+      selectedTransaction === 'YES' ? 'bg-primary-500' : 'bg-neutral-100'
     }`,
     [selectedTransaction]
   );
   
+  const noButtonStyle = useMemo(() =>
+    `flex-row items-center py-2.5 px-4 rounded-lg mr-2 ${
+      selectedTransaction === 'NO' ? 'bg-primary-500' : 'bg-neutral-100'
+    }`,
+    [selectedTransaction]
+  );
+  
+  const yesTextStyle = useMemo(() =>
+    `ml-2 font-semibold ${
+      selectedTransaction === 'YES' ? 'text-white' : 'text-primary-500'
+    }`,
+    [selectedTransaction]
+  );
+  
+  const noTextStyle = useMemo(() =>
+    `ml-2 font-semibold ${
+      selectedTransaction === 'NO' ? 'text-white' : 'text-primary-500'
+    }`,
+    [selectedTransaction]
+  );
+  
+  const yesIconColor = useMemo(() => 
+    selectedTransaction === 'YES' ? '#fff' : '#f97316',
+    [selectedTransaction]
+  );
+  
+  const noIconColor = useMemo(() => 
+    selectedTransaction === 'NO' ? '#fff' : '#f97316',
+    [selectedTransaction]
+  );
+
   return (
     <View className="mb-4">
-      <Text className="text-base font-semibold mb-3 text-neutral-800" style={{ fontFamily: 'Inter_500Medium' }}>
-        Status Transaksi
-      </Text>
-      <View className="flex-row gap-3">
+      <Text className="text-base font-semibold mb-2 text-black">Transaksi</Text>
+      <View className="flex-row gap-4">
         <TouchableOpacity
-          className={yesButtonClass}
+          className={yesButtonStyle}
           onPress={handleYesPress}
           accessibilityRole="button"
           accessibilityLabel="Pilih transaksi YES"
         >
-          <View className={yesCircleClass}>
-            <IconSymbol 
-              name="checkmark" 
-              size={14} 
-              color={selectedTransaction === 'YES' ? '#f97316' : '#9CA3AF'} 
-            />
-          </View>
-          <Text className={`font-medium ${
-            selectedTransaction === 'YES' ? 'text-white' : 'text-neutral-700'
-          }`} style={{ fontFamily: 'Inter_500Medium' }}>
-            Ada Transaksi
+          <IconSymbol 
+            name="checkmark.circle.fill" 
+            size={20} 
+            color={yesIconColor} 
+          />
+          <Text className={yesTextStyle}>
+            YES
           </Text>
         </TouchableOpacity>
         
         <TouchableOpacity
-          className={noButtonClass}
+          className={noButtonStyle}
           onPress={handleNoPress}
           accessibilityRole="button"
           accessibilityLabel="Pilih transaksi NO"
         >
-          <View className={noCircleClass}>
-            <IconSymbol 
-              name="xmark" 
-              size={14} 
-              color={selectedTransaction === 'NO' ? '#f97316' : '#9CA3AF'} 
-            />
-          </View>
-          <Text className={`font-medium ${
-            selectedTransaction === 'NO' ? 'text-white' : 'text-neutral-700'
-          }`} style={{ fontFamily: 'Inter_500Medium' }}>
-            Tidak Ada
+          <IconSymbol 
+            name="xmark.circle.fill" 
+            size={20} 
+            color={noIconColor} 
+          />
+          <Text className={noTextStyle}>
+            NO
           </Text>
         </TouchableOpacity>
       </View>
@@ -252,7 +248,7 @@ const TransactionSelector = memo(function TransactionSelector({
   );
 });
 
-const NotesInput = memo(function NotesInput({ 
+const NotesInput = React.memo(function NotesInput({ 
   notes, 
   onNotesChange 
 }: { 
@@ -261,42 +257,30 @@ const NotesInput = memo(function NotesInput({
 }) {
   const handleSubmitEditing = useCallback(() => Keyboard.dismiss(), []);
   
-  const inputStyle = useMemo(() => ({ 
-    textAlignVertical: 'top' as const,
-    fontFamily: 'Inter_400Regular'
-  }), []);
-  
   return (
-    <View className="mb-6">
-      <Text className="text-base font-semibold mb-3 text-neutral-800" style={{ fontFamily: 'Inter_500Medium' }}>
-        Catatan Kunjungan
-      </Text>
-      <View className="bg-white rounded-lg border border-neutral-200">
-        <TextInput
-          className="p-3 min-h-[100px] text-neutral-800 text-base leading-5"
-          placeholder="Tuliskan catatan atau keterangan kunjungan Anda di sini..."
-          placeholderTextColor="#9CA3AF"
-          multiline
-          value={notes}
-          onChangeText={onNotesChange}
-          style={inputStyle}
-          blurOnSubmit={true}
-          returnKeyType="done"
-          onSubmitEditing={handleSubmitEditing}
-          maxLength={500}
-          accessibilityLabel="Input catatan kunjungan"
-          accessibilityHint="Masukkan catatan atau keterangan untuk kunjungan ini"
-        />
-      </View>
-      <Text className="text-xs text-neutral-500 mt-2" style={{ fontFamily: 'Inter_400Regular' }}>
-        {notes.length}/500 karakter
-      </Text>
+    <View className="mb-4">
+      <Text className="text-base font-semibold mb-2 text-black">Catatan</Text>
+      <TextInput
+        className="bg-white rounded-lg border border-neutral-200 p-3 min-h-20 text-black"
+        placeholder="Tambahkan catatan untuk kunjungan ini..."
+        placeholderTextColor="#7B8FA1"
+        multiline
+        value={notes}
+        onChangeText={onNotesChange}
+        style={{ textAlignVertical: 'top' }}
+        blurOnSubmit={true}
+        returnKeyType="done"
+        onSubmitEditing={handleSubmitEditing}
+        maxLength={500}
+        accessibilityLabel="Input catatan kunjungan"
+        accessibilityHint="Masukkan catatan atau keterangan untuk kunjungan ini"
+      />
     </View>
   );
 });
 
 // Simple camera screen for checkout
-const SimpleCameraScreenCheckout = memo(function SimpleCameraScreenCheckout({ 
+const SimpleCameraScreenCheckout = ({ 
   hasCameraPermission, 
   requestCameraPermission,
   cameraRef,
@@ -322,52 +306,28 @@ const SimpleCameraScreenCheckout = memo(function SimpleCameraScreenCheckout({
   onTakePhoto: () => void;
   onGoBack: () => void;
   visit: Visit;
-}) {
+}) => {
   const insets = useSafeAreaInsets();
-  
-  const backButtonStyle = useMemo(() => ({ 
-    top: insets.top + 16 
-  }), [insets.top]);
-
-  const flashButtonStyle = useMemo(() => ({ 
-    top: insets.top + 16 
-  }), [insets.top]);
-
-  const bottomButtonStyle = useMemo(() => ({ 
-    paddingBottom: Math.max(insets.bottom, 16) 
-  }), [insets.bottom]);
-
-  const handleToggleFlash = useCallback(() => {
-    setIsFlashOn(!isFlashOn);
-  }, [isFlashOn, setIsFlashOn]);
-
-  const handleCameraReady = useCallback(() => {
-    setIsCameraReady(true);
-  }, [setIsCameraReady]);
   
   return (
     <View className="flex-1 bg-black">
     {/* Back button */}
     <TouchableOpacity 
-      className="absolute left-4 bg-black/60 rounded-full p-3 z-30 items-center justify-center" 
-      style={backButtonStyle}
+      className="absolute left-6 bg-black/50 rounded-full p-2 z-30 items-center justify-center" 
+      style={{ top: insets.top + 16 }}
       onPress={onGoBack}
-      accessibilityRole="button"
-      accessibilityLabel="Kembali"
     >
-      <Ionicons name="arrow-back" size={20} color="#fff" />
+      <Ionicons name="arrow-back" size={24} color="#fff" />
     </TouchableOpacity>
     
     {/* Flash toggle */}
     {hasCameraPermission?.status === 'granted' && (
       <TouchableOpacity 
-        className="absolute right-4 bg-black/60 rounded-full p-3 z-30 items-center justify-center" 
-        style={flashButtonStyle}
-        onPress={handleToggleFlash}
-        accessibilityRole="button"
-        accessibilityLabel={isFlashOn ? 'Matikan flash' : 'Nyalakan flash'}
+        className="absolute right-6 bg-black/50 rounded-full p-2 z-30 items-center justify-center" 
+        style={{ top: insets.top + 16 }}
+        onPress={() => setIsFlashOn(!isFlashOn)}
       >
-        <Ionicons name={isFlashOn ? 'flash' : 'flash-off'} size={20} color="#fff" />
+        <Ionicons name={isFlashOn ? 'flash' : 'flash-off'} size={24} color="#fff" />
       </TouchableOpacity>
     )}
     
@@ -377,7 +337,7 @@ const SimpleCameraScreenCheckout = memo(function SimpleCameraScreenCheckout({
         <CameraView
           ref={ref => setCameraRef(ref)}
           style={{ flex: 1, width: '100%', height: '100%' }}
-          onCameraReady={handleCameraReady}
+          onCameraReady={() => setIsCameraReady(true)}
           facing="front"
           flash={isFlashOn ? 'on' : 'off'}
         />
@@ -402,7 +362,7 @@ const SimpleCameraScreenCheckout = memo(function SimpleCameraScreenCheckout({
     )}
 
     {/* Fixed bottom button */}
-    <View className="absolute bottom-0 left-0 right-0 p-4 items-center" style={bottomButtonStyle}>
+    <View className="absolute bottom-0 left-0 right-0 p-4 items-center" style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
       <Button
         title={isProcessingPhoto ? 'Mengompresi...' : 'Kirim'}
         variant="primary"
@@ -431,54 +391,41 @@ const SimpleCameraScreenCheckout = memo(function SimpleCameraScreenCheckout({
     )}
       </View>
     );
-  });
+  };
 
-  const LoadingState = memo(function LoadingState() {
+  const LoadingState = () => {
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? 'light'];
     
     return (
-      <View className="flex-1" style={{ backgroundColor: colors.background }}>
-        <Header currentStep={1} onBack={() => router.back()} colors={colors} />
-        <View className="flex-1 justify-center items-center px-6">
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text className="mt-4 text-base" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
-            Memuat data kunjungan...
-          </Text>
-        </View>
+      <View className="flex-1 justify-center items-center" style={{ backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text className="mt-4 text-base" style={{ color: colors.textSecondary }}>Memuat...</Text>
       </View>
     );
-  });
+  };
 
-  const ErrorState = memo(function ErrorState({ onBack }: { onBack: () => void }) {
-    const colorScheme = useColorScheme();
-    const colors = Colors[colorScheme ?? 'light'];
-    
-    return (
-      <View className="flex-1" style={{ backgroundColor: colors.background }}>
-        <Header currentStep={1} onBack={onBack} colors={colors} />
-        <View className="flex-1 justify-center items-center px-6">
-          <View className="w-16 h-16 rounded-full items-center justify-center mb-4" style={{ backgroundColor: colors.danger + '20' }}>
-            <IconSymbol name="exclamationmark.triangle" size={32} color={colors.danger} />
-          </View>
-          <Text className="text-lg font-semibold text-center mb-2" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
-            Data Tidak Ditemukan
-          </Text>
-          <Text className="text-sm text-center mb-6" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
-            Data kunjungan tidak dapat ditemukan atau sudah tidak valid
-          </Text>
-          <Button
-            title="Kembali"
-            variant="primary"
-            onPress={onBack}
-            style={{ marginTop: 8 }}
-          />
-        </View>
-      </View>
-    );
-  });
+  const ErrorState = ({ onBack }: { onBack: () => void }) => {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+  
+  return (
+    <View className="flex-1 justify-center items-center" style={{ backgroundColor: colors.background }}>
+      <IconSymbol name="exclamationmark.triangle" size={60} color={colors.danger} />
+      <Text className="text-lg font-semibold mt-4" style={{ color: colors.text }}>
+        Data kunjungan tidak ditemukan.
+      </Text>
+      <Button
+        title="Kembali"
+        variant="primary"
+        onPress={onBack}
+        style={{ marginTop: 24 }}
+      />
+    </View>
+  );
+};
 
-export default memo(function CheckOutScreen() {
+export default function CheckOutScreen() {
   // CRITICAL: All hooks must be at the top level and in consistent order
   const { id } = useLocalSearchParams();
   const { checkOutVisit, fetchVisit } = useVisit();
@@ -509,8 +456,8 @@ export default memo(function CheckOutScreen() {
   const insets = useSafeAreaInsets();
   
   // Derived values
-  const visitId = useMemo(() => typeof id === 'string' ? id : '', [id]);
-  const colors = useMemo(() => Colors[colorScheme ?? 'light'], [colorScheme]);
+  const visitId = typeof id === 'string' ? id : '';
+  const colors = Colors[colorScheme ?? 'light'];
 
   const getCurrentLocation = useCallback(async () => {
     try {
@@ -656,7 +603,7 @@ export default memo(function CheckOutScreen() {
     try {
       // Step 1: Take photo with higher quality first
       const photo = await cameraRef.takePictureAsync({ 
-        quality: 0.5, // Reduced quality for performance
+        quality: 0.7,
         skipProcessing: true,
         mirrorImage: true
       });
@@ -720,7 +667,7 @@ export default memo(function CheckOutScreen() {
           try {
             const watermarkedUri = await captureRef(viewShotRef, { 
               format: 'jpg', 
-              quality: 0.5, // Reduced quality for performance
+              quality: 0.8, // Higher quality for ViewShot
               result: 'tmpfile'
             });
 
@@ -774,7 +721,7 @@ export default memo(function CheckOutScreen() {
           }
         }
         setIsSubmitting(false);
-      }, 300); // Reduced timeout for better performance
+      }, 500); // Slightly longer timeout for better ViewShot processing
     } catch (error) {
       console.error('Error in checkout process:', error);
       setIsSubmitting(false);
@@ -796,14 +743,12 @@ export default memo(function CheckOutScreen() {
     visitId
   ]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       formManager.resetForm();
       setRawPhoto(null);
-      setWatermarkData(null);
     };
-  }, [formManager]);
+  }, []);
 
   // Memoized values
   const isFormValid = useMemo(() => 
@@ -824,8 +769,8 @@ export default memo(function CheckOutScreen() {
   if (currentStep === 2) {
     return (
       <ErrorBoundary>
-        <View className="flex-1" style={{ backgroundColor: colors.background }}>
-          <Header currentStep={currentStep} onBack={() => changeStep(1)} colors={colors} />
+        <View className="flex-1 bg-white">
+          <Header currentStep={currentStep} onBack={() => changeStep(1)} />
           
           <SimpleCameraScreenCheckout
             hasCameraPermission={hasCameraPermission}
@@ -845,7 +790,7 @@ export default memo(function CheckOutScreen() {
           {rawPhoto && watermarkData && visit && (
             <ViewShot 
               ref={viewShotRef} 
-              options={{ format: 'jpg', quality: 0.3 }} // Reduced quality for performance
+              options={{ format: 'jpg', quality: 0.5 }} 
               style={{ 
                 position: 'absolute', 
                 left: -1000, 
@@ -871,12 +816,11 @@ export default memo(function CheckOutScreen() {
   
   return (
     <ErrorBoundary>
-      <Animated.View className="flex-1" style={{ opacity: fadeAnim, backgroundColor: colors.background }}>
+      <Animated.View className="flex-1 bg-white" style={{ opacity: fadeAnim }}>
         <Header 
           currentStep={currentStep} 
           onBack={() => router.back()} 
           onRefresh={getCurrentLocation}
-          colors={colors}
         />
         
         <View className="flex-1">
@@ -905,18 +849,18 @@ export default memo(function CheckOutScreen() {
                 description={visit.outlet.district ?? ''}
               >
                 <View className="items-center justify-center">
-                  <View className="rounded-full p-2 border-2 shadow-lg" style={{ backgroundColor: colors.card, borderColor: colors.primary }}>
-                    <IconSymbol name="building.2" size={24} color={colors.primary} />
+                  <View className="bg-white rounded-full p-1.5 border-2 border-red-700 shadow-md">
+                    <Ionicons name="business" size={28} color="#C62828" />
                   </View>
                   <View 
                     className="w-0 h-0 -mt-0.5"
                     style={{
-                      borderLeftWidth: 8,
-                      borderRightWidth: 8,
-                      borderTopWidth: 12,
+                      borderLeftWidth: 10,
+                      borderRightWidth: 10,
+                      borderTopWidth: 18,
                       borderLeftColor: 'transparent',
                       borderRightColor: 'transparent',
-                      borderTopColor: colors.primary,
+                      borderTopColor: '#C62828',
                     }}
                   />
                 </View>
@@ -925,33 +869,15 @@ export default memo(function CheckOutScreen() {
           </MapView>
           
           {/* Outlet Info Card Overlay */}
-          <View className="absolute left-4 right-4 z-10" style={{ top: 16 }}>
-            <TouchableOpacity 
-              className="rounded-lg border p-3 shadow-sm"
-              style={{ 
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-                minHeight: 48 
-              }}
-              activeOpacity={0.7}
-            >
-              <View className="flex-row items-center">
-                <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={{ backgroundColor: colors.primary + '20' }}>
-                  <IconSymbol name="building.2" size={18} color={colors.primary} />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-xs mb-0.5" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
-                    Outlet Check Out
-                  </Text>
-                  <Text className="text-sm font-medium" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
-                    {visit!.outlet.name}
-                  </Text>
-                  <Text className="text-xs" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
-                    {visit!.outlet.code} • {visit!.outlet.district || 'Tidak ada distrik'}
-                  </Text>
-                </View>
+          <View className="absolute left-4 right-4 z-10" style={{ top: insets.top + 16 }}>
+            <View className="bg-white rounded-xl p-4 shadow-sm">
+              <Text className="text-sm text-neutral-400 mb-1">Informasi Outlet</Text>
+              <Text className="text-primary-500 text-lg font-bold mb-1">{visit!.outlet.name} ({visit!.outlet.code})</Text>
+              <View className="flex-row items-center mt-0.5">
+                <IconSymbol name="mappin.and.ellipse" size={18} color="#222B45" style={{ marginRight: 8 }} />
+                <Text className="text-primary-500 text-base">{visit!.outlet.district || visit!.outlet.address}</Text>
               </View>
-            </TouchableOpacity>
+            </View>
           </View>
           
           {/* Bottom Sheet for Step 1 */}
@@ -976,9 +902,7 @@ export default memo(function CheckOutScreen() {
                     height: bottomSheetIndex >= 1 ? 'auto' : 0,
                     overflow: 'hidden'
                   }}>
-                    <Text className="text-lg font-semibold mb-4 text-neutral-800" style={{ fontFamily: 'Inter_600SemiBold' }}>
-                      Data Check Out
-                    </Text>
+                    <Text className="font-bold text-lg mb-4 text-black">Catatan & Transaksi</Text>
                     
                     <TransactionSelector
                       selectedTransaction={formManager.formData.transaction}
@@ -1009,4 +933,4 @@ export default memo(function CheckOutScreen() {
       </Animated.View>
     </ErrorBoundary>
   );
-});
+}

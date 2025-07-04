@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/Button';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Input } from '@/components/ui/Input';
+import { useChangePassword } from '@/hooks/data/useChangePassword';
 import { useThemeStyles } from '@/hooks/utils/useThemeStyles';
 import { useRouter } from 'expo-router';
 import React, { memo, useCallback, useMemo, useState } from 'react';
@@ -93,7 +94,8 @@ const SecurityTips = memo(function SecurityTips({ colors }: { colors: any }) {
   const tips = useMemo(() => [
     'Minimal 8 karakter',
     'Kombinasi huruf besar, kecil, angka, dan simbol',
-    'Hindari informasi pribadi seperti nama atau tanggal lahir'
+    'Hindari informasi pribadi seperti nama atau tanggal lahir',
+    'Password baru harus berbeda dengan password saat ini'
   ], []);
 
   return (
@@ -250,7 +252,7 @@ const PasswordFormCard = memo(function PasswordFormCard({
 export default memo(function ChangePasswordScreen() {
   const { colors } = useThemeStyles();
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const { loading, changePassword } = useChangePassword();
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -285,15 +287,17 @@ export default memo(function ChangePasswordScreen() {
     if (!formData.newPassword.trim()) {
       newErrors.newPassword = 'Password baru wajib diisi';
     } else if (formData.newPassword.length < 8) {
-      newErrors.newPassword = 'Password minimal 8 karakter';
+      newErrors.newPassword = 'Password baru minimal 8 karakter';
     } else if (formData.newPassword === formData.currentPassword) {
       newErrors.newPassword = 'Password baru harus berbeda dengan password saat ini';
     }
 
     if (!formData.confirmPassword.trim()) {
-      newErrors.confirmPassword = 'Konfirmasi password wajib diisi';
+      newErrors.confirmPassword = 'Konfirmasi password baru wajib diisi';
+    } else if (formData.confirmPassword.length < 8) {
+      newErrors.confirmPassword = 'Konfirmasi password baru minimal 8 karakter';
     } else if (formData.confirmPassword !== formData.newPassword) {
-      newErrors.confirmPassword = 'Konfirmasi password tidak cocok';
+      newErrors.confirmPassword = 'Konfirmasi password baru tidak cocok';
     }
 
     setErrors(newErrors);
@@ -303,11 +307,14 @@ export default memo(function ChangePasswordScreen() {
   const handleSubmit = useCallback(async () => {
     if (!validateForm()) return;
 
-    setLoading(true);
     try {
-      // TODO: Implement API call to change password
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
-      
+      const result = await changePassword({
+        current_password: formData.currentPassword,
+        new_password: formData.newPassword,
+        new_password_confirmation: formData.confirmPassword,
+      });
+
+      if (result.success) {
       Alert.alert('Sukses', 'Password berhasil diubah!', [
         { 
           text: 'OK', 
@@ -322,12 +329,19 @@ export default memo(function ChangePasswordScreen() {
           }
         }
       ]);
-    } catch (error) {
-      Alert.alert('Gagal', 'Terjadi kesalahan saat mengubah password. Pastikan password saat ini benar.');
-    } finally {
-      setLoading(false);
+      } else {
+        Alert.alert('Gagal', result.error || 'Terjadi kesalahan saat mengubah password.');
+      }
+    } catch (error: any) {
+      // Handle specific backend validation errors
+      if (error.errors) {
+        const errorMessages = Object.values(error.errors).flat().join('\n');
+        Alert.alert('Gagal', errorMessages);
+      } else {
+        Alert.alert('Gagal', error.message || 'Terjadi kesalahan saat mengubah password. Pastikan password saat ini benar.');
+      }
     }
-  }, [formData, validateForm, router]);
+  }, [formData, validateForm, changePassword, router]);
 
   const isFormValid = useMemo(() => 
     !formData.currentPassword || !formData.newPassword || !formData.confirmPassword,
