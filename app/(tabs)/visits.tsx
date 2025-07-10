@@ -1,22 +1,22 @@
-import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { router } from 'expo-router';
-import { debounce } from 'lodash';
+import { useDebounce } from 'use-debounce';
 
-import { AdvancedFilter } from '@/components/AdvancedFilter';
+import { AdvancedFilterBottomSheet, type AdvancedFilterBottomSheetRef } from '@/components/AdvancedFilterBottomSheet';
+import { HeaderSearchFilter } from '@/components/HeaderSearchFilter';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 
 import { Colors } from '@/constants/Colors';
-
 import { useNetwork } from '@/context/network-context';
 import { useVisit } from '@/hooks/data/useVisit';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 
-type FilterType = 'All' | 'Today' | 'Planned' | 'Completed' | 'Cancelled';
+type FilterType = 'All' | 'extracall' | 'planned';
 type SortColumn = 'visit_date' | 'outlet.name' | 'type';
 
 const useVisitFilters = () => {
@@ -29,31 +29,25 @@ const useVisitFilters = () => {
   const [sortDirection, setSortDirection] = useState<'asc'|'desc'>('desc');
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('All');
   const [dateFilter, setDateFilter] = useState<string | null>(null);
-  const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
-
-  const filterTabs: FilterType[] = ['All', 'Today', 'Planned', 'Completed', 'Cancelled'];
   
   const getFilterParam = useCallback((filter: FilterType): Record<string, any> => {
     switch (filter) {
-      case 'Today':
-        return { 'filters[date]': new Date().toISOString().split('T')[0] };
-      case 'Planned':
+      case 'extracall':
+        return { 'filters[type]': 'extracall' };
+      case 'planned':
         return { 'filters[type]': 'planned' };
-      case 'Completed':
-        return { 'filters[type]': 'completed' };
-      case 'Cancelled':
-        return { 'filters[type]': 'cancelled' };
       default:
         return {};
     }
   }, []);
 
-  const debouncedSearch = useCallback(
-    debounce((text: string) => {
-      setSearchQuery(text);
-    }, 300),
-    []
-  );
+  // Create a debounced search value to reduce API calls
+  const [debouncedInputValue] = useDebounce(inputValue, 300);
+
+  // Update searchQuery when debounced value changes
+  useEffect(() => {
+    setSearchQuery(debouncedInputValue);
+  }, [debouncedInputValue]);
 
   React.useEffect(() => { 
     setPage(1); 
@@ -61,13 +55,17 @@ const useVisitFilters = () => {
 
   const handleSearchInput = useCallback((text: string) => {
     setInputValue(text);
-    debouncedSearch(text);
-  }, [debouncedSearch]);
+  }, []);
 
   const clearSearch = useCallback(() => {
     setInputValue('');
     setSearchQuery('');
   }, []);
+
+  // Check if filters are active
+  const hasActiveFilters = useCallback(() => {
+    return perPage !== 10 || sortColumn !== 'visit_date' || sortDirection !== 'desc' || selectedFilter !== 'All';
+  }, [perPage, sortColumn, sortDirection, selectedFilter]);
 
   return {
     inputValue,
@@ -79,8 +77,6 @@ const useVisitFilters = () => {
     sortDirection,
     selectedFilter,
     dateFilter,
-    showAdvancedFilter,
-    filterTabs,
     setRefreshing,
     setPage,
     setPerPage,
@@ -88,10 +84,10 @@ const useVisitFilters = () => {
     setSortDirection,
     setSelectedFilter,
     setDateFilter,
-    setShowAdvancedFilter,
     getFilterParam,
     handleSearchInput,
     clearSearch,
+    hasActiveFilters,
   };
 };
 
@@ -131,83 +127,6 @@ const useVisitActions = (fetchVisits: any, page: number, perPage: number, sortCo
   };
 };
 
-const FilterChip = React.memo(function FilterChip({ 
-  value, 
-  currentValue, 
-  label, 
-  onPress, 
-  isActive,
-  colors 
-}: { 
-  value: string; 
-  currentValue: string; 
-  label: string; 
-  onPress: () => void; 
-  isActive: boolean;
-  colors: any;
-}) {
-  return (
-    <TouchableOpacity
-      className="px-3 py-1.5 rounded-lg border mr-1 mb-1 min-w-[40px] items-center"
-      style={{
-        backgroundColor: isActive ? colors.primary : 'transparent',
-        borderColor: isActive ? colors.primary : 'rgba(156, 163, 175, 0.3)',
-      }}
-      onPress={onPress}
-    >
-      <Text 
-        style={{ 
-          fontFamily: 'Inter',
-          color: isActive ? '#fff' : colors.textSecondary
-        }}
-        className={isActive ? 'font-semibold' : 'font-normal'}
-      >
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
-});
-
-const SearchBar = React.memo(function SearchBar({
-  inputValue,
-  onChangeText,
-  onClear,
-  colors
-}: {
-  inputValue: string;
-  onChangeText: (text: string) => void;
-  onClear: () => void;
-  colors: any;
-}) {
-  return (
-    <View className="flex-row items-center p-3 rounded-lg mb-3 border bg-white dark:bg-neutral-950"
-          style={{ borderColor: 'rgba(156, 163, 175, 0.3)' }}>
-      <View 
-        className="w-9 h-9 rounded-lg justify-center items-center mr-3 border"
-        style={{ 
-          backgroundColor: colors.primary + '20', 
-          borderColor: colors.primary 
-        }}
-      >
-        <IconSymbol name="magnifyingglass" size={20} color={colors.primary} />
-      </View>
-      <TextInput
-        className="flex-1 text-base text-neutral-900 dark:text-neutral-100"
-        style={{ fontFamily: 'Inter' }}
-        placeholder="Search visits or outlets..."
-        placeholderTextColor={colors.textSecondary}
-        value={inputValue}
-        onChangeText={onChangeText}
-      />
-      {inputValue ? (
-        <TouchableOpacity onPress={onClear} className="p-1">
-          <IconSymbol name="xmark.circle.fill" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
-      ) : null}
-    </View>
-  );
-});
-
 const EmptyState = React.memo(function EmptyState({
   loading,
   searchQuery,
@@ -219,48 +138,49 @@ const EmptyState = React.memo(function EmptyState({
 }) {
   if (loading) {
     return (
-      <View className="items-center p-5">
-        <ActivityIndicator size="large" color={colors.primary} style={{ marginBottom: 16 }} />
-        <Text style={{ fontFamily: 'Inter' }} className="text-base font-medium text-neutral-900 dark:text-neutral-100">
+      <View className="items-center py-8">
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text 
+          style={{ fontFamily: 'Inter' }} 
+          className="mt-3 text-base text-neutral-600 dark:text-neutral-400"
+        >
           Loading visits...
         </Text>
       </View>
     );
   }
-  
-  if (searchQuery) {
-    return (
-      <View className="items-center p-5">
-        <View className="mb-3">
-          <IconSymbol name="magnifyingglass" size={32} color={colors.textSecondary} />
-        </View>
-        <Text style={{ fontFamily: 'Inter' }} className="text-base font-medium text-neutral-900 dark:text-neutral-100 text-center mb-2">
-          No matching visits
-        </Text>
-        <Text style={{ fontFamily: 'Inter' }} className="text-sm text-neutral-600 dark:text-neutral-400 text-center">
-          Try adjusting your search terms
-        </Text>
-      </View>
-    );
-  }
-  
+
   return (
-    <View className="items-center p-5">
-      <View className="mb-3">
-        <IconSymbol name="calendar" size={32} color={colors.textSecondary} />
+    <View className="items-center py-12">
+      <View 
+        className="w-16 h-16 rounded-full items-center justify-center mb-4"
+        style={{ backgroundColor: colors.primary + '20' }}
+      >
+        <IconSymbol name="calendar" size={32} color={colors.primary} />
       </View>
-      <Text style={{ fontFamily: 'Inter' }} className="text-base font-medium text-neutral-900 dark:text-neutral-100 text-center mb-2">
-        No visits found
+      <Text 
+        style={{ fontFamily: 'Inter' }} 
+        className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-2"
+      >
+        {searchQuery ? 'No visits found' : 'No visits available'}
       </Text>
-      <Text style={{ fontFamily: 'Inter' }} className="text-sm text-neutral-600 dark:text-neutral-400 text-center mb-4">
-        Plan a new visit to get started
+      <Text 
+        style={{ fontFamily: 'Inter' }} 
+        className="text-base text-neutral-600 dark:text-neutral-400 text-center mb-6"
+      >
+        {searchQuery 
+          ? `No visits match "${searchQuery}". Try adjusting your search.`
+          : 'Start by planning your first outlet visit.'
+        }
       </Text>
-      <Button 
-        title="+ Plan Visit"
-        size="sm"
-        variant="primary"
-        onPress={() => router.push('/visit/check-in')}
-      />
+      {!searchQuery && (
+        <Button
+          title="Plan Visit"
+          variant="primary"
+          size="md"
+          onPress={() => router.push('/plan-visit')}
+        />
+      )}
     </View>
   );
 });
@@ -278,33 +198,48 @@ const Pagination = React.memo(function Pagination({
   onPrevPage: () => void;
   onNextPage: () => void;
 }) {
-  if (!meta) return null;
-  
+  if (!meta || meta.last_page <= 1) return null;
+
   return (
-    <View className="flex-row justify-center items-center my-4">
-      <Button 
-        title="Prev" 
-        size="sm" 
-        variant="secondary"
-        onPress={onPrevPage} 
-        disabled={page === 1 || loading} 
-        style={{ minWidth: 80, marginRight: 8 }}
-      />
-      
-      <View className="px-4">
-        <Text style={{ fontFamily: 'Inter' }} className="text-base text-neutral-900 dark:text-neutral-100">
-          Page <Text className="font-bold">{meta.current_page}</Text> of {meta.last_page}
+    <View className="flex-row justify-between items-center mt-6 px-2">
+      <TouchableOpacity
+        onPress={onPrevPage}
+        disabled={page <= 1 || loading}
+        className="flex-row items-center px-4 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700"
+        style={{ 
+          opacity: (page <= 1 || loading) ? 0.5 : 1,
+          backgroundColor: 'rgba(249, 115, 22, 0.1)'
+        }}
+      >
+        <IconSymbol name="chevron.left" size={16} color="#f97316" />
+        <Text style={{ fontFamily: 'Inter' }} className="ml-1 text-orange-500 font-medium">
+          Previous
+        </Text>
+      </TouchableOpacity>
+
+      <View className="items-center">
+        <Text style={{ fontFamily: 'Inter' }} className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+          Page {page} of {meta.last_page}
+        </Text>
+        <Text style={{ fontFamily: 'Inter' }} className="text-xs text-neutral-600 dark:text-neutral-400">
+          {meta.total} total visits
         </Text>
       </View>
-      
-      <Button 
-        title="Next" 
-        size="sm" 
-        variant="secondary"
-        onPress={onNextPage} 
-        disabled={page === meta.last_page || loading} 
-        style={{ minWidth: 80 }}
-      />
+
+      <TouchableOpacity
+        onPress={onNextPage}
+        disabled={page >= meta.last_page || loading}
+        className="flex-row items-center px-4 py-2 rounded-lg border border-neutral-200 dark:border-neutral-700"
+        style={{ 
+          opacity: (page >= meta.last_page || loading) ? 0.5 : 1,
+          backgroundColor: 'rgba(249, 115, 22, 0.1)'
+        }}
+      >
+        <Text style={{ fontFamily: 'Inter' }} className="mr-1 text-orange-500 font-medium">
+          Next
+        </Text>
+        <IconSymbol name="chevron.right" size={16} color="#f97316" />
+      </TouchableOpacity>
     </View>
   );
 });
@@ -318,56 +253,127 @@ const VisitCard = React.memo(function VisitCard({
   colors: any;
   onPress: () => void;
 }) {
-  const formatDate = useCallback((dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    } catch {
-      return dateString;
+  const getTypeColor = (type: string) => {
+    switch (type?.toLowerCase()) {
+      case 'planned': return { bg: '#dbeafe', text: '#1d4ed8' };
+      case 'extracall': return { bg: '#fef3c7', text: '#d97706' };
+      default: return { bg: '#f3f4f6', text: '#6b7280' };
     }
-  }, []);
+  };
+
+  const typeColors = getTypeColor(item.type);
+  const visitDate = new Date(item.visit_date);
+  const isToday = new Date().toDateString() === visitDate.toDateString();
+
+  // Format waktu check-in/check-out
+  const formatTime = (timeString: string | null) => {
+    if (!timeString) return null;
+    try {
+      return new Date(timeString).toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return timeString;
+    }
+  };
+
+  const checkinTime = formatTime(item.checkin_time);
+  const checkoutTime = formatTime(item.checkout_time);
 
   return (
     <TouchableOpacity
-      className="mb-2 p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950 min-h-[48px]"
       onPress={onPress}
+      className="bg-white dark:bg-neutral-900 rounded-xl p-4 mb-3 border border-neutral-200 dark:border-neutral-700"
       activeOpacity={0.7}
-      accessibilityRole="button"
     >
-      <View className="flex-row items-center">
-        {/* Left: Icon Container */}
+      {/* Header - Basic Outlet Info + Badges */}
+      <View className="flex-row justify-between items-start mb-3">
+        <View className="flex-1 mr-3">
+          <Text 
+            style={{ fontFamily: 'Inter' }} 
+            className="text-base font-semibold text-neutral-900 dark:text-neutral-100"
+            numberOfLines={1}
+          >
+            {item.outlet?.name || 'Unknown Outlet'}
+          </Text>
+          <Text 
+            style={{ fontFamily: 'Inter' }} 
+            className="text-sm text-neutral-600 dark:text-neutral-400 mt-1"
+            numberOfLines={1}
+          >
+            {item.outlet?.code} {item.outlet?.owner_name}
+          </Text>
+        </View>
+        
+        {/* Visit Type Badge */}
         <View 
-          className="w-9 h-9 rounded-lg justify-center items-center mr-3 border"
+          className="px-2 py-1 rounded-md"
           style={{ 
-            backgroundColor: colors.primary + '20', 
-            borderColor: colors.primary 
+            backgroundColor: typeColors.bg
           }}
         >
-          <IconSymbol name="calendar" size={20} color={colors.primary} />
+          <Text 
+            style={{ 
+              fontFamily: 'Inter',
+              color: typeColors.text,
+              fontSize: 10,
+              fontWeight: '600'
+            }}
+          >
+            {item.type?.toUpperCase()}
+          </Text>
         </View>
-        
-        {/* Center: Visit Info */}
+      </View>
+
+      {/* Basic Visit Info */}
+      <View className="flex-row justify-between items-center">
+        {/* Visit Date */}
         <View className="flex-1">
-          <Text style={{ fontFamily: 'Inter' }} className="text-base font-medium text-neutral-900 dark:text-neutral-100" numberOfLines={1}>
-            {item.outlet.name}
+          <Text 
+            style={{ fontFamily: 'Inter' }} 
+            className={`text-sm ${isToday ? 'font-semibold text-orange-500' : 'text-neutral-600 dark:text-neutral-400'}`}
+          >
+            {visitDate.toLocaleDateString('id-ID', {
+              weekday: 'short',
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric'
+            })}
+            {isToday && ' (Hari Ini)'}
           </Text>
-          <Text style={{ fontFamily: 'Inter' }} className="text-sm text-neutral-600 dark:text-neutral-400" numberOfLines={1}>
-            {item.outlet.district}
-          </Text>
-          <View className="flex-row items-center mt-1">
-            <Text style={{ fontFamily: 'Inter' }} className="text-xs text-neutral-600 dark:text-neutral-400">
-              {formatDate(item.visit_date)}
-            </Text>
-            <Text style={{ fontFamily: 'Inter' }} className="text-xs text-neutral-600 dark:text-neutral-400 ml-3">
-              {item.user.name}
-            </Text>
-          </View>
         </View>
-        
-        {/* Right: Chevron */}
-        <View className="ml-3">
-          <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
-        </View>
+
+                 {/* Check-in/Check-out Times */}
+         <View className="flex-row items-center">
+           {checkinTime && (
+             <View className="flex-row items-center">
+               <View className="w-2 h-2 rounded-full bg-green-500 mr-1" />
+               <Text 
+                 style={{ fontFamily: 'Inter' }} 
+                 className="text-sm text-neutral-600 dark:text-neutral-400"
+               >
+                 {checkinTime}
+               </Text>
+             </View>
+           )}
+           
+           {checkinTime && checkoutTime && (
+             <View style={{ width: 8 }} />
+           )}
+           
+           {checkoutTime && (
+             <View className="flex-row items-center">
+               <View className="w-2 h-2 rounded-full bg-red-500 mr-1" />
+               <Text 
+                 style={{ fontFamily: 'Inter' }} 
+                 className="text-sm text-neutral-600 dark:text-neutral-400"
+               >
+                 {checkoutTime}
+               </Text>
+             </View>
+           )}
+         </View>
       </View>
     </TouchableOpacity>
   );
@@ -378,8 +384,10 @@ export default function VisitsScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const { isConnected } = useNetwork();
 
+  // Get visits data from the hook
   const { visits, loading, meta, fetchVisits } = useVisit();
-  
+
+  // Custom hooks for state management
   const {
     inputValue,
     searchQuery,
@@ -390,8 +398,6 @@ export default function VisitsScreen() {
     sortDirection,
     selectedFilter,
     dateFilter,
-    showAdvancedFilter,
-    filterTabs,
     setRefreshing,
     setPage,
     setPerPage,
@@ -399,23 +405,27 @@ export default function VisitsScreen() {
     setSortDirection,
     setSelectedFilter,
     setDateFilter,
-    setShowAdvancedFilter,
     getFilterParam,
     handleSearchInput,
     clearSearch,
+    hasActiveFilters,
   } = useVisitFilters();
 
   const { fetchPage, handleRefresh } = useVisitActions(
-    fetchVisits, 
-    page, 
-    perPage, 
-    sortColumn, 
-    sortDirection, 
-    searchQuery, 
+    fetchVisits,
+    page,
+    perPage,
+    sortColumn,
+    sortDirection,
+    searchQuery,
     selectedFilter,
     getFilterParam
   );
 
+  // Advanced filter bottom sheet ref
+  const filterBottomSheetRef = React.useRef<AdvancedFilterBottomSheetRef>(null);
+
+  // Pagination handlers
   const handleNextPage = useCallback(() => {
     if (meta && page < meta.last_page) {
       const newPage = page + 1;
@@ -436,118 +446,89 @@ export default function VisitsScreen() {
     handleRefresh(setRefreshing, setPage);
   }, [handleRefresh, setRefreshing, setPage]);
 
+  // Advanced filter handlers
+  const handleAdvancedFilterPress = useCallback(() => {
+    filterBottomSheetRef.current?.present();
+  }, []);
+
+  const handleFilterChange = useCallback((sectionKey: string, value: string | number | string[]) => {
+    switch (sectionKey) {
+      case 'perPage':
+        setPerPage(value as number);
+        setPage(1);
+        break;
+      case 'sortDirection':
+        setSortDirection(value as 'asc' | 'desc');
+        break;
+      case 'filterType':
+        setSelectedFilter(value as FilterType);
+        break;
+      default:
+        break;
+    }
+  }, [setPerPage, setPage, setSortDirection, setSelectedFilter]);
+
+  const handleApplyFilters = useCallback(() => {
+    // Filters are applied automatically through useEffect in useVisitActions
+    console.log('Filters applied');
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    setPerPage(10);
+    setSortDirection('desc');
+    setSelectedFilter('All');
+    setDateFilter(null);
+    setPage(1);
+  }, [setPerPage, setSortDirection, setSelectedFilter, setDateFilter, setPage]);
+
+  // Prepare filter sections for bottom sheet
+  const filterSections = React.useMemo(() => [
+    {
+      title: 'Jumlah Item per Halaman',
+      key: 'perPage',
+      options: [
+        { label: '10 item', value: 10 },
+        { label: '20 item', value: 20 },
+        { label: '50 item', value: 50 },
+        { label: '100 item', value: 100 },
+      ],
+      selectedValue: perPage,
+    },
+    {
+      title: 'Filter Berdasarkan Type',
+      key: 'filterType',
+      options: [
+        { label: 'Semua', value: 'All' },
+        { label: 'Extracall', value: 'extracall' },
+        { label: 'Planned', value: 'planned' },
+      ],
+      selectedValue: selectedFilter,
+    },
+    {
+      title: 'Arah Pengurutan',
+      key: 'sortDirection',
+      options: [
+        { label: 'Terbaru Dahulu', value: 'desc' },
+        { label: 'Terlama Dahulu', value: 'asc' },
+      ],
+      selectedValue: sortDirection,
+    },
+  ], [perPage, selectedFilter, sortDirection]);
+
   return (
-    <SafeAreaView className="flex-1 bg-neutral-50 dark:bg-neutral-900" edges={isConnected ? ['top','left','right'] : ['left','right']}>
-      <View className="flex-row justify-between items-center px-4 py-3 bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
-        <Text style={{ fontFamily: 'Inter' }} className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
-          Visits
-        </Text>
-        <Button
-          title="+ Plan Visit"
-          size="sm"
-          variant="primary"
-          onPress={() => router.push('/visit/check-in')}
-        />
-      </View>
-
-      <Card className="m-4 mb-2 p-3 rounded-xl">
-        <SearchBar
-          inputValue={inputValue}
-          onChangeText={handleSearchInput}
-          onClear={clearSearch}
-          colors={colors}
-        />
-        
-        <AdvancedFilter 
-          showAdvancedFilter={showAdvancedFilter}
-          onToggle={() => setShowAdvancedFilter(!showAdvancedFilter)}
-        >
-          <View className="mb-2">
-            <Text style={{ fontFamily: 'Inter' }} className="text-xs mb-1 text-neutral-600 dark:text-neutral-400">
-              Filter
-            </Text>
-            <View className="flex-row flex-wrap mb-2">
-              {filterTabs.map((item) => (
-                <FilterChip
-                  key={`filter-${item}`}
-                  value={item}
-                  currentValue={selectedFilter}
-                  label={item}
-                  onPress={() => setSelectedFilter(item)}
-                  isActive={item === selectedFilter}
-                  colors={colors}
-                />
-              ))}
-            </View>
-          </View>
-          
-          <View className="flex-row flex-wrap justify-between mb-3">
-            <View className="mb-2">
-              <Text style={{ fontFamily: 'Inter' }} className="text-xs mb-1 text-neutral-600 dark:text-neutral-400">
-                Show
-              </Text>
-              <View className="flex-row flex-wrap">
-                {[10, 20, 50].map(n => 
-                  <FilterChip
-                    key={`perpage-${n}`}
-                    value={String(n)}
-                    currentValue={String(perPage)}
-                    label={String(n)}
-                    onPress={() => { setPerPage(n); setPage(1); }}
-                    isActive={String(n) === String(perPage)}
-                    colors={colors}
-                  />
-                )}
-              </View>
-            </View>
-            
-            <View className="mb-2">
-              <Text style={{ fontFamily: 'Inter' }} className="text-xs mb-1 text-neutral-600 dark:text-neutral-400">
-                Sort by
-              </Text>
-              <View className="flex-row flex-wrap items-center">
-                {[
-                  { id: 'visit_date', label: 'Date' },
-                  { id: 'outlet.name', label: 'Outlet' },
-                  { id: 'type', label: 'Type' },
-                ].map(item => 
-                  <FilterChip
-                    key={`sortcol-${item.id}`}
-                    value={item.id}
-                    currentValue={sortColumn}
-                    label={item.label}
-                    onPress={() => setSortColumn(item.id as SortColumn)}
-                    isActive={item.id === sortColumn}
-                    colors={colors}
-                  />
-                )}
-                <TouchableOpacity
-                  className="w-9 h-8 rounded-md border border-neutral-200 dark:border-neutral-700 justify-center items-center"
-                  onPress={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
-                >
-                  <IconSymbol 
-                    name={sortDirection === 'asc' ? 'arrow.up' : 'arrow.down'} 
-                    size={18} 
-                    color={colors.primary} 
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </AdvancedFilter>
-
-        <View className="flex-row items-center pt-1">
-          {loading && <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 8 }} />}
-          
-          {meta && (
-            <Text style={{ fontFamily: 'Inter' }} className="text-xs text-neutral-600 dark:text-neutral-400">
-              Showing {visits.length} of {meta.total} visits
-              {searchQuery ? ` for "${searchQuery}"` : ''}
-            </Text>
-          )}
-        </View>
-      </Card>
-       
+    <SafeAreaView className="flex-1 bg-neutral-50 dark:bg-neutral-900" edges={isConnected ? [] : ['left','right']}>
+      {/* Header with Search and Filter */}
+      <HeaderSearchFilter
+        searchValue={inputValue}
+        onSearchChange={handleSearchInput}
+        onClearSearch={clearSearch}
+        onAdvancedFilterPress={handleAdvancedFilterPress}
+        placeholder="Cari kunjungan atau outlet..."
+        hasActiveFilter={hasActiveFilters()}
+        showAdvancedFilter={true}
+      />
+      
+      {/* Visit List */}
       <FlatList
         data={visits}
         keyExtractor={(item) => String(item.id)}
@@ -561,10 +542,10 @@ export default function VisitsScreen() {
           <VisitCard
             item={item}
             colors={colors}
-            onPress={() => router.push({ pathname: '/visit/view', params: { id: item.id } })}
+            onPress={() => router.push(`/visit/view?id=${item.id}`)}
           />
         )}
-        contentContainerStyle={{ padding: 16, paddingTop: 8, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
         ListFooterComponent={
           <Pagination
             meta={meta}
@@ -583,6 +564,16 @@ export default function VisitsScreen() {
             />
           </Card>
         }
+      />
+
+      {/* Advanced Filter Bottom Sheet */}
+      <AdvancedFilterBottomSheet
+        ref={filterBottomSheetRef}
+        sections={filterSections}
+        onFilterChange={handleFilterChange}
+        onApplyFilters={handleApplyFilters}
+        onClearFilters={handleClearFilters}
+        hasActiveFilters={hasActiveFilters()}
       />
     </SafeAreaView>
   );

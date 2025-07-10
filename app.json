@@ -34,6 +34,14 @@
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.CAMERA",
         "android.permission.FOREGROUND_SERVICE",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.CAMERA",
+        "android.permission.FOREGROUND_SERVICE",
         "android.permission.POST_NOTIFICATIONS"
       ],
       "package": "com.mediaselularindonesia.sam"
@@ -60,7 +68,7 @@
           "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
         }
       ],
-            [
+      [
         "onesignal-expo-plugin",
         {
           "mode": "production"
@@ -85,17 +93,35 @@
                       "group.com.mediaselularindonesia.sam.onesignal"
                     ]
                   }
+                },
+                {
+                  "targetName": "OneSignalNotificationServiceExtension",
+                  "bundleIdentifier": "com.mediaselularindonesia.sam.OneSignalNotificationServiceExtension",
+                  "entitlements": {
+                    "com.apple.security.application-groups": [
+                      "group.com.mediaselularindonesia.sam.onesignal"
+                    ]
+                  }
+                },
+                {
+                  "targetName": "OneSignalNotificationServiceExtension",
+                  "bundleIdentifier": "com.mediaselularindonesia.sam.OneSignalNotificationServiceExtension",
+                  "entitlements": {
+                    "com.apple.security.application-groups": [
+                      "group.com.mediaselularindonesia.sam.onesignal"
+                    ]
+                  }
                 }
               ]
             }
           }
         },
-        "projectId": "b6d11554-270d-4d81-a2bd-0d8333eceb91"
+        "projectId": "4bafb1fb-b1b9-4498-81a5-c6e145bb030c"
       }
     },
     "runtimeVersion": "1.0.0",
     "updates": {
-      "url": "https://u.expo.dev/b6d11554-270d-4d81-a2bd-0d8333eceb91"
+      "url": "https://u.expo.dev/4bafb1fb-b1b9-4498-81a5-c6e145bb030c"
     }
   }
 }

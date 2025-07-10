@@ -14,13 +14,13 @@
     "@expo/vector-icons": "^14.1.0",
     "@gorhom/bottom-sheet": "^5.1.6",
     "@react-native-async-storage/async-storage": "2.1.2",
-    "@react-native-community/datetimepicker": "^8.4.1",
+    "@react-native-community/datetimepicker": "8.4.1",
     "@react-native-community/netinfo": "^11.4.1",
     "@react-native-picker/picker": "^2.11.0",
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/elements": "^2.3.8",
     "@react-navigation/native": "^7.1.6",
-    "expo": "53.0.17",
+    "expo": "53.0.19",
     "expo-av": "~15.1.7",
     "expo-blur": "~14.1.4",
     "expo-camera": "~16.1.10",
@@ -41,7 +41,6 @@
     "expo-updates": "~0.28.16",
     "expo-video": "~2.2.2",
     "expo-web-browser": "~14.2.0",
-    "lodash": "^4.17.21",
     "nativewind": "^4.1.23",
     "onesignal-expo-plugin": "^1.1.2",
     "prettier-plugin-tailwindcss": "^0.5.11",
@@ -59,15 +58,22 @@
     "react-native-web": "~0.20.0",
     "react-native-webview": "13.13.5",
     "tailwindcss": "^3.4.17",
-    "use-debounce": "^10.0.5"
+    "use-debounce": "^10.0.5",
+    "expo-dev-client": "~5.2.4"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
-    "@types/lodash": "^4.17.16",
     "@types/react": "~19.0.10",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~9.2.0",
     "typescript": "~5.8.3"
+  },
+  "overrides": {
+    "onesignal-expo-plugin": {
+      "semver": "^7.6.0"
+    },
+    "glob": "^10.3.0",
+    "rimraf": "^5.0.0"
   },
   "private": true
 }

@@ -25,12 +25,8 @@
     <meta-data android:name="expo.modules.updates.EXPO_RUNTIME_VERSION" android:value="@string/expo_runtime_version"/>
     <meta-data android:name="expo.modules.updates.EXPO_UPDATES_CHECK_ON_LAUNCH" android:value="ALWAYS"/>
     <meta-data android:name="expo.modules.updates.EXPO_UPDATES_LAUNCH_WAIT_MS" android:value="0"/>
-    <meta-data android:name="expo.modules.updates.EXPO_UPDATE_URL" android:value="https://u.expo.dev/b6d11554-270d-4d81-a2bd-0d8333eceb91"/>
-    
-    <!-- Google Maps API Key -->
-    <meta-data
-        android:name="com.google.android.geo.API_KEY"
-        android:value="AIzaSyAkq7TjvGfPZCn0DafSIJMBee_icUPNpHY"/>
+    <meta-data android:name="expo.modules.updates.EXPO_UPDATE_URL" android:value="https://u.expo.dev/4bafb1fb-b1b9-4498-81a5-c6e145bb030c"/>
+    <meta-data android:name="com.google.android.geo.API_KEY" android:value="AIzaSyAkq7TjvGfPZCn0DafSIJMBee_icUPNpHY"/>
     <activity android:name=".MainActivity" android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode" android:launchMode="singleTask" android:windowSoftInputMode="adjustResize" android:theme="@style/Theme.App.SplashScreen" android:exported="true" android:screenOrientation="portrait">
       <intent-filter>
         <action android:name="android.intent.action.MAIN"/>
