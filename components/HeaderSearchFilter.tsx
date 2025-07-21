@@ -13,6 +13,7 @@ interface HeaderSearchFilterProps {
   placeholder?: string;
   hasActiveFilter?: boolean;
   showAdvancedFilter?: boolean;
+  useSafeArea?: boolean; // Add option to control safe area
 }
 
 export const HeaderSearchFilter = React.memo(function HeaderSearchFilter({
@@ -23,6 +24,7 @@ export const HeaderSearchFilter = React.memo(function HeaderSearchFilter({
   placeholder = "Cari...",
   hasActiveFilter = false,
   showAdvancedFilter = true,
+  useSafeArea = true,
 }: HeaderSearchFilterProps) {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
@@ -46,7 +48,7 @@ export const HeaderSearchFilter = React.memo(function HeaderSearchFilter({
     <View 
       className="border-b bg-white dark:bg-neutral-950"
       style={{
-        paddingTop: insets.top,
+        paddingTop: useSafeArea ? insets.top : 12, // Use smaller padding when not using safe area
         borderBottomColor: colors.border,
         backgroundColor: colors.background,
       }}
@@ -62,13 +64,13 @@ export const HeaderSearchFilter = React.memo(function HeaderSearchFilter({
               borderColor: colors.searchBorder,
             }}
           >
-                         <View className="mr-3">
-               <IconSymbol 
-                 name="magnifyingglass" 
-                 size={20} 
-                 color={colors.textSecondary}
-               />
-             </View>
+            <View className="mr-3">
+              <IconSymbol 
+                name="magnifyingglass" 
+                size={20} 
+                color={colors.textSecondary}
+              />
+            </View>
             <TextInput
               className="flex-1 text-base"
               style={{ 
@@ -123,8 +125,6 @@ export const HeaderSearchFilter = React.memo(function HeaderSearchFilter({
             </TouchableOpacity>
           )}
         </View>
-
-
       </View>
     </View>
   );

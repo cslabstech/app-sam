@@ -77,20 +77,6 @@ const LoadingScreen = memo(function LoadingScreen({
 });
 
 const SecurityTips = memo(function SecurityTips({ colors }: { colors: any }) {
-  const cardStyle = useMemo(() => ({ 
-    backgroundColor: colors.card,
-    borderColor: colors.border,
-    minHeight: 48 
-  }), [colors.card, colors.border]);
-
-  const iconBackgroundStyle = useMemo(() => ({ 
-    backgroundColor: colors.primary + '20' 
-  }), [colors.primary]);
-
-  const bulletStyle = useMemo(() => ({ 
-    backgroundColor: colors.primary 
-  }), [colors.primary]);
-
   const tips = useMemo(() => [
     'Minimal 8 karakter',
     'Kombinasi huruf besar, kecil, angka, dan simbol',
@@ -99,153 +85,22 @@ const SecurityTips = memo(function SecurityTips({ colors }: { colors: any }) {
   ], []);
 
   return (
-    <TouchableOpacity 
-      className="rounded-lg border p-4 mb-4 shadow-sm"
-      style={cardStyle}
-      activeOpacity={1}
-    >
-      <View className="flex-row items-center mb-4">
-        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={iconBackgroundStyle}>
-          <IconSymbol name="shield.fill" size={18} color={colors.primary} />
-        </View>
-        <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
-          Tips Keamanan Password
-        </Text>
-      </View>
+    <View className="mb-6">
+      <Text className="text-base font-medium mb-3" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
+        Tips Keamanan Password
+      </Text>
       
-      <View className="gap-3">
+      <View className="gap-2">
         {tips.map((tip, index) => (
           <View key={index} className="flex-row items-start">
-            <View className="w-2 h-2 rounded-full mt-1.5 mr-3" style={bulletStyle} />
+            <View className="w-1.5 h-1.5 rounded-full mt-2 mr-3" style={{ backgroundColor: colors.primary }} />
             <Text className="text-sm flex-1" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
               {tip}
             </Text>
           </View>
         ))}
       </View>
-    </TouchableOpacity>
-  );
-});
-
-const PasswordFormCard = memo(function PasswordFormCard({ 
-  formData, 
-  errors, 
-  colors, 
-  showCurrentPassword, 
-  showNewPassword, 
-  showConfirmPassword, 
-  setShowCurrentPassword, 
-  setShowNewPassword, 
-  setShowConfirmPassword, 
-  updateField 
-}: {
-  formData: PasswordForm;
-  errors: ValidationErrors;
-  colors: any;
-  showCurrentPassword: boolean;
-  showNewPassword: boolean;
-  showConfirmPassword: boolean;
-  setShowCurrentPassword: (show: boolean) => void;
-  setShowNewPassword: (show: boolean) => void;
-  setShowConfirmPassword: (show: boolean) => void;
-  updateField: (field: keyof PasswordForm, value: string) => void;
-}) {
-  const cardStyle = useMemo(() => ({ 
-    backgroundColor: colors.card,
-    borderColor: colors.border,
-    minHeight: 48 
-  }), [colors.card, colors.border]);
-
-  const iconBackgroundStyle = useMemo(() => ({ 
-    backgroundColor: colors.primary + '20' 
-  }), [colors.primary]);
-
-  const handleToggleCurrentPassword = useCallback(() => {
-    setShowCurrentPassword(!showCurrentPassword);
-  }, [showCurrentPassword, setShowCurrentPassword]);
-
-  const handleToggleNewPassword = useCallback(() => {
-    setShowNewPassword(!showNewPassword);
-  }, [showNewPassword, setShowNewPassword]);
-
-  const handleToggleConfirmPassword = useCallback(() => {
-    setShowConfirmPassword(!showConfirmPassword);
-  }, [showConfirmPassword, setShowConfirmPassword]);
-
-  return (
-    <TouchableOpacity 
-      className="rounded-lg border p-4 mb-4 shadow-sm"
-      style={cardStyle}
-      activeOpacity={1}
-    >
-      <View className="flex-row items-center mb-4">
-        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={iconBackgroundStyle}>
-          <IconSymbol name="lock.fill" size={18} color={colors.primary} />
-        </View>
-        <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
-          Ubah Password
-        </Text>
-      </View>
-      
-      <View className="gap-4">
-        <Input
-          label="Password Saat Ini"
-          value={formData.currentPassword}
-          onChangeText={(value) => updateField('currentPassword', value)}
-          placeholder="Masukkan password saat ini"
-          secureTextEntry={!showCurrentPassword}
-          error={errors.currentPassword}
-          maxLength={50}
-          rightIcon={
-            <TouchableOpacity onPress={handleToggleCurrentPassword}>
-              <IconSymbol 
-                name={showCurrentPassword ? "eye.slash" : "eye"} 
-                size={20} 
-                color={colors.textSecondary} 
-              />
-            </TouchableOpacity>
-          }
-        />
-
-        <Input
-          label="Password Baru"
-          value={formData.newPassword}
-          onChangeText={(value) => updateField('newPassword', value)}
-          placeholder="Masukkan password baru"
-          secureTextEntry={!showNewPassword}
-          error={errors.newPassword}
-          maxLength={50}
-          rightIcon={
-            <TouchableOpacity onPress={handleToggleNewPassword}>
-              <IconSymbol 
-                name={showNewPassword ? "eye.slash" : "eye"} 
-                size={20} 
-                color={colors.textSecondary} 
-              />
-            </TouchableOpacity>
-          }
-        />
-
-        <Input
-          label="Konfirmasi Password Baru"
-          value={formData.confirmPassword}
-          onChangeText={(value) => updateField('confirmPassword', value)}
-          placeholder="Konfirmasi password baru"
-          secureTextEntry={!showConfirmPassword}
-          error={errors.confirmPassword}
-          maxLength={50}
-          rightIcon={
-            <TouchableOpacity onPress={handleToggleConfirmPassword}>
-              <IconSymbol 
-                name={showConfirmPassword ? "eye.slash" : "eye"} 
-                size={20} 
-                color={colors.textSecondary} 
-              />
-            </TouchableOpacity>
-          }
-        />
-      </View>
-    </TouchableOpacity>
+    </View>
   );
 });
 
@@ -343,52 +198,125 @@ export default memo(function ChangePasswordScreen() {
     }
   }, [formData, validateForm, changePassword, router]);
 
-  const isFormValid = useMemo(() => 
-    !formData.currentPassword || !formData.newPassword || !formData.confirmPassword,
-    [formData.currentPassword, formData.newPassword, formData.confirmPassword]
-  );
+  const handleToggleCurrentPassword = useCallback(() => {
+    setShowCurrentPassword(!showCurrentPassword);
+  }, [showCurrentPassword]);
+
+  const handleToggleNewPassword = useCallback(() => {
+    setShowNewPassword(!showNewPassword);
+  }, [showNewPassword]);
+
+  const handleToggleConfirmPassword = useCallback(() => {
+    setShowConfirmPassword(!showConfirmPassword);
+  }, [showConfirmPassword]);
+
+  // Check if form is valid (all required fields filled)
+  const isFormValid = useMemo(() => {
+    return formData.currentPassword.trim() !== '' && 
+           formData.newPassword.trim() !== '' && 
+           formData.confirmPassword.trim() !== '';
+  }, [formData.currentPassword, formData.newPassword, formData.confirmPassword]);
 
   if (loading) {
     return <LoadingScreen colors={colors} onBack={handleBack} />;
   }
 
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.background }}>
+    <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
       <Header onBack={handleBack} colors={colors} />
       
       <ScrollView 
-        className="flex-1 px-4"
+        className="flex-1"
         removeClippedSubviews={true}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 32 }}
       >
-        <View className="pt-4 pb-8">
-          {/* Change Password Form Card */}
-          <PasswordFormCard
-            formData={formData}
-            errors={errors}
-            colors={colors}
-            showCurrentPassword={showCurrentPassword}
-            showNewPassword={showNewPassword}
-            showConfirmPassword={showConfirmPassword}
-            setShowCurrentPassword={setShowCurrentPassword}
-            setShowNewPassword={setShowNewPassword}
-            setShowConfirmPassword={setShowConfirmPassword}
-            updateField={updateField}
-          />
+        <View className="px-4 pt-6">
+          {/* Form Fields - Following login screen pattern */}
+          <View className="space-y-6 mb-8 w-full gap-5">
+            <Input
+              label="Password Saat Ini"
+              placeholder="Masukkan password saat ini"
+              value={formData.currentPassword}
+              onChangeText={(value) => updateField('currentPassword', value)}
+              secureTextEntry={!showCurrentPassword}
+              error={errors.currentPassword}
+              size="lg"
+              rightIcon={
+                <TouchableOpacity onPress={handleToggleCurrentPassword}>
+                  <IconSymbol 
+                    name={showCurrentPassword ? "eye.slash" : "eye"} 
+                    size={20} 
+                    color={colors.textSecondary} 
+                  />
+                </TouchableOpacity>
+              }
+              textContentType="password"
+              autoComplete="current-password"
+              maxLength={50}
+            />
 
-          {/* Security Tips */}
+            <Input
+              label="Password Baru"
+              placeholder="Masukkan password baru"
+              value={formData.newPassword}
+              onChangeText={(value) => updateField('newPassword', value)}
+              secureTextEntry={!showNewPassword}
+              error={errors.newPassword}
+              size="lg"
+              rightIcon={
+                <TouchableOpacity onPress={handleToggleNewPassword}>
+                  <IconSymbol 
+                    name={showNewPassword ? "eye.slash" : "eye"} 
+                    size={20} 
+                    color={colors.textSecondary} 
+                  />
+                </TouchableOpacity>
+              }
+              textContentType="newPassword"
+              autoComplete="new-password"
+              maxLength={50}
+            />
+
+            <Input
+              label="Konfirmasi Password Baru"
+              placeholder="Konfirmasi password baru"
+              value={formData.confirmPassword}
+              onChangeText={(value) => updateField('confirmPassword', value)}
+              secureTextEntry={!showConfirmPassword}
+              error={errors.confirmPassword}
+              size="lg"
+              rightIcon={
+                <TouchableOpacity onPress={handleToggleConfirmPassword}>
+                  <IconSymbol 
+                    name={showConfirmPassword ? "eye.slash" : "eye"} 
+                    size={20} 
+                    color={colors.textSecondary} 
+                  />
+                </TouchableOpacity>
+              }
+              textContentType="newPassword"
+              autoComplete="new-password"
+              maxLength={50}
+            />
+          </View>
+
+          {/* Security Tips - Simplified */}
           <SecurityTips colors={colors} />
 
-          {/* Submit Button */}
-          <Button
-            title="Ubah Password"
-            variant="primary"
-            size="lg"
-            fullWidth
-            onPress={handleSubmit}
-            disabled={isFormValid}
-          />
+          {/* Submit Button - Following login screen pattern */}
+          <View className="mb-4">
+            <Button
+              title={loading ? "Memperbarui..." : "Ubah Password"}
+              variant="primary"
+              size="lg"
+              fullWidth={true}
+              onPress={handleSubmit}
+              disabled={!isFormValid || loading}
+              loading={loading}
+            />
+          </View>
         </View>
       </ScrollView>
     </View>

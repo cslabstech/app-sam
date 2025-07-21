@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/Button';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/context/auth-context';
@@ -20,17 +21,13 @@ const Header = memo(function Header({
   onBack, 
   colors,
   editing,
-  loading,
   onEdit,
-  onSave,
   onCancel
 }: { 
   onBack: () => void; 
   colors: any;
   editing: boolean;
-  loading: boolean;
   onEdit: () => void;
-  onSave: () => void;
   onCancel: () => void;
 }) {
   const insets = useSafeAreaInsets();
@@ -39,16 +36,6 @@ const Header = memo(function Header({
     paddingTop: insets.top + 12, 
     backgroundColor: colors.primary 
   }), [insets.top, colors.primary]);
-
-  const editButtonStyle = useMemo(() => ({ 
-    backgroundColor: loading ? 'rgba(255,255,255,0.3)' : '#fff',
-    opacity: loading ? 0.7 : 1
-  }), [loading]);
-
-  const editButtonTextStyle = useMemo(() => ({ 
-    fontFamily: 'Inter_500Medium', 
-    color: loading ? '#fff' : colors.primary 
-  }), [loading, colors.primary]);
   
   return (
     <View className="px-4 pb-4" style={headerStyle}>
@@ -67,44 +54,25 @@ const Header = memo(function Header({
           </Text>
         </View>
         
-        {/* Header Actions */}
-        <View className="flex-row items-center gap-2">
+        {/* Header Actions - Removed Save button */}
+        <View className="flex-row items-center">
           {editing ? (
-            <>
-              <TouchableOpacity
-                onPress={onCancel}
-                className="px-3 py-1.5 rounded-lg border border-white/30"
-                disabled={loading}
-                accessibilityRole="button"
-                accessibilityLabel="Batal edit"
-              >
-                <Text style={{ fontFamily: 'Inter_500Medium', color: '#fff' }} className="text-sm">
-                  Batal
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                onPress={onSave}
-                className="px-3 py-1.5 rounded-lg"
-                style={editButtonStyle}
-                disabled={loading}
-                accessibilityRole="button"
-                accessibilityLabel="Simpan perubahan"
-              >
-                <Text style={editButtonTextStyle} className="text-sm">
-                  {loading ? 'Menyimpan...' : 'Simpan'}
-                </Text>
-              </TouchableOpacity>
-            </>
+            <TouchableOpacity
+              onPress={onCancel}
+              accessibilityRole="button"
+              accessibilityLabel="Batal edit"
+            >
+              <Text style={{ fontFamily: 'Inter_500Medium', color: '#fff' }} className="text-base">
+                Batal
+              </Text>
+            </TouchableOpacity>
           ) : (
             <TouchableOpacity
               onPress={onEdit}
-              className="px-3 py-1.5 rounded-lg"
-              style={{ backgroundColor: '#fff' }}
               accessibilityRole="button"
               accessibilityLabel="Edit informasi"
             >
-              <Text style={{ fontFamily: 'Inter_500Medium', color: colors.primary }} className="text-sm">
+              <Text style={{ fontFamily: 'Inter_500Medium', color: '#fff' }} className="text-base">
                 Edit
               </Text>
             </TouchableOpacity>
@@ -124,7 +92,7 @@ const LoadingScreen = memo(function LoadingScreen({
 }) {
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Header onBack={onBack} colors={colors} editing={false} loading={false} onEdit={() => {}} onSave={() => {}} onCancel={() => {}} />
+      <Header onBack={onBack} colors={colors} editing={false} onEdit={() => {}} onCancel={() => {}} />
       <View className="flex-1 justify-center items-center px-6">
         <ActivityIndicator size="large" color={colors.primary} />
         <Text className="mt-4 text-base" style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}>
@@ -174,7 +142,7 @@ const ProfilePhoto = memo(function ProfilePhoto({
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.5, // Reduced quality for performance
+        quality: 0.5,
       });
 
       if (!result.canceled && result.assets[0]) {
@@ -197,7 +165,7 @@ const ProfilePhoto = memo(function ProfilePhoto({
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.5, // Reduced quality for performance
+        quality: 0.5,
       });
 
       if (!result.canceled && result.assets[0]) {
@@ -208,11 +176,8 @@ const ProfilePhoto = memo(function ProfilePhoto({
     }
   }, [onPhotoChange]);
 
-  const borderStyle = useMemo(() => ({ borderColor: colors.primary }), [colors.primary]);
-  const cameraButtonStyle = useMemo(() => ({ backgroundColor: colors.primary }), [colors.primary]);
-
   return (
-    <View className="items-center mb-6">
+    <View className="items-center mb-8">
       <TouchableOpacity
         onPress={handlePhotoPress}
         disabled={!editing}
@@ -220,10 +185,7 @@ const ProfilePhoto = memo(function ProfilePhoto({
         accessibilityRole="button"
         accessibilityLabel={editing ? "Ubah foto profil" : "Foto profil"}
       >
-        <View 
-          className="w-28 h-28 rounded-full border-4 overflow-hidden shadow-lg"
-          style={borderStyle}
-        >
+        <View className="w-24 h-24 rounded-full overflow-hidden">
           <Image 
             source={{ uri: photoUri || defaultImage }} 
             className="w-full h-full"
@@ -233,10 +195,10 @@ const ProfilePhoto = memo(function ProfilePhoto({
         
         {editing && (
           <View 
-            className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full border-3 border-white items-center justify-center shadow-lg"
-            style={cameraButtonStyle}
+            className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full border-2 border-white items-center justify-center"
+            style={{ backgroundColor: colors.primary }}
           >
-            <IconSymbol name="camera.fill" size={18} color="#fff" />
+            <IconSymbol name="camera.fill" size={14} color="#fff" />
           </View>
         )}
       </TouchableOpacity>
@@ -244,91 +206,12 @@ const ProfilePhoto = memo(function ProfilePhoto({
       {editing && (
         <Text 
           style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }} 
-          className="text-sm mt-3 text-center"
+          className="text-sm mt-2 text-center"
         >
           Ketuk untuk mengubah foto
         </Text>
       )}
     </View>
-  );
-});
-
-const PersonalInfoCard = memo(function PersonalInfoCard({ 
-  formData, 
-  editing, 
-  colors, 
-  updateField 
-}: {
-  formData: PersonalInfoForm;
-  editing: boolean;
-  colors: any;
-  updateField: (field: keyof PersonalInfoForm, value: string) => void;
-}) {
-  const cardStyle = useMemo(() => ({ 
-    backgroundColor: colors.card,
-    borderColor: colors.border,
-    minHeight: 48 
-  }), [colors.card, colors.border]);
-
-  const iconBackgroundStyle = useMemo(() => ({ 
-    backgroundColor: colors.primary + '20' 
-  }), [colors.primary]);
-
-  const getInputStyle = useCallback((editable: boolean) => ({ 
-    backgroundColor: editable ? 'transparent' : colors.backgroundAlt,
-    color: editable ? colors.text : colors.textSecondary
-  }), [colors.backgroundAlt, colors.text, colors.textSecondary]);
-
-  return (
-    <TouchableOpacity 
-      className="rounded-lg border p-4 mb-4 shadow-sm"
-      style={cardStyle}
-      activeOpacity={1}
-    >
-      <View className="flex-row items-center mb-4">
-        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={iconBackgroundStyle}>
-          <IconSymbol name="person.fill" size={18} color={colors.primary} />
-        </View>
-        <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
-          Data Personal
-        </Text>
-      </View>
-      
-      <View className="gap-4">
-        <Input
-          label="Nama Lengkap"
-          value={formData.name}
-          onChangeText={(value) => updateField('name', value)}
-          placeholder="Masukkan nama lengkap"
-          editable={editing}
-          style={getInputStyle(editing)}
-          maxLength={50}
-        />
-
-        <Input
-          label="No. HP"
-          value={formData.phone}
-          onChangeText={(value) => updateField('phone', value)}
-          placeholder="Masukkan nomor HP"
-          keyboardType="phone-pad"
-          editable={editing}
-          style={getInputStyle(editing)}
-          maxLength={15}
-        />
-
-        <Input
-          label="Email"
-          value={formData.email}
-          onChangeText={(value) => updateField('email', value)}
-          placeholder="Masukkan email"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          editable={editing}
-          style={getInputStyle(editing)}
-          maxLength={50}
-        />
-      </View>
-    </TouchableOpacity>
   );
 });
 
@@ -403,29 +286,35 @@ export default memo(function PersonalInfoScreen() {
     setFormData(prev => ({ ...prev, [field]: value }));
   }, []);
 
+  // Check if form is valid (all required fields filled)
+  const isFormValid = useMemo(() => {
+    return formData.name.trim() !== '' && 
+           formData.phone.trim() !== '' && 
+           formData.email.trim() !== '';
+  }, [formData.name, formData.phone, formData.email]);
+
   if (loading && !editing) {
     return <LoadingScreen colors={colors} onBack={handleBack} />;
   }
 
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.background }}>
+    <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
       <Header 
         onBack={handleBack} 
         colors={colors} 
         editing={editing} 
-        loading={loading} 
         onEdit={handleEdit} 
-        onSave={handleSave} 
         onCancel={handleCancel} 
       />
       
       <ScrollView 
-        className="flex-1 px-4"
+        className="flex-1"
         removeClippedSubviews={true}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 32 }}
       >
-        <View className="pt-4 pb-8">
+        <View className="px-4 pt-6">
           {/* Profile Photo */}
           <ProfilePhoto
             photoUri={formData.photo}
@@ -434,13 +323,74 @@ export default memo(function PersonalInfoScreen() {
             colors={colors}
           />
 
-          {/* Personal Information Card */}
-          <PersonalInfoCard
-            formData={formData}
-            editing={editing}
-            colors={colors}
-            updateField={updateField}
-          />
+          {/* Form Fields - Following login screen pattern */}
+          <View className="space-y-6 mb-8 w-full gap-5">
+            <Input
+              label="Nama Lengkap"
+              placeholder="Masukkan nama lengkap"
+              value={formData.name}
+              onChangeText={(value) => updateField('name', value)}
+              editable={editing}
+              size="lg"
+              textContentType="name"
+              autoComplete="name"
+              style={{
+                backgroundColor: editing ? 'transparent' : colors.backgroundAlt,
+                color: editing ? colors.text : colors.textSecondary
+              }}
+              maxLength={50}
+            />
+
+            <Input
+              label="No. HP"
+              placeholder="Masukkan nomor HP"
+              value={formData.phone}
+              onChangeText={(value) => updateField('phone', value)}
+              editable={editing}
+              size="lg"
+              keyboardType="phone-pad"
+              textContentType="telephoneNumber"
+              autoComplete="tel"
+              style={{
+                backgroundColor: editing ? 'transparent' : colors.backgroundAlt,
+                color: editing ? colors.text : colors.textSecondary
+              }}
+              maxLength={15}
+            />
+
+            <Input
+              label="Email"
+              placeholder="Masukkan email"
+              value={formData.email}
+              onChangeText={(value) => updateField('email', value)}
+              editable={editing}
+              size="lg"
+              keyboardType="email-address"
+              textContentType="emailAddress"
+              autoComplete="email"
+              autoCapitalize="none"
+              style={{
+                backgroundColor: editing ? 'transparent' : colors.backgroundAlt,
+                color: editing ? colors.text : colors.textSecondary
+              }}
+              maxLength={50}
+            />
+          </View>
+
+          {/* Save Button - Following login screen pattern */}
+          {editing && (
+            <View className="mb-4">
+              <Button
+                title={loading ? "Menyimpan..." : "Simpan Perubahan"}
+                variant="primary"
+                size="lg"
+                fullWidth={true}
+                onPress={handleSave}
+                disabled={!isFormValid || loading}
+                loading={loading}
+              />
+            </View>
+          )}
         </View>
       </ScrollView>
     </View>

@@ -1,7 +1,7 @@
 import { useAuth } from '@/context/auth-context';
 import { BaseResponse, apiRequest } from '@/utils/api';
 import { log } from '@/utils/logger';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 // Interface untuk outlet photos
 export interface OutletPhotos {
@@ -78,6 +78,27 @@ export function useOutlet(searchQuery: string) {
   const perPageRef = useRef(20);
   const sortColumnRef = useRef('name');
   const sortDirectionRef = useRef('asc');
+
+  // Debounce search untuk mengurangi request ke backend
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery);
+  const searchTimeoutRef = useRef<any>(null);
+
+  // Effect untuk debounce search query
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300); // 300ms debounce
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]);
 
   // Transform backend data to our outlet format
   const transformOutletData = useCallback((data: any[]): OutletAPI[] => {
@@ -167,13 +188,24 @@ export function useOutlet(searchQuery: string) {
     };
   }, []);
 
-  // Fetch all outlets (basic - no pagination)
-  const fetchOutlets = useCallback(async () => {
+  // Fetch outlets dengan search backend
+  const fetchOutlets = useCallback(async (searchQuery?: string) => {
     setLoading(true);
     setError(null);
     try {
+      const params: any = {
+        per_page: 50, // Ambil lebih banyak untuk dropdown
+        sort_column: 'name',
+        sort_direction: 'asc',
+      };
+      
+      // Tambahkan search query jika ada
+      if (searchQuery && searchQuery.trim()) {
+        params.search = searchQuery.trim();
+      }
+      
       const json: OutletsResponse = await apiRequest({
-        url: `${BASE_URL}/outlets`,
+        url: `${BASE_URL}/outlets?${new URLSearchParams(params).toString()}`,
         method: 'GET',
         body: null,
         logLabel: 'FETCH_OUTLETS',
@@ -198,6 +230,11 @@ export function useOutlet(searchQuery: string) {
     }
     setLoading(false);
   }, [token, transformOutletData]);
+
+  // Effect untuk fetch outlets berdasarkan debounced search query
+  useEffect(() => {
+    fetchOutlets(debouncedSearchQuery);
+  }, [debouncedSearchQuery, fetchOutlets]);
 
   // Fetch single outlet by id
   const fetchOutlet = useCallback(async (id: string) => {
@@ -241,7 +278,7 @@ export function useOutlet(searchQuery: string) {
         token
       });
       
-      await fetchOutlets(); // refresh list
+      await fetchOutlets(''); // refresh list without search
       return { success: true };
     } catch (e: any) {
       const errorMessage = e.message || 'Failed to create outlet';
@@ -266,7 +303,7 @@ export function useOutlet(searchQuery: string) {
         token
       });
       
-      await fetchOutlets(); // refresh list
+      await fetchOutlets(''); // refresh list without search
       return { success: true };
     } catch (e: any) {
       const errorMessage = e.message || 'Failed to update outlet';
@@ -288,10 +325,11 @@ export function useOutlet(searchQuery: string) {
         method: 'POST',
         body: formData,
         logLabel: 'UPDATE_OUTLET_WITH_FILE',
-        token
+        token,
+        timeout: 60000 // 60 seconds timeout for file uploads
       });
       
-      await fetchOutlets(); // refresh list
+      await fetchOutlets(''); // refresh list without search
       return { success: true };
     } catch (e: any) {
       const errorMessage = e.message || 'Failed to update outlet';
@@ -355,27 +393,8 @@ export function useOutlet(searchQuery: string) {
     setLoading(false);
   }, [token, transformOutletData]);
 
-  // Filter outlets based on search query locally
-  const filteredOutlets = useMemo(() => {
-    if (!searchQuery || searchQuery.trim() === '') {
-      return outlets;
-    }
-    const query = searchQuery.toLowerCase().trim();
-    return outlets.filter(outlet =>
-      outlet.name.toLowerCase().includes(query) ||
-      outlet.code.toLowerCase().includes(query) ||
-      outlet.district.toLowerCase().includes(query) ||
-      (outlet.owner_name && outlet.owner_name.toLowerCase().includes(query)) ||
-      (outlet.address && outlet.address.toLowerCase().includes(query))
-    );
-  }, [outlets, searchQuery]);
-
-  useEffect(() => {
-    fetchOutlets();
-  }, [fetchOutlets]);
-
   return {
-    outlets: filteredOutlets,
+    outlets,
     outlet,
     loading,
     error,

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -7,27 +7,11 @@ import { useRouter } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Input } from '@/components/ui/Input';
+import { useAuth } from '@/hooks/data/useAuth';
+import { useOutlet } from '@/hooks/data/useOutlet';
 import { useOutletLevelFields } from '@/hooks/data/useReference';
-import { useRegisterOutletForm } from '@/hooks/data/useRegisterOutletForm';
+import { useCurrentLocation } from '@/hooks/utils/useCurrentLocation';
 import { useThemeStyles } from '@/hooks/utils/useThemeStyles';
-
-type FormField = 'name' | 'address' | 'contactName' | 'contactPhone' | 'notes' | 'type';
-
-interface FormData {
-  name: string;
-  address: string;
-  contactName: string;
-  contactPhone: string;
-  notes: string;
-}
-
-interface FormErrors {
-  name?: string;
-  type?: string;
-  address?: string;
-  contactName?: string;
-  contactPhone?: string;
-}
 
 const Header = React.memo(function Header({ 
   onBack, 
@@ -65,374 +49,14 @@ const Header = React.memo(function Header({
   );
 });
 
-const FormSection = React.memo(function FormSection({ 
-  title, 
-  icon, 
-  children, 
-  styles, 
-  colors 
-}: {
-  title: string;
-  icon: string;
-  children: React.ReactNode;
-  styles: any;
-  colors: any;
-}) {
-  const cardStyle = useMemo(() => ({ 
-    backgroundColor: colors.card,
-    borderColor: colors.border,
-    minHeight: 48 
-  }), [colors.card, colors.border]);
-
-  const iconBackgroundStyle = useMemo(() => ({ 
-    backgroundColor: colors.primary + '20' 
-  }), [colors.primary]);
-
-  return (
-    <TouchableOpacity 
-      className="rounded-lg border p-4 mb-4 shadow-sm"
-      style={cardStyle}
-      activeOpacity={1}
-    >
-      <View className="flex-row items-center mb-4">
-        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={iconBackgroundStyle}>
-          <IconSymbol name={icon} size={18} color={colors.primary} />
-        </View>
-        <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
-          {title}
-        </Text>
-      </View>
-      {children}
-    </TouchableOpacity>
-  );
-});
-
-const OutletTypeDropdown = React.memo(function OutletTypeDropdown({
-  selectedType,
-  showTypeDropdown,
-  errors,
-  outletTypes,
-  onToggle,
-  onSelect,
-  styles,
-  colors,
-}: {
-  selectedType: string | null;
-  showTypeDropdown: boolean;
-  errors: FormErrors;
-  outletTypes: string[];
-  onToggle: () => void;
-  onSelect: (type: string) => void;
-  styles: any;
-  colors: any;
-}) {
-  const inputStyle = useMemo(() => ({
-    borderColor: errors.type ? colors.danger : colors.inputBorder
-  }), [errors.type, colors.danger, colors.inputBorder]);
-
-  const dropdownStyle = useMemo(() => ({ 
-    backgroundColor: colors.card, 
-    borderColor: colors.border 
-  }), [colors.card, colors.border]);
-
-  const placeholderText = useMemo(() => 
-    selectedType || 'Pilih tipe outlet',
-    [selectedType]
-  );
-
-  return (
-    <View className="mb-4 relative z-10">
-      <Text style={{ fontFamily: 'Inter', color: colors.text }} className="text-sm font-medium mb-1.5">
-        Tipe Outlet
-      </Text>
-      <TouchableOpacity
-        className={`flex-row justify-between items-center h-11 rounded-lg px-3 border ${
-          errors.type ? 'border-red-500' : 'border-neutral-200 dark:border-neutral-700'
-        }`}
-        style={inputStyle}
-        onPress={onToggle}
-      >
-        <View className="flex-row items-center">
-          <IconSymbol name="tag.fill" size={18} color={colors.textSecondary} />
-          <Text style={{
-            fontFamily: 'Inter',
-            color: selectedType ? colors.text : colors.textSecondary
-          }} className="ml-2 text-base">
-            {placeholderText}
-          </Text>
-        </View>
-        <IconSymbol
-          name={showTypeDropdown ? 'chevron.up' : 'chevron.down'}
-          size={18}
-          color={colors.textSecondary}
-        />
-      </TouchableOpacity>
-      
-      {showTypeDropdown && (
-        <View 
-          className="mt-1 rounded-lg absolute top-18 left-0 right-0 z-20 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-950"
-          style={dropdownStyle}
-        >
-          {outletTypes.map((type, index) => (
-            <TouchableOpacity
-              key={type}
-              className={`py-3 px-4 ${index < outletTypes.length - 1 ? 'border-b border-neutral-100 dark:border-neutral-800' : ''}`}
-              style={{
-                borderBottomColor: colors.border,
-                backgroundColor: selectedType === type ? colors.primary + '20' : 'transparent'
-              }}
-              onPress={() => onSelect(type)}
-            >
-              <Text style={{
-                fontFamily: 'Inter',
-                color: selectedType === type ? colors.primary : colors.text,
-                fontWeight: selectedType === type ? '500' : '400'
-              }} className="text-base">
-                {type}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-      {errors.type && (
-        <Text style={{ fontFamily: 'Inter', color: colors.danger }} className="text-xs mt-1">
-          {errors.type}
-        </Text>
-      )}
-    </View>
-  );
-});
-
-const OutletInformationSection = React.memo(function OutletInformationSection({
-  formData,
-  errors,
-  selectedType,
-  showTypeDropdown,
-  outletTypes,
-  onInputChange,
-  onToggleDropdown,
-  onTypeSelect,
-  styles,
-  colors,
-}: {
-  formData: FormData;
-  errors: FormErrors;
-  selectedType: string | null;
-  showTypeDropdown: boolean;
-  outletTypes: string[];
-  onInputChange: (field: keyof FormData, value: string) => void;
-  onToggleDropdown: () => void;
-  onTypeSelect: (type: any) => void;
-  styles: any;
-  colors: any;
-}) {
-  const nameInputStyle = useMemo(() => ({ height: 80, textAlignVertical: 'top' as const }), []);
-
-  const handleNameChange = useCallback((value: string) => {
-    onInputChange('name', value);
-  }, [onInputChange]);
-
-  const handleAddressChange = useCallback((value: string) => {
-    onInputChange('address', value);
-  }, [onInputChange]);
-
-  return (
-    <FormSection 
-      title="Informasi Outlet" 
-      icon="building.2.fill" 
-      styles={styles} 
-      colors={colors}
-    >
-      <View className="mb-4">
-        <Input
-          label="Nama Outlet"
-          placeholder="Masukkan nama outlet"
-          value={formData.name}
-          onChangeText={handleNameChange}
-          error={errors.name}
-          maxLength={100}
-          leftIcon={<IconSymbol name="building.2.fill" size={18} color={colors.textSecondary} />}
-        />
-      </View>
-
-      <OutletTypeDropdown
-        selectedType={selectedType}
-        showTypeDropdown={showTypeDropdown}
-        errors={errors}
-        outletTypes={outletTypes}
-        onToggle={onToggleDropdown}
-        onSelect={onTypeSelect}
-        styles={styles}
-        colors={colors}
-      />
-
-      <View className="mb-4">
-        <Input
-          label="Alamat"
-          placeholder="Masukkan alamat outlet"
-          value={formData.address}
-          onChangeText={handleAddressChange}
-          error={errors.address}
-          multiline
-          numberOfLines={3}
-          style={nameInputStyle}
-          maxLength={500}
-          leftIcon={<IconSymbol name="mappin.and.ellipse" size={18} color={colors.textSecondary} />}
-        />
-      </View>
-    </FormSection>
-  );
-});
-
-const ContactInformationSection = React.memo(function ContactInformationSection({
-  formData,
-  errors,
-  onInputChange,
-  styles,
-  colors,
-}: {
-  formData: FormData;
-  errors: FormErrors;
-  onInputChange: (field: keyof FormData, value: string) => void;
-  styles: any;
-  colors: any;
-}) {
-  const notesInputStyle = useMemo(() => ({ height: 80, textAlignVertical: 'top' as const }), []);
-
-  const handleContactNameChange = useCallback((value: string) => {
-    onInputChange('contactName', value);
-  }, [onInputChange]);
-
-  const handleContactPhoneChange = useCallback((value: string) => {
-    onInputChange('contactPhone', value);
-  }, [onInputChange]);
-
-  const handleNotesChange = useCallback((value: string) => {
-    onInputChange('notes', value);
-  }, [onInputChange]);
-
-  return (
-    <FormSection 
-      title="Informasi Kontak" 
-      icon="person.fill" 
-      styles={styles} 
-      colors={colors}
-    >
-      <View className="mb-4">
-        <Input
-          label="Nama Contact Person"
-          placeholder="Masukkan nama contact person"
-          value={formData.contactName}
-          onChangeText={handleContactNameChange}
-          error={errors.contactName}
-          maxLength={50}
-          leftIcon={<IconSymbol name="person.fill" size={18} color={colors.textSecondary} />}
-        />
-      </View>
-
-      <View className="mb-4">
-        <Input
-          label="Nomor Telepon"
-          placeholder="Masukkan nomor telepon"
-          value={formData.contactPhone}
-          onChangeText={handleContactPhoneChange}
-          error={errors.contactPhone}
-          keyboardType="phone-pad"
-          maxLength={15}
-          leftIcon={<IconSymbol name="phone.fill" size={18} color={colors.textSecondary} />}
-        />
-      </View>
-
-      <View>
-        <Input
-          label="Catatan (Opsional)"
-          placeholder="Masukkan catatan tambahan"
-          value={formData.notes}
-          onChangeText={handleNotesChange}
-          multiline
-          numberOfLines={3}
-          style={notesInputStyle}
-          maxLength={300}
-          leftIcon={<IconSymbol name="text.alignleft" size={18} color={colors.textSecondary} />}
-        />
-      </View>
-    </FormSection>
-  );
-});
-
-const ActionButtons = React.memo(function ActionButtons({
-  isSubmitting,
-  onLocationSet,
-  onSubmit,
-  colors,
-}: {
-  isSubmitting: boolean;
-  onLocationSet: () => void;
-  onSubmit: () => void;
-  colors: any;
-}) {
-  const locationButtonStyle = useMemo(() => ({ 
-    borderColor: colors.primary 
-  }), [colors.primary]);
-
-  return (
-    <View className="gap-3 mt-2 mb-6">
-      <TouchableOpacity
-        className="flex-row items-center justify-center py-3 rounded-lg border border-primary-500"
-        style={locationButtonStyle}
-        onPress={onLocationSet}
-      >
-        <IconSymbol name="mappin.and.ellipse" size={20} color={colors.primary} />
-        <Text style={{ fontFamily: 'Inter', color: colors.primary }} className="ml-2 text-base font-medium">
-          Set Lokasi
-        </Text>
-      </TouchableOpacity>
-
-      <Button
-        title={isSubmitting ? 'Menyimpan...' : 'Submit Outlet'}
-        variant="primary"
-        size="lg"
-        fullWidth
-        loading={isSubmitting}
-        disabled={isSubmitting}
-        onPress={onSubmit}
-      />
-    </View>
-  );
-});
-
 // Komponen Tab LEAD/NOO dengan nativewind
 const LeadNooTabs = React.memo(function LeadNooTabs({ 
   activeTab, 
-  onTabChange,
-  colors 
+  onTabChange
 }: { 
   activeTab: 'LEAD' | 'NOO'; 
   onTabChange: (tab: 'LEAD' | 'NOO') => void;
-  colors: any;
 }) {
-  const tabContainerStyle = useMemo(() => ({ 
-    backgroundColor: colors.inputBackground 
-  }), [colors.inputBackground]);
-
-  const leadTabStyle = useMemo(() => ({ 
-    backgroundColor: activeTab === 'LEAD' ? colors.primary : 'transparent' 
-  }), [activeTab, colors.primary]);
-
-  const nooTabStyle = useMemo(() => ({ 
-    backgroundColor: activeTab === 'NOO' ? colors.primary : 'transparent' 
-  }), [activeTab, colors.primary]);
-
-  const leadTextColor = useMemo(() => 
-    activeTab === 'LEAD' ? '#fff' : colors.textSecondary,
-    [activeTab, colors.textSecondary]
-  );
-
-  const nooTextColor = useMemo(() => 
-    activeTab === 'NOO' ? '#fff' : colors.textSecondary,
-    [activeTab, colors.textSecondary]
-  );
-
   const handleLeadPress = useCallback(() => {
     onTabChange('LEAD');
   }, [onTabChange]);
@@ -443,37 +67,39 @@ const LeadNooTabs = React.memo(function LeadNooTabs({
 
   return (
     <View className="px-4 mb-4">
-      <View className="flex-row rounded-lg p-1" style={tabContainerStyle}>
+      <View className="flex-row rounded-lg p-1 bg-neutral-100 dark:bg-neutral-800">
         <TouchableOpacity
-          className="flex-1 py-3 rounded-lg items-center"
-          style={leadTabStyle}
+          className={`flex-1 py-3 rounded-lg items-center ${
+            activeTab === 'LEAD' ? 'bg-orange-500' : 'bg-transparent'
+          }`}
           onPress={handleLeadPress}
           accessibilityRole="button"
           accessibilityLabel="Tab LEAD"
+          activeOpacity={0.7}
         >
           <Text 
-            className="font-semibold"
-            style={{ 
-              fontFamily: 'Inter_600SemiBold',
-              color: leadTextColor
-            }}
+            className={`font-semibold ${
+              activeTab === 'LEAD' ? 'text-white' : 'text-neutral-600 dark:text-neutral-400'
+            }`}
+            style={{ fontFamily: 'Inter' }}
           >
             LEAD
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          className="flex-1 py-3 rounded-lg items-center"
-          style={nooTabStyle}
+          className={`flex-1 py-3 rounded-lg items-center ${
+            activeTab === 'NOO' ? 'bg-orange-500' : 'bg-transparent'
+          }`}
           onPress={handleNooPress}
           accessibilityRole="button"
           accessibilityLabel="Tab NOO"
+          activeOpacity={0.7}
         >
           <Text 
-            className="font-semibold"
-            style={{ 
-              fontFamily: 'Inter_600SemiBold',
-              color: nooTextColor
-            }}
+            className={`font-semibold ${
+              activeTab === 'NOO' ? 'text-white' : 'text-neutral-600 dark:text-neutral-400'
+            }`}
+            style={{ fontFamily: 'Inter' }}
           >
             NOO
           </Text>
@@ -484,11 +110,16 @@ const LeadNooTabs = React.memo(function LeadNooTabs({
 });
 
 // Komponen untuk render field dinamis
-const DynamicField = React.memo(function DynamicField({ field, value, onChange, colors }: {
+const DynamicField = React.memo(function DynamicField({ 
+  field, 
+  value, 
+  onChange, 
+  error 
+}: {
   field: any;
   value: string;
   onChange: (val: string) => void;
-  colors: any;
+  error?: string;
 }) {
   const textareaStyle = useMemo(() => ({ 
     height: 80, 
@@ -499,20 +130,43 @@ const DynamicField = React.memo(function DynamicField({ field, value, onChange, 
     onChange(val);
   }, [onChange]);
 
-  // Tentukan komponen input berdasarkan type
+  // Handle Select/Dropdown field
+  if (field.type === 'select') {
+    return (
+      <View className="mb-6">
+        <Text className="mb-2 text-sm font-medium text-neutral-700 dark:text-neutral-200" style={{ fontFamily: 'Inter' }}>
+          {field.name}{field.required && <Text className="text-red-500"> *</Text>}
+        </Text>
+        <TouchableOpacity className="flex-row items-center rounded-md border h-12 bg-neutral-50 dark:bg-neutral-900 border-neutral-300 dark:border-neutral-700">
+          <View className="flex-1 px-4 justify-center">
+            <Text className="text-base text-neutral-500 dark:text-neutral-400" style={{ fontFamily: 'Inter' }}>
+              {value || `Pilih ${field.name}`}
+            </Text>
+          </View>
+          <View className="px-4 justify-center">
+            <IconSymbol name="chevron.down" size={16} color="#6b7280" />
+          </View>
+        </TouchableOpacity>
+        {error && (
+          <Text className="text-red-600 dark:text-red-400 text-sm mt-2" style={{ fontFamily: 'Inter' }}>
+            {error}
+          </Text>
+        )}
+      </View>
+    );
+  }
+
+  // Handle Textarea field
   if (field.type === 'textarea') {
     return (
-      <View className="mb-4">
-        <Text 
-          className="mb-2 text-sm font-medium" 
-          style={{ fontFamily: 'Inter', color: colors.text }}
-        >
-          {field.name}{field.required && <Text className="text-red-500">*</Text>}
-        </Text>
+      <View className="mb-6">
         <Input
+          label={field.name + (field.required ? ' *' : '')}
+          placeholder={`Masukkan ${field.name.toLowerCase()}`}
           value={value}
           onChangeText={handleInputChange}
-          placeholder={field.name}
+          error={error}
+          size="lg"
           multiline
           numberOfLines={3}
           style={textareaStyle}
@@ -521,217 +175,368 @@ const DynamicField = React.memo(function DynamicField({ field, value, onChange, 
       </View>
     );
   }
-  if (field.type === 'select') {
-    return (
-      <View className="mb-4">
-        <Text 
-          className="mb-2 text-sm font-medium" 
-          style={{ fontFamily: 'Inter', color: colors.text }}
-        >
-          {field.name}{field.required && <Text className="text-red-500">*</Text>}
-        </Text>
-        <View className="border rounded-lg px-2">
-          <TouchableOpacity>
-            {/* TODO: Implement Select Dropdown */}
-            <Text 
-              className="py-3 text-base text-neutral-500"
-              style={{ fontFamily: 'Inter' }}
-            >
-              {value || `Pilih ${field.name}`}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
 
-  const maxLength = useMemo(() => {
-    if (field.type === 'number') return 15;
-    if (field.type === 'phone') return 15;
-    return 100;
-  }, [field.type]);
+  // Determine input props based on field type
+  const getInputProps = () => {
+    switch (field.type) {
+      case 'number':
+        return {
+          keyboardType: 'numeric' as const,
+          maxLength: 15
+        };
+      case 'phone':
+        return {
+          keyboardType: 'phone-pad' as const,
+          maxLength: 15
+        };
+      case 'email':
+        return {
+          keyboardType: 'email-address' as const,
+          maxLength: 100,
+          autoCapitalize: 'none' as const
+        };
+      default:
+        return {
+          keyboardType: 'default' as const,
+          maxLength: 100
+        };
+    }
+  };
+
+  const inputProps = getInputProps();
 
   return (
-    <View className="mb-4">
-      <Text 
-        className="mb-2 text-sm font-medium" 
-        style={{ fontFamily: 'Inter', color: colors.text }}
-      >
-        {field.name}{field.required && <Text className="text-red-500">*</Text>}
-      </Text>
+    <View className="mb-6">
       <Input
+        label={field.name + (field.required ? ' *' : '')}
+        placeholder={`Masukkan ${field.name.toLowerCase()}`}
         value={value}
         onChangeText={handleInputChange}
-        placeholder={field.name}
-        maxLength={maxLength}
-        keyboardType={field.type === 'number' ? 'numeric' : (field.type === 'phone' ? 'phone-pad' : 'default')}
+        error={error}
+        size="lg"
+        {...inputProps}
       />
     </View>
   );
 });
 
 // Komponen untuk render section dinamis
-const DynamicFormSection = React.memo(function DynamicFormSection({ section, form, setForm, colors }: {
+const DynamicFormSection = React.memo(function DynamicFormSection({ 
+  section, 
+  formData, 
+  onFieldChange,
+  errors 
+}: {
   section: any;
-  form: Record<string, string>;
-  setForm: (f: Record<string, string>) => void;
-  colors: any;
+  formData: Record<string, string>;
+  onFieldChange: (fieldCode: string, value: string) => void;
+  errors: Record<string, string>;
 }) {
-  const cardStyle = useMemo(() => ({ 
-    backgroundColor: colors.card,
-    borderColor: colors.border,
-    minHeight: 48 
-  }), [colors.card, colors.border]);
-
-  const iconBackgroundStyle = useMemo(() => ({ 
-    backgroundColor: colors.primary + '20' 
-  }), [colors.primary]);
-
   const handleFieldChange = useCallback((fieldCode: string) => (val: string) => {
-    setForm({ ...form, [fieldCode]: val });
-  }, [form, setForm]);
+    onFieldChange(fieldCode, val);
+  }, [onFieldChange]);
 
   return (
-    <TouchableOpacity 
-      className="rounded-lg border p-4 mb-4 shadow-sm"
-      style={cardStyle}
-      activeOpacity={1}
-    >
-      <View className="flex-row items-center mb-4">
-        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={iconBackgroundStyle}>
-          <IconSymbol name="building.2.fill" size={18} color={colors.primary} />
-        </View>
-        <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
+    <View className="mb-6">
+      <View className="mb-6">
+        <Text className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-4" style={{ fontFamily: 'Inter' }}>
           {section.name}
         </Text>
+        {section.description && (
+          <Text className="text-sm text-neutral-600 dark:text-neutral-400 mb-4" style={{ fontFamily: 'Inter' }}>
+            {section.description}
+          </Text>
+        )}
       </View>
       {section.custom_fields.map((field: any) => (
         <DynamicField
           key={field.code}
           field={field}
-          value={form[field.code] || ''}
+          value={formData[field.code] || ''}
           onChange={handleFieldChange(field.code)}
-          colors={colors}
+          error={errors[field.code]}
         />
       ))}
-    </TouchableOpacity>
+    </View>
+  );
+});
+
+const ActionButtons = React.memo(function ActionButtons({
+  isSubmitting,
+  onSubmit,
+}: {
+  isSubmitting: boolean;
+  onSubmit: () => void;
+}) {
+  return (
+    <View className="mt-2 mb-6">
+      <Button
+        title={isSubmitting ? 'Menyimpan...' : 'Submit Outlet'}
+        variant="primary"
+        size="lg"
+        fullWidth={true}
+        loading={isSubmitting}
+        disabled={isSubmitting}
+        onPress={onSubmit}
+      />
+    </View>
   );
 });
 
 /**
- * Register Outlet Screen - Form untuk mendaftarkan outlet baru
- * Mengikuti best practice: UI-only components, custom hooks untuk logic
+ * Register Outlet Screen - Form dinamis berdasarkan API
+ * Semua field diambil dari endpoint outlet-level-fields
  */
 export default React.memo(function RegisterOutletScreen() {
-  const { colors, styles } = useThemeStyles();
+  const { colors } = useThemeStyles();
+  const { token } = useAuth();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<'LEAD' | 'NOO'>('LEAD');
-  // State untuk dynamic form
-  const [form, setForm] = useState<Record<string, string>>({});
-  const { data: sections, loading, error } = useOutletLevelFields(activeTab);
   
-  const {
-    formData,
-    errors,
-    isSubmitting,
-    selectedType,
-    setSelectedType,
-    showTypeDropdown,
-    setShowTypeDropdown,
-    outletTypes,
-    handleInputChange,
-    handleTypeSelect,
-    handleSubmit,
-  } = useRegisterOutletForm();
+  // State untuk dynamic form - semua field dari API
+  const [formData, setFormData] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Location hook untuk mendapatkan koordinat saat ini
+  const { 
+    location, 
+    loading: locationLoading, 
+    error: locationError, 
+    permissionStatus,
+    getLocation, 
+    requestPermission 
+  } = useCurrentLocation();
+  
+  // Outlet hook untuk API calls
+  const { createOutlet } = useOutlet('');
+  
+  // Fetch dynamic form structure
+  const { data: sections, loading, error } = useOutletLevelFields(activeTab);
+
+  // Auto-request location saat component mount
+  useEffect(() => {
+    const initLocation = async () => {
+      if (permissionStatus === null) {
+        await requestPermission();
+      } else if (permissionStatus === 'granted' && !location) {
+        await getLocation();
+      }
+    };
+    
+    initLocation();
+  }, [permissionStatus, location, requestPermission, getLocation]);
+
+  // Handle field change dengan error clearing
+  const handleFieldChange = useCallback((fieldCode: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [fieldCode]: value
+    }));
+    
+    // Clear error untuk field ini
+    if (errors[fieldCode]) {
+      setErrors(prev => ({
+        ...prev,
+        [fieldCode]: ''
+      }));
+    }
+  }, [errors]);
+
+  // Validasi form berdasarkan field requirements
+  const validateForm = useCallback((): boolean => {
+    if (!sections) return false;
+    
+    const newErrors: Record<string, string> = {};
+    let hasErrors = false;
+
+    // Check if location is available
+    if (!location) {
+      Alert.alert(
+        'Lokasi Diperlukan',
+        'Mohon aktifkan GPS dan berikan izin akses lokasi untuk melanjutkan',
+        [
+          { text: 'Batal', style: 'cancel' },
+          { text: 'Coba Lagi', onPress: () => getLocation() }
+        ]
+      );
+      return false;
+    }
+
+    sections.forEach(section => {
+      section.custom_fields.forEach(field => {
+        const value = formData[field.code] || '';
+        
+        // Check required fields
+        if (field.required && !value.trim()) {
+          newErrors[field.code] = `${field.name} wajib diisi`;
+          hasErrors = true;
+        }
+        
+        // Check validation rules
+        if (value && field.validation_rules && field.validation_rules.length > 0) {
+          field.validation_rules.forEach((rule: any) => {
+            // Implementasi validation rules sesuai dengan rule dari API
+            if (rule.type === 'min_length' && value.length < rule.value) {
+              newErrors[field.code] = `${field.name} minimal ${rule.value} karakter`;
+              hasErrors = true;
+            }
+            if (rule.type === 'max_length' && value.length > rule.value) {
+              newErrors[field.code] = `${field.name} maksimal ${rule.value} karakter`;
+              hasErrors = true;
+            }
+            if (rule.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+              newErrors[field.code] = `${field.name} format email tidak valid`;
+              hasErrors = true;
+            }
+            if (rule.type === 'phone' && !/^[0-9]{10,15}$/.test(value.replace(/[^0-9]/g, ''))) {
+              newErrors[field.code] = `${field.name} format nomor telepon tidak valid`;
+              hasErrors = true;
+            }
+          });
+        }
+      });
+    });
+
+    setErrors(newErrors);
+    return !hasErrors;
+  }, [sections, formData, location, getLocation]);
+
+  // Handle submit dengan API call yang sesungguhnya
+  const handleSubmit = useCallback(async () => {
+    if (!validateForm()) {
+      Alert.alert('Error', 'Mohon lengkapi semua field yang wajib diisi');
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      // Prepare payload dengan struktur yang sesuai API backend
+      const apiPayload = {
+        // Convert dynamic form data to API format
+        ...formData,
+        // Add location coordinates
+        latitude: location?.latitude,
+        longitude: location?.longitude,
+        location_accuracy: location?.accuracy,
+        // Add level info
+        level: activeTab,
+        // Ensure proper location format for backend
+        location: `${location?.latitude},${location?.longitude}`
+      };
+      
+      console.log('Submitting outlet data to API:', apiPayload);
+      
+      // Call actual API endpoint
+      const result = await createOutlet(apiPayload);
+      
+      setIsSubmitting(false);
+      
+      if (result.success) {
+        Alert.alert(
+          'Berhasil', 
+          'Outlet berhasil didaftarkan dengan lokasi tersimpan',
+          [
+            { 
+              text: 'OK', 
+              onPress: () => router.push('/(tabs)/outlets') 
+            }
+          ]
+        );
+      } else {
+        Alert.alert('Error', result.error || 'Gagal mendaftarkan outlet');
+      }
+      
+    } catch (error: any) {
+      setIsSubmitting(false);
+      console.error('Create outlet error:', error);
+      Alert.alert('Error', error.message || 'Gagal mendaftarkan outlet');
+    }
+  }, [validateForm, activeTab, formData, location, createOutlet, router]);
+
+  // Handle tab change
+  const handleTabChange = useCallback((tab: 'LEAD' | 'NOO') => {
+    setActiveTab(tab);
+    // Reset form data when switching tabs
+    setFormData({});
+    setErrors({});
+  }, []);
 
   // Optimized callbacks
   const handleBack = useCallback(() => {
     router.back();
   }, [router]);
 
-  const handleLocationSet = useCallback(() => {
-    Alert.alert(
-      'Set Location',
-      'Location picker akan diimplementasikan di versi selanjutnya',
-      [{ text: 'OK' }]
-    );
-  }, []);
-
-  const handleToggleDropdown = useCallback(() => {
-    setShowTypeDropdown(!showTypeDropdown);
-  }, [showTypeDropdown, setShowTypeDropdown]);
-
-  const handleTabChange = useCallback((tab: 'LEAD' | 'NOO') => {
-    setActiveTab(tab);
-  }, []);
-
-  // Memoized loading and error states
-  const loadingText = useMemo(() => 
-    loading ? 'Memuat form...' : null,
-    [loading]
-  );
-
-  const errorText = useMemo(() => 
-    error ? error : null,
-    [error]
-  );
-
-  // Cleanup on unmount
-  React.useEffect(() => {
-    return () => {
-      setForm({});
-    };
-  }, []);
+  // Status indicator untuk location
+  const locationStatus = useMemo(() => {
+    if (locationLoading) return 'Mengambil lokasi...';
+    if (locationError) return `Error: ${locationError}`;
+    if (location) return `📍 Lokasi tersimpan (${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)})`;
+    if (permissionStatus === 'denied') return '❌ Izin lokasi ditolak';
+    return '⏳ Menunggu lokasi...';
+  }, [locationLoading, locationError, location, permissionStatus]);
 
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <Header 
-        onBack={handleBack}
-        colors={colors}
-      />
+    <View className="flex-1 bg-neutral-50 dark:bg-neutral-900">
+      <Header onBack={handleBack} colors={colors} />
       
       {/* Tabs LEAD/NOO */}
-      <LeadNooTabs activeTab={activeTab} onTabChange={handleTabChange} colors={colors} />
+      <LeadNooTabs activeTab={activeTab} onTabChange={handleTabChange} />
       
       <ScrollView 
-        className="flex-1 px-4"
+        className="flex-1"
         showsVerticalScrollIndicator={false}
-        removeClippedSubviews={true}
         keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ flexGrow: 1 }}
       >
-        <View className="pt-4 pb-8">
-          {loadingText && (
-            <Text 
-              className="text-center text-base my-8" 
-              style={{ fontFamily: 'Inter_400Regular', color: colors.textSecondary }}
-            >
-              {loadingText}
+        <View className="px-4 pt-4 pb-8 space-y-6">
+          {/* Location Status Indicator */}
+          <View className="mb-4 p-3 rounded-lg bg-neutral-100 dark:bg-neutral-800">
+            <Text className="text-sm text-neutral-600 dark:text-neutral-400" style={{ fontFamily: 'Inter' }}>
+              {locationStatus}
+            </Text>
+            {permissionStatus === 'denied' && (
+              <TouchableOpacity 
+                className="mt-2"
+                onPress={requestPermission}
+                activeOpacity={0.7}
+              >
+                <Text className="text-sm text-orange-600 dark:text-orange-400 font-medium" style={{ fontFamily: 'Inter' }}>
+                  Coba minta izin lagi
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {loading && (
+            <Text className="text-center text-base my-8 text-neutral-600 dark:text-neutral-400" style={{ fontFamily: 'Inter' }}>
+              Memuat form...
             </Text>
           )}
-          {errorText && (
-            <Text 
-              className="text-center text-base my-8"
-              style={{ fontFamily: 'Inter_400Regular', color: colors.danger }}
-            >
-              {errorText}
+          
+          {error && (
+            <Text className="text-center text-base my-8 text-red-600 dark:text-red-400" style={{ fontFamily: 'Inter' }}>
+              {error}
             </Text>
           )}
+
           {sections && sections.map(section => (
             <DynamicFormSection
               key={section.code}
               section={section}
-              form={form}
-              setForm={setForm}
-              colors={colors}
+              formData={formData}
+              onFieldChange={handleFieldChange}
+              errors={errors}
             />
           ))}
-          <ActionButtons
-            isSubmitting={isSubmitting}
-            onLocationSet={handleLocationSet}
-            onSubmit={handleSubmit}
-            colors={colors}
-          />
+
+          {sections && sections.length > 0 && (
+            <ActionButtons
+              isSubmitting={isSubmitting}
+              onSubmit={handleSubmit}
+            />
+          )}
         </View>
       </ScrollView>
     </View>

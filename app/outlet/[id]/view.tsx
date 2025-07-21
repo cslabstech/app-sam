@@ -1,6 +1,6 @@
 // React & React Native
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Third-party libraries
@@ -19,6 +19,7 @@ import { Colors } from '@/constants/Colors';
 import { useNetwork } from '@/context/network-context';
 import { useOutlet } from '@/hooks/data/useOutlet';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
+import { usePermissionWithModal } from '@/hooks/utils/usePermission';
 
 // Constants
 const BASE_URL_STORAGE = process.env.EXPO_PUBLIC_BASE_URL_STORAGE;
@@ -416,15 +417,44 @@ export default React.memo(function OutletViewPage() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('info');
   const { isConnected } = useNetwork();
 
+  // Permission modal hook
+  const {
+    requestLocationWithModal,
+    requestCameraWithModal,
+  } = usePermissionWithModal();
+
   const { outlet, loading, error } = useOutletView(id);
   const { imageList, videoUrl } = useMediaData(outlet);
 
   const handleGoBack = useCallback(() => router.back(), [router]);
   
-  const handleEdit = useCallback(() => 
-    router.push(`/outlet/${outlet?.id}/edit`), 
-    [router, outlet?.id]
-  );
+  // Permission-aware edit handler
+  const handleEdit = useCallback(async () => {
+    // Check location permission first
+    const locationRes = await requestLocationWithModal();
+    if (!locationRes.granted) {
+      Alert.alert(
+        'Izin Lokasi Diperlukan',
+        'Untuk mengedit outlet, aplikasi memerlukan izin akses lokasi.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    // Check camera permission
+    const cameraRes = await requestCameraWithModal();
+    if (!cameraRes.granted) {
+      Alert.alert(
+        'Izin Kamera Diperlukan', 
+        'Untuk mengedit outlet, aplikasi memerlukan izin akses kamera.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    // Both permissions granted, proceed to edit
+    router.push(`/outlet/${outlet?.id}/edit`);
+  }, [router, outlet?.id, requestLocationWithModal, requestCameraWithModal]);
 
   const handleTabChange = useCallback((tab: ActiveTab) => {
     setActiveTab(tab);

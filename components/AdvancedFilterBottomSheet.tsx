@@ -1,9 +1,11 @@
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
-import React, { forwardRef, useCallback, useImperativeHandle, useMemo } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import React, { forwardRef, useCallback, useImperativeHandle, useMemo, useState } from 'react';
+import { Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { Select } from '@/components/ui/Select';
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 
 interface FilterOption {
@@ -15,9 +17,11 @@ interface FilterOption {
 interface FilterSection {
   title: string;
   key: string;
-  options: FilterOption[];
+  type?: 'options' | 'dropdown' | 'date'; // Added type field
+  options?: FilterOption[];
   selectedValue?: string | number;
   multiSelect?: boolean;
+  placeholder?: string; // For dropdown
 }
 
 interface AdvancedFilterBottomSheetProps {
@@ -42,6 +46,7 @@ export const AdvancedFilterBottomSheet = forwardRef<
 ) {
   const colorScheme = useColorScheme();
   const bottomSheetRef = React.useRef<BottomSheet>(null);
+  const [showDatePicker, setShowDatePicker] = useState<string | null>(null);
 
   const colors = {
     background: colorScheme === 'dark' ? '#1a1a1a' : '#ffffff',
@@ -55,7 +60,7 @@ export const AdvancedFilterBottomSheet = forwardRef<
     selected: colorScheme === 'dark' ? '#f97316' : '#f97316',
   };
 
-  const snapPoints = useMemo(() => ['50%'], []);
+  const snapPoints = useMemo(() => ['60%'], []);
 
   useImperativeHandle(ref, () => ({
     present: () => bottomSheetRef.current?.expand(),
@@ -78,6 +83,21 @@ export const AdvancedFilterBottomSheet = forwardRef<
     onFilterChange(sectionKey, value);
   }, [onFilterChange]);
 
+  const handleDateChange = useCallback((sectionKey: string, event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(null);
+    }
+    
+    if (selectedDate) {
+      const dateString = selectedDate.toISOString().split('T')[0];
+      onFilterChange(sectionKey, dateString);
+    }
+    
+    if (Platform.OS === 'ios') {
+      setShowDatePicker(null);
+    }
+  }, [onFilterChange]);
+
   const handleApply = useCallback(() => {
     onApplyFilters();
     bottomSheetRef.current?.close();
@@ -86,6 +106,195 @@ export const AdvancedFilterBottomSheet = forwardRef<
   const handleClear = useCallback(() => {
     onClearFilters();
   }, [onClearFilters]);
+
+  const renderSection = useCallback((section: FilterSection, sectionIndex: number) => {
+    const sectionType = section.type || 'options';
+
+    return (
+      <View key={section.key} className={`px-4 ${sectionIndex === 0 ? 'pt-3 pb-4' : 'py-4'}`}>
+        <Text 
+          className="text-sm font-semibold mb-3"
+          style={{ 
+            fontFamily: 'Inter',
+            color: colors.text,
+          }}
+        >
+          {section.title}
+        </Text>
+        
+        {/* Dropdown Type */}
+        {sectionType === 'dropdown' && section.options && (
+          <Select
+            value={String(section.selectedValue || '')}
+            options={section.options.map(opt => ({ 
+              label: opt.label, 
+              value: String(opt.value) 
+            }))}
+            onValueChange={(value) => handleFilterOption(section.key, value)}
+            placeholder={section.placeholder || 'Pilih'}
+          />
+        )}
+
+        {/* Date Picker Type */}
+        {sectionType === 'date' && (
+          <View>
+            <TouchableOpacity
+              onPress={() => setShowDatePicker(section.key)}
+              className="flex-row items-center justify-between py-3 px-4 rounded-lg border"
+              style={{
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+              }}
+            >
+              <Text 
+                className="text-base"
+                style={{ 
+                  fontFamily: 'Inter',
+                  color: colors.text,
+                }}
+              >
+                {section.selectedValue 
+                  ? new Date(section.selectedValue).toLocaleDateString('id-ID', {
+                      weekday: 'long',
+                      year: 'numeric', 
+                      month: 'long',
+                      day: 'numeric'
+                    })
+                  : 'Pilih tanggal'
+                }
+              </Text>
+              <IconSymbol name="calendar" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+
+            {showDatePicker === section.key && (
+              <DateTimePicker
+                value={section.selectedValue ? new Date(section.selectedValue) : new Date()}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(event, date) => handleDateChange(section.key, event, date)}
+              />
+            )}
+          </View>
+        )}
+
+        {/* Options Type (existing radio buttons) */}
+        {sectionType === 'options' && section.options && (
+          <>
+            {/* Layout khusus untuk section dengan 4 items atau kurang - gunakan grid 2 kolom */}
+            {section.options.length <= 4 ? (
+              <View className="flex-row flex-wrap -mx-1">
+                {section.options.map((option) => {
+                  const isSelected = section.selectedValue === option.value;
+                  return (
+                    <View key={`${section.key}-${option.value}`} className="w-1/2 px-1 mb-2">
+                      <TouchableOpacity
+                        onPress={() => handleFilterOption(section.key, option.value)}
+                        className="flex-row items-center py-3 px-3 rounded-lg border"
+                        style={{
+                          backgroundColor: isSelected ? colors.selected + '10' : colors.surface,
+                          borderColor: isSelected ? colors.selected : colors.border,
+                        }}
+                      >
+                        <View 
+                          className="w-3 h-3 rounded-full border-2 mr-2 items-center justify-center"
+                          style={{
+                            borderColor: isSelected ? colors.selected : colors.border,
+                            backgroundColor: isSelected ? colors.selected : 'transparent',
+                          }}
+                        >
+                          {isSelected && (
+                            <View 
+                              className="w-1.5 h-1.5 rounded-full"
+                              style={{ backgroundColor: '#ffffff' }}
+                            />
+                          )}
+                        </View>
+                        
+                        <Text 
+                          className="text-sm flex-1"
+                          style={{ 
+                            fontFamily: 'Inter',
+                            color: isSelected ? colors.selected : colors.text,
+                            fontWeight: isSelected ? '600' : '400',
+                          }}
+                          numberOfLines={1}
+                        >
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : (
+              /* Layout vertikal untuk section dengan banyak items */
+              <View className="space-y-2">
+                {section.options.map((option) => {
+                  const isSelected = section.selectedValue === option.value;
+                  return (
+                    <TouchableOpacity
+                      key={`${section.key}-${option.value}`}
+                      onPress={() => handleFilterOption(section.key, option.value)}
+                      className="flex-row items-center justify-between py-3 px-3 rounded-lg border"
+                      style={{
+                        backgroundColor: isSelected ? colors.selected + '10' : colors.surface,
+                        borderColor: isSelected ? colors.selected : colors.border,
+                      }}
+                    >
+                      <View className="flex-row items-center flex-1">
+                        <View 
+                          className="w-3 h-3 rounded-full border-2 mr-3 items-center justify-center"
+                          style={{
+                            borderColor: isSelected ? colors.selected : colors.border,
+                            backgroundColor: isSelected ? colors.selected : 'transparent',
+                          }}
+                        >
+                          {isSelected && (
+                            <View 
+                              className="w-1.5 h-1.5 rounded-full"
+                              style={{ backgroundColor: '#ffffff' }}
+                            />
+                          )}
+                        </View>
+                        
+                        <Text 
+                          className="text-sm flex-1"
+                          style={{ 
+                            fontFamily: 'Inter',
+                            color: isSelected ? colors.selected : colors.text,
+                            fontWeight: isSelected ? '600' : '400',
+                          }}
+                        >
+                          {option.label}
+                        </Text>
+                      </View>
+                      
+                      {option.count !== undefined && (
+                        <View 
+                          className="px-2 py-1 rounded-full"
+                          style={{ backgroundColor: colors.border }}
+                        >
+                          <Text 
+                            className="text-xs font-medium"
+                            style={{ 
+                              fontFamily: 'Inter',
+                              color: colors.textSecondary,
+                            }}
+                          >
+                            {option.count}
+                          </Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          </>
+        )}
+      </View>
+    );
+  }, [colors, handleFilterOption, handleDateChange, showDatePicker]);
 
   return (
     <BottomSheet
@@ -130,130 +339,7 @@ export const AdvancedFilterBottomSheet = forwardRef<
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 80 }}
         >
-          {sections.map((section, sectionIndex) => (
-            <View key={section.key} className={`px-4 ${sectionIndex === 0 ? 'pt-3 pb-4' : 'py-4'}`}>
-              <Text 
-                className="text-sm font-semibold mb-3"
-                style={{ 
-                  fontFamily: 'Inter',
-                  color: colors.text,
-                }}
-              >
-                {section.title}
-              </Text>
-              
-              {/* Layout khusus untuk section dengan 4 items atau kurang - gunakan grid 2 kolom */}
-              {section.options.length <= 4 ? (
-                <View className="flex-row flex-wrap -mx-1">
-                  {section.options.map((option) => {
-                    const isSelected = section.selectedValue === option.value;
-                    return (
-                      <View key={`${section.key}-${option.value}`} className="w-1/2 px-1 mb-2">
-                        <TouchableOpacity
-                          onPress={() => handleFilterOption(section.key, option.value)}
-                          className="flex-row items-center py-3 px-3 rounded-lg border"
-                          style={{
-                            backgroundColor: isSelected ? colors.selected + '10' : colors.surface,
-                            borderColor: isSelected ? colors.selected : colors.border,
-                          }}
-                        >
-                          <View 
-                            className="w-3 h-3 rounded-full border-2 mr-2 items-center justify-center"
-                            style={{
-                              borderColor: isSelected ? colors.selected : colors.border,
-                              backgroundColor: isSelected ? colors.selected : 'transparent',
-                            }}
-                          >
-                            {isSelected && (
-                              <View 
-                                className="w-1.5 h-1.5 rounded-full"
-                                style={{ backgroundColor: '#ffffff' }}
-                              />
-                            )}
-                          </View>
-                          
-                          <Text 
-                            className="text-sm flex-1"
-                            style={{ 
-                              fontFamily: 'Inter',
-                              color: isSelected ? colors.selected : colors.text,
-                              fontWeight: isSelected ? '600' : '400',
-                            }}
-                            numberOfLines={1}
-                          >
-                            {option.label}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    );
-                  })}
-                </View>
-              ) : (
-                /* Layout vertikal untuk section dengan banyak items */
-                <View className="space-y-2">
-                  {section.options.map((option) => {
-                    const isSelected = section.selectedValue === option.value;
-                    return (
-                      <TouchableOpacity
-                        key={`${section.key}-${option.value}`}
-                        onPress={() => handleFilterOption(section.key, option.value)}
-                        className="flex-row items-center justify-between py-3 px-3 rounded-lg border"
-                        style={{
-                          backgroundColor: isSelected ? colors.selected + '10' : colors.surface,
-                          borderColor: isSelected ? colors.selected : colors.border,
-                        }}
-                      >
-                        <View className="flex-row items-center flex-1">
-                          <View 
-                            className="w-3 h-3 rounded-full border-2 mr-3 items-center justify-center"
-                            style={{
-                              borderColor: isSelected ? colors.selected : colors.border,
-                              backgroundColor: isSelected ? colors.selected : 'transparent',
-                            }}
-                          >
-                            {isSelected && (
-                              <View 
-                                className="w-1.5 h-1.5 rounded-full"
-                                style={{ backgroundColor: '#ffffff' }}
-                              />
-                            )}
-                          </View>
-                          
-                          <Text 
-                            className="text-sm flex-1"
-                            style={{ 
-                              fontFamily: 'Inter',
-                              color: isSelected ? colors.selected : colors.text,
-                              fontWeight: isSelected ? '600' : '400',
-                            }}
-                          >
-                            {option.label}
-                          </Text>
-                        </View>
-                        
-                        {option.count !== undefined && (
-                          <View 
-                            className="px-2 py-1 rounded-full"
-                            style={{ backgroundColor: colors.border }}
-                          >
-                            <Text 
-                              className="text-xs font-medium"
-                              style={{ 
-                                fontFamily: 'Inter',
-                                color: colors.textSecondary,
-                              }}
-                            >
-                              {option.count}
-                            </Text>
-                          </View>
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              )}
-            </View>
-          ))}
+          {sections.map(renderSection)}
         </ScrollView>
 
                 {/* Action Buttons */}

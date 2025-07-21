@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useMemo } from 'react';
-import { Animated, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { Animated, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { useColorScheme } from '@/hooks/utils/useColorScheme';
 
@@ -14,6 +14,7 @@ interface OutletDropdownProps {
   outlets: Outlet[];
   selectedOutletId: string | null;
   onSelect: (id: string) => void;
+  onSearchChange?: (query: string) => void; // Tambah prop untuk search backend
   disabled?: boolean;
   loading?: boolean;
   showDropdown: boolean;
@@ -24,29 +25,55 @@ const useOutletDropdownLogic = ({
   outlets, 
   selectedOutletId, 
   onSelect, 
+  onSearchChange,
   setShowDropdown, 
   disabled 
 }: {
   outlets: Outlet[];
   selectedOutletId: string | null;
   onSelect: (id: string) => void;
+  onSearchChange?: (query: string) => void;
   setShowDropdown: (v: boolean) => void;
   disabled?: boolean;
 }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+
   const selectedOutlet = useMemo(() => {
     return outlets.find(o => o.id === selectedOutletId) || null;
   }, [outlets, selectedOutletId]);
 
+  // Remove client-side filtering, karena sekarang search di-handle backend
+  const filteredOutlets = outlets;
+
   const handleToggleDropdown = useCallback(() => {
     if (!disabled) {
       setShowDropdown(true);
+      setSearchQuery(''); // Reset search when opening
+      // Reset search di backend juga
+      onSearchChange?.('');
     }
-  }, [disabled, setShowDropdown]);
+  }, [disabled, setShowDropdown, onSearchChange]);
 
   const handleSelectOutlet = useCallback((outletId: string | number) => {
     onSelect(outletId.toString());
     setShowDropdown(false);
-  }, [onSelect, setShowDropdown]);
+    setSearchQuery(''); // Reset search after selection
+    // Reset search di backend juga
+    onSearchChange?.('');
+  }, [onSelect, setShowDropdown, onSearchChange]);
+
+  const handleCloseDropdown = useCallback(() => {
+    setShowDropdown(false);
+    setSearchQuery('');
+    // Reset search di backend juga
+    onSearchChange?.('');
+  }, [setShowDropdown, onSearchChange]);
+
+  const handleSearchChange = useCallback((query: string) => {
+    setSearchQuery(query);
+    // Kirim search query ke backend
+    onSearchChange?.(query);
+  }, [onSearchChange]);
 
   const getDisplayText = useCallback(() => {
     if (selectedOutlet) {
@@ -57,8 +84,12 @@ const useOutletDropdownLogic = ({
 
   return {
     selectedOutlet,
+    filteredOutlets,
+    searchQuery,
     handleToggleDropdown,
     handleSelectOutlet,
+    handleCloseDropdown,
+    handleSearchChange,
     getDisplayText,
   };
 };
@@ -67,6 +98,7 @@ export const OutletDropdown = React.memo(function OutletDropdown({
   outlets,
   selectedOutletId,
   onSelect,
+  onSearchChange,
   disabled = false,
   loading = false,
   showDropdown,
@@ -75,13 +107,18 @@ export const OutletDropdown = React.memo(function OutletDropdown({
   const colorScheme = useColorScheme();
   const {
     selectedOutlet,
+    filteredOutlets,
+    searchQuery,
     handleToggleDropdown,
     handleSelectOutlet,
+    handleCloseDropdown,
+    handleSearchChange,
     getDisplayText,
   } = useOutletDropdownLogic({ 
     outlets, 
     selectedOutletId, 
-    onSelect, 
+    onSelect,
+    onSearchChange,
     setShowDropdown, 
     disabled 
   });
@@ -119,6 +156,16 @@ export const OutletDropdown = React.memo(function OutletDropdown({
     ].join(' ');
   };
 
+  const getSearchInputClasses = () => {
+    return [
+      'border-b border-neutral-200 dark:border-neutral-600',
+      'p-3',
+      'text-base font-sans',
+      'text-neutral-900 dark:text-white',
+      'bg-neutral-50 dark:bg-neutral-800',
+    ].join(' ');
+  };
+
   const getLoadingTextClasses = () => {
     return 'p-4 text-neutral-600 dark:text-neutral-400 font-sans';
   };
@@ -135,9 +182,9 @@ export const OutletDropdown = React.memo(function OutletDropdown({
     return 'text-neutral-900 dark:text-white font-sans';
   };
 
-  const handleClose = useCallback(() => {
-    setShowDropdown(false);
-  }, [setShowDropdown]);
+  const getNoResultsClasses = () => {
+    return 'p-4 text-neutral-500 dark:text-neutral-400 font-sans text-center';
+  };
 
   return (
     <View className={getContainerClasses()}>
@@ -161,6 +208,16 @@ export const OutletDropdown = React.memo(function OutletDropdown({
 
       {showDropdown && !disabled && (
         <View className={getDropdownClasses()}>
+          {/* Search Input */}
+          <TextInput
+            className={getSearchInputClasses()}
+            placeholder="Cari outlet..."
+            placeholderTextColor={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'}
+            value={searchQuery}
+            onChangeText={handleSearchChange}
+            autoFocus
+          />
+
           {loading ? (
             <Text className={getLoadingTextClasses()}>
               Memuat outlet...
@@ -170,22 +227,39 @@ export const OutletDropdown = React.memo(function OutletDropdown({
               persistentScrollbar
               nestedScrollEnabled
               showsVerticalScrollIndicator={true}
+              style={{ maxHeight: 200 }}
             >
-              {outlets.map(outlet => (
-                <TouchableOpacity
-                  key={outlet.id}
-                  className={getOptionClasses()}
-                  onPress={() => handleSelectOutlet(outlet.id)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${outlet.name} ${outlet.code}`}
-                >
-                  <Text className={getOptionTextClasses()}>
-                    {outlet.name} ({outlet.code})
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {filteredOutlets.length > 0 ? (
+                filteredOutlets.map(outlet => (
+                  <TouchableOpacity
+                    key={outlet.id}
+                    className={getOptionClasses()}
+                    onPress={() => handleSelectOutlet(outlet.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${outlet.name} ${outlet.code}`}
+                  >
+                    <Text className={getOptionTextClasses()}>
+                      {outlet.name} ({outlet.code})
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <Text className={getNoResultsClasses()}>
+                  {searchQuery.trim() ? 'Outlet tidak ditemukan' : 'Tidak ada outlet'}
+                </Text>
+              )}
             </Animated.ScrollView>
           )}
+
+          {/* Close button area - tap outside to close */}
+          <TouchableOpacity
+            className="p-2 items-center border-t border-neutral-200 dark:border-neutral-600"
+            onPress={handleCloseDropdown}
+          >
+            <Text className="text-sm text-neutral-500 dark:text-neutral-400">
+              Tutup
+            </Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>

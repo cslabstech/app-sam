@@ -4,7 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { router, useFocusEffect } from 'expo-router';
 
-import { DateFilter } from '@/components/DateFilter';
+import { AdvancedFilterBottomSheet, type AdvancedFilterBottomSheetRef } from '@/components/AdvancedFilterBottomSheet';
+import { HeaderSearchFilter } from '@/components/HeaderSearchFilter';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { PlanVisit, usePlanVisit } from '@/hooks/data/usePlanVisit';
 import { useThemeStyles } from '@/hooks/utils/useThemeStyles';
@@ -26,6 +27,8 @@ const usePlanVisitFilters = () => {
   const [currentFilters, setCurrentFilters] = useState<FilterParams>({
     filterType: 'all'
   });
+  const [inputValue, setInputValue] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const getApiParams = useCallback((filters: FilterParams, pageNum: number, perPage: number) => {
     const params: Record<string, any> = {
@@ -35,6 +38,12 @@ const usePlanVisitFilters = () => {
       sort_direction: 'desc',
     };
 
+    // Add search if available
+    if (searchQuery.trim()) {
+      params.search = searchQuery.trim();
+    }
+
+    // Add date/month filters
     if (filters.filterType === 'month' && filters.month && filters.year) {
       params.month = filters.month;
       params.year = filters.year;
@@ -43,16 +52,38 @@ const usePlanVisitFilters = () => {
     }
 
     return params;
-  }, []);
+  }, [searchQuery]);
 
   const updateFilters = useCallback((filters: FilterParams) => {
     setCurrentFilters(filters);
   }, []);
 
+  // Handle search input changes
+  const handleSearchInput = useCallback((text: string) => {
+    setInputValue(text);
+    setSearchQuery(text);
+  }, []);
+
+  // Clear search input
+  const clearSearch = useCallback(() => {
+    setInputValue('');
+    setSearchQuery('');
+  }, []);
+
+  // Check if filters are active
+  const hasActiveFilters = useCallback(() => {
+    return currentFilters.filterType !== 'all';
+  }, [currentFilters.filterType]);
+
   return {
     currentFilters,
+    inputValue,
+    searchQuery,
     updateFilters,
     getApiParams,
+    handleSearchInput,
+    clearSearch,
+    hasActiveFilters,
   };
 };
 
@@ -467,9 +498,12 @@ export default React.memo(function PlanVisitListScreen() {
   const [perPage] = useState(20);
 
   // Custom hooks
-  const { currentFilters, updateFilters, getApiParams } = usePlanVisitFilters();
+  const { currentFilters, inputValue, updateFilters, getApiParams, handleSearchInput, clearSearch, hasActiveFilters } = usePlanVisitFilters();
   const { fetchState, refreshing, executeFetch, setRefreshState, mounted } = usePlanVisitFetch();
   const { handleDelete, handleCreate } = usePlanVisitActions();
+
+  // Advanced filter bottom sheet ref
+  const filterBottomSheetRef = useRef<AdvancedFilterBottomSheetRef>(null);
 
   // Optimized callbacks
   const handleBack = useCallback(() => {
@@ -515,6 +549,118 @@ export default React.memo(function PlanVisitListScreen() {
   const handleItemDelete = useCallback((item: PlanVisit) => {
     handleDelete(item, handleDeleteSuccess);
   }, [handleDelete, handleDeleteSuccess]);
+
+  // Advanced filter handlers
+  const handleAdvancedFilterPress = useCallback(() => {
+    filterBottomSheetRef.current?.present();
+  }, []);
+
+  const handleAdvancedFilterChange = useCallback((sectionKey: string, value: string | number | string[]) => {
+    const newFilters = { ...currentFilters };
+    const stringValue = String(value);
+    
+    if (sectionKey === 'filterType') {
+      // Use direct assignment for known values
+      if (stringValue === 'all') {
+        newFilters.filterType = 'all';
+        delete newFilters.month;
+        delete newFilters.year;
+        delete newFilters.date;
+      } else if (stringValue === 'month') {
+        newFilters.filterType = 'month';
+        delete newFilters.date;
+      } else if (stringValue === 'date') {
+        newFilters.filterType = 'date';
+        delete newFilters.month;
+        delete newFilters.year;
+      }
+    } else if (sectionKey === 'month') {
+      newFilters.month = stringValue;
+    } else if (sectionKey === 'year') {
+      newFilters.year = stringValue;
+    } else if (sectionKey === 'date') {
+      newFilters.date = stringValue;
+    }
+    
+    handleFilterChange(newFilters);
+  }, [currentFilters, handleFilterChange]);
+
+  const handleApplyFilters = useCallback(() => {
+    filterBottomSheetRef.current?.dismiss();
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    const resetFilters: FilterParams = { filterType: 'all' };
+    handleFilterChange(resetFilters);
+  }, [handleFilterChange]);
+
+  // Prepare filter sections for bottom sheet
+  const filterSections = useMemo(() => {
+    const sections: any[] = [
+      {
+        title: 'Tipe Filter',
+        key: 'filterType',
+        type: 'options',
+        options: [
+          { label: 'Semua Data', value: 'all' },
+          { label: 'Filter per Bulan', value: 'month' },
+          { label: 'Filter per Tanggal', value: 'date' },
+        ],
+        selectedValue: currentFilters.filterType,
+      },
+    ];
+
+    // Add month/year selection if filter type is 'month'
+    if (currentFilters.filterType === 'month') {
+      sections.push(
+        {
+          title: 'Bulan',
+          key: 'month',
+          type: 'dropdown',
+          options: [
+            { label: 'Januari', value: '01' },
+            { label: 'Februari', value: '02' },
+            { label: 'Maret', value: '03' },
+            { label: 'April', value: '04' },
+            { label: 'Mei', value: '05' },
+            { label: 'Juni', value: '06' },
+            { label: 'Juli', value: '07' },
+            { label: 'Agustus', value: '08' },
+            { label: 'September', value: '09' },
+            { label: 'Oktober', value: '10' },
+            { label: 'November', value: '11' },
+            { label: 'Desember', value: '12' },
+          ],
+          selectedValue: currentFilters.month || '',
+          placeholder: 'Pilih bulan',
+        },
+        {
+          title: 'Tahun',
+          key: 'year',
+          type: 'dropdown',
+          options: Array.from({ length: 4 }, (_, i) => {
+            const year = new Date().getFullYear() - 2 + i;
+            return { label: year.toString(), value: year.toString() };
+          }),
+          selectedValue: currentFilters.year || new Date().getFullYear().toString(),
+          placeholder: 'Pilih tahun',
+        }
+      );
+    }
+
+    // Add date selection if filter type is 'date'  
+    if (currentFilters.filterType === 'date') {
+      const today = new Date().toISOString().split('T')[0];
+      sections.push({
+        title: 'Pilih Tanggal',
+        key: 'date',
+        type: 'date',
+        selectedValue: currentFilters.date || today,
+      });
+    }
+
+    return sections;
+  }, [currentFilters]);
 
   const renderPlanVisitItem = useCallback(({ item }: { item: PlanVisit }) => (
     <PlanVisitItem
@@ -593,48 +739,66 @@ export default React.memo(function PlanVisitListScreen() {
         onCreate={handleCreate}
       />
 
-      <View className="flex-1 px-4 pt-4">
-        <DateFilter
-          onFilterChange={handleFilterChange}
-          initialFilters={currentFilters}
+      <View className="flex-1">
+        <HeaderSearchFilter
+          searchValue={inputValue}
+          onSearchChange={handleSearchInput}
+          onClearSearch={clearSearch}
+          onAdvancedFilterPress={handleAdvancedFilterPress}
+          placeholder="Cari plan visit..."
+          hasActiveFilter={hasActiveFilters()}
+          showAdvancedFilter={true}
+          useSafeArea={false}
         />
         
-        <ErrorDisplay
-          error={error}
-          fetchError={fetchState.error}
-          colors={colors}
-        />
-        
-        <LoadingIndicator
-          visible={fetchState.loading && planVisits.length > 0}
-          colors={colors}
-        />
-        
-        {hasData ? (
-          <>
-            <ListHeader
-              planVisits={planVisits}
-              meta={meta}
-              currentFilters={currentFilters}
-              colors={colors}
-            />
-            <FlatList
-              data={planVisits}
-              renderItem={renderPlanVisitItem}
-              keyExtractor={keyExtractor}
-              refreshControl={refreshControl}
-              showsVerticalScrollIndicator={false}
-              removeClippedSubviews={true}
-              initialNumToRender={8}
-              maxToRenderPerBatch={5}
-              windowSize={8}
-              getItemLayout={getItemLayout}
-            />
-          </>
-        ) : (
-          <EmptyState currentFilters={currentFilters} colors={colors} />
-        )}
+        <View className="flex-1 px-4 pt-4">
+          <ErrorDisplay
+            error={error}
+            fetchError={fetchState.error}
+            colors={colors}
+          />
+          
+          <LoadingIndicator
+            visible={fetchState.loading && planVisits.length > 0}
+            colors={colors}
+          />
+          
+          {hasData ? (
+            <>
+              <ListHeader
+                planVisits={planVisits}
+                meta={meta}
+                currentFilters={currentFilters}
+                colors={colors}
+              />
+              <FlatList
+                data={planVisits}
+                renderItem={renderPlanVisitItem}
+                keyExtractor={keyExtractor}
+                refreshControl={refreshControl}
+                showsVerticalScrollIndicator={false}
+                removeClippedSubviews={true}
+                initialNumToRender={8}
+                maxToRenderPerBatch={5}
+                windowSize={8}
+                getItemLayout={getItemLayout}
+              />
+            </>
+          ) : (
+            <EmptyState currentFilters={currentFilters} colors={colors} />
+          )}
+        </View>
       </View>
+
+      {/* Advanced Filter Bottom Sheet */}
+      <AdvancedFilterBottomSheet
+        ref={filterBottomSheetRef}
+        sections={filterSections}
+        onFilterChange={handleAdvancedFilterChange}
+        onApplyFilters={handleApplyFilters}
+        onClearFilters={handleClearFilters}
+        hasActiveFilters={hasActiveFilters()}
+      />
     </View>
   );
 }); 

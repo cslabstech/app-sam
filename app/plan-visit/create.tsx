@@ -1,7 +1,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { OutletDropdown } from '@/components/OutletDropdown';
@@ -63,36 +63,21 @@ const useCreatePlanVisitForm = () => {
 };
 
 const useOutletManagement = () => {
-  const { outlets, loading: outletsLoading, fetchOutlets } = useOutlet('');
+  const [searchQuery, setSearchQuery] = useState(''); // Tambah state untuk search query
+  const { outlets, loading: outletsLoading, fetchOutlets } = useOutlet(searchQuery); // Pass searchQuery ke useOutlet
   const [showDropdown, setShowDropdown] = useState(false);
   const abortController = useRef<AbortController | null>(null);
 
-  const loadOutlets = useCallback(async () => {
-    if (abortController.current) {
-      abortController.current.abort();
-    }
-    
-    abortController.current = new AbortController();
-    
-    try {
-      await fetchOutlets();
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        console.log('Outlet fetch aborted');
-        return;
-      }
-      console.error('Error loading outlets:', error);
-    }
-  }, [fetchOutlets]);
+  // Remove loadOutlets function karena sekarang auto fetch berdasarkan searchQuery
+  // useEffect sudah di-handle di useOutlet hook
 
   useEffect(() => {
-    loadOutlets();
     return () => {
       if (abortController.current) {
         abortController.current.abort();
       }
     };
-  }, [loadOutlets]);
+  }, []);
 
   const formattedOutlets: OutletData[] = useMemo(() => 
     outlets.map(outlet => ({
@@ -111,12 +96,17 @@ const useOutletManagement = () => {
     setShowDropdown(false);
   }, []);
 
+  const handleSearchChange = useCallback((query: string) => {
+    setSearchQuery(query);
+  }, []);
+
   return {
     outlets: formattedOutlets,
     outletsLoading,
     showDropdown,
     handleDropdownToggle,
     closeDropdown,
+    handleSearchChange,
   };
 };
 
@@ -199,9 +189,9 @@ const OutletSection = React.memo(function OutletSection({
   outlets, 
   selectedOutletId, 
   onSelect, 
-  showDropdown, 
-  onToggleDropdown, 
-  outletsLoading, 
+  showDropdown,
+  onToggleDropdown,
+  onSearchChange,
   loading, 
   fieldErrors, 
   colors 
@@ -211,66 +201,36 @@ const OutletSection = React.memo(function OutletSection({
   onSelect: (id: string) => void;
   showDropdown: boolean;
   onToggleDropdown: (show: boolean) => void;
-  outletsLoading: boolean;
+  onSearchChange: (query: string) => void;
   loading: boolean;
   fieldErrors: FormErrors;
   colors: any;
 }) {
-  const cardStyle = useMemo(() => ({ 
-    backgroundColor: colors.card,
-    borderColor: colors.border,
-    minHeight: 48 
-  }), [colors.card, colors.border]);
-
-  const iconBackgroundStyle = useMemo(() => ({ 
-    backgroundColor: colors.primary + '20' 
-  }), [colors.primary]);
-
-  const errorBorderStyle = useMemo(() => ({ 
-    borderColor: fieldErrors.outlet_id ? colors.danger : 'transparent' 
-  }), [fieldErrors.outlet_id, colors.danger]);
-
   return (
-    <TouchableOpacity 
-      className="rounded-lg border p-4 mb-4 shadow-sm"
-      style={cardStyle}
-      activeOpacity={1}
-    >
-      <View className="flex-row items-center mb-4">
-        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={iconBackgroundStyle}>
-          <IconSymbol name="building.2" size={18} color={colors.primary} />
+    <View className="mb-6">
+      <Text className="text-base font-medium mb-3" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
+        Outlet <Text style={{ color: colors.danger }}>*</Text>
+      </Text>
+      <OutletDropdown
+        outlets={outlets}
+        selectedOutletId={selectedOutletId || null}
+        onSelect={onSelect}
+        onSearchChange={onSearchChange}
+        showDropdown={showDropdown}
+        setShowDropdown={onToggleDropdown}
+        loading={loading}
+        disabled={loading}
+      />
+      {fieldErrors.outlet_id && (
+        <View className="mt-2">
+          {fieldErrors.outlet_id.map((error, index) => (
+            <Text key={index} className="text-sm" style={{ fontFamily: 'Inter_400Regular', color: colors.danger }}>
+              {error}
+            </Text>
+          ))}
         </View>
-        <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
-          Pilih Outlet
-        </Text>
-      </View>
-      
-      <View className="mb-3">
-        <Text className="mb-3 text-base font-medium" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
-          Outlet <Text style={{ color: colors.danger }}>*</Text>
-        </Text>
-        <View className={fieldErrors.outlet_id ? 'border rounded-lg' : ''} style={errorBorderStyle}>
-          <OutletDropdown
-            outlets={outlets}
-            selectedOutletId={selectedOutletId || null}
-            onSelect={onSelect}
-            showDropdown={showDropdown}
-            setShowDropdown={onToggleDropdown}
-            loading={outletsLoading}
-            disabled={loading}
-          />
-        </View>
-        {fieldErrors.outlet_id && (
-          <View className="mt-2">
-            {fieldErrors.outlet_id.map((error, index) => (
-              <Text key={index} className="text-xs" style={{ fontFamily: 'Inter_400Regular', color: colors.danger }}>
-                {error}
-              </Text>
-            ))}
-          </View>
-        )}
-      </View>
-    </TouchableOpacity>
+      )}
+    </View>
   );
 });
 
@@ -287,20 +247,10 @@ const DateSection = React.memo(function DateSection({
   colors: any;
   formatDate: (date: Date) => string;
 }) {
-  const cardStyle = useMemo(() => ({ 
-    backgroundColor: colors.card,
-    borderColor: colors.border,
-    minHeight: 48 
-  }), [colors.card, colors.border]);
-
-  const iconBackgroundStyle = useMemo(() => ({ 
-    backgroundColor: colors.primary + '20' 
-  }), [colors.primary]);
-
   const inputStyle = useMemo(() => ({ 
     borderColor: fieldErrors.visit_date ? colors.danger : colors.border,
-    backgroundColor: colors.card,
-  }), [fieldErrors.visit_date, colors.danger, colors.border, colors.card]);
+    backgroundColor: colors.background,
+  }), [fieldErrors.visit_date, colors.danger, colors.border, colors.background]);
 
   const formattedDateText = useMemo(() => 
     formatDate(planDate),
@@ -308,49 +258,31 @@ const DateSection = React.memo(function DateSection({
   );
 
   return (
-    <TouchableOpacity 
-      className="rounded-lg border p-4 mb-4 shadow-sm"
-      style={cardStyle}
-      activeOpacity={1}
-    >
-      <View className="flex-row items-center mb-4">
-        <View className="w-9 h-9 rounded-lg items-center justify-center mr-3" style={iconBackgroundStyle}>
-          <IconSymbol name="calendar" size={18} color={colors.primary} />
-        </View>
-        <Text className="text-lg font-semibold" style={{ fontFamily: 'Inter_600SemiBold', color: colors.text }}>
-          Tanggal Kunjungan
+    <View className="mb-6">
+      <Text className="text-base font-medium mb-3" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
+        Tanggal Kunjungan <Text style={{ color: colors.danger }}>*</Text>
+      </Text>
+      <Pressable
+        className="rounded-lg border px-4 py-3 flex-row items-center justify-between"
+        style={inputStyle}
+        onPress={onPress}
+        accessibilityRole="button"
+      >
+        <Text className="text-base flex-1" style={{ fontFamily: 'Inter_400Regular', color: colors.text }}>
+          {formattedDateText}
         </Text>
-      </View>
-      
-      <View className="mb-3">
-        <Text className="mb-3 text-base font-medium" style={{ fontFamily: 'Inter_500Medium', color: colors.text }}>
-          Tanggal Plan Visit <Text style={{ color: colors.danger }}>*</Text>
-        </Text>
-        <Pressable
-          className="rounded-lg border px-3 py-3 flex-row items-center justify-between"
-          style={inputStyle}
-          onPress={onPress}
-          accessibilityRole="button"
-        >
-          <View className="flex-row items-center">
-            <IconSymbol name="calendar" size={20} color={colors.primary} />
-            <Text className="ml-3 text-base" style={{ fontFamily: 'Inter_400Regular', color: colors.text }}>
-              {formattedDateText}
+        <IconSymbol name="calendar" size={20} color={colors.textSecondary} />
+      </Pressable>
+      {fieldErrors.visit_date && (
+        <View className="mt-2">
+          {fieldErrors.visit_date.map((error, index) => (
+            <Text key={index} className="text-sm" style={{ fontFamily: 'Inter_400Regular', color: colors.danger }}>
+              {error}
             </Text>
-          </View>
-          <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
-        </Pressable>
-        {fieldErrors.visit_date && (
-          <View className="mt-2">
-            {fieldErrors.visit_date.map((error, index) => (
-              <Text key={index} className="text-xs" style={{ fontFamily: 'Inter_400Regular', color: colors.danger }}>
-                {error}
-              </Text>
-            ))}
-          </View>
-        )}
-      </View>
-    </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </View>
   );
 });
 
@@ -367,11 +299,6 @@ const DatePickerModal = React.memo(function DatePickerModal({
   onClose: () => void;
   colors: any;
 }) {
-  const cancelButtonStyle = useMemo(() => ({ 
-    backgroundColor: colors.card, 
-    borderColor: colors.border 
-  }), [colors.card, colors.border]);
-
   if (!show) return null;
 
   return (
@@ -384,10 +311,10 @@ const DatePickerModal = React.memo(function DatePickerModal({
         minimumDate={new Date()}
       />
       {Platform.OS === 'ios' && (
-        <View className="flex-row justify-end mt-3 gap-3">
+        <View className="flex-row justify-end mt-4 gap-3">
           <Pressable
             className="px-4 py-2 rounded-lg border"
-            style={cancelButtonStyle}
+            style={{ borderColor: colors.border, backgroundColor: colors.background }}
             onPress={onClose}
             accessibilityRole="button"
           >
@@ -431,7 +358,7 @@ const SubmitButton = React.memo(function SubmitButton({
 
   return (
     <Pressable
-      className="w-full py-4 rounded-lg items-center justify-center mb-8"
+      className="w-full py-4 rounded-lg items-center justify-center"
       style={buttonStyle}
       onPress={onPress}
       disabled={loading}
@@ -466,6 +393,7 @@ export default React.memo(function CreatePlanVisitScreen() {
     showDropdown,
     handleDropdownToggle,
     closeDropdown,
+    handleSearchChange,
   } = useOutletManagement();
 
   const {
@@ -503,12 +431,6 @@ export default React.memo(function CreatePlanVisitScreen() {
   const handleDatePickerChange = useCallback((event: any, selectedDate?: Date) => {
     handleDateChange(event, selectedDate, handleDateSelect, () => clearFieldError('visit_date'));
   }, [handleDateChange, handleDateSelect, clearFieldError]);
-
-  const handleScreenPress = useCallback(() => {
-    if (showDropdown) {
-      closeDropdown();
-    }
-  }, [showDropdown, closeDropdown]);
 
   const handleSubmit = useCallback(async () => {
     if (!mounted.current) return;
@@ -586,11 +508,11 @@ export default React.memo(function CreatePlanVisitScreen() {
       <Header colors={colors} insets={insets} onBack={handleBack} />
 
       <ScrollView 
-        className="flex-1 px-4 pt-6"
-        onTouchStart={handleScreenPress}
+        className="flex-1 px-4"
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         removeClippedSubviews={true}
+        contentContainerStyle={{ paddingTop: 24, paddingBottom: 32 }}
       >
         <OutletSection
           outlets={outlets}
@@ -598,8 +520,8 @@ export default React.memo(function CreatePlanVisitScreen() {
           onSelect={handleOutletSelect}
           showDropdown={showDropdown}
           onToggleDropdown={handleDropdownToggle}
-          outletsLoading={outletsLoading}
-          loading={loading}
+          onSearchChange={handleSearchChange}
+          loading={outletsLoading}
           fieldErrors={fieldErrors}
           colors={colors}
         />
