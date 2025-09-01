@@ -7,7 +7,10 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const NotFoundIcon = React.memo(function NotFoundIcon({ colors }: { colors: any }) {
+/**
+ * Simple icon component - no need for memoization
+ */
+function NotFoundIcon({ colors }: { colors: any }) {
   return (
     <IconSymbol 
       name="exclamationmark.triangle.fill" 
@@ -16,46 +19,56 @@ const NotFoundIcon = React.memo(function NotFoundIcon({ colors }: { colors: any 
       style={{ marginBottom: 32 }}
     />
   );
-});
+}
 
-const NotFoundContent = React.memo(function NotFoundContent() {
+/**
+ * Simple text content component - no need for memoization
+ */
+function NotFoundContent() {
   return (
     <>
       <Text 
         className="text-2xl font-bold text-neutral-900 dark:text-neutral-100 text-center mb-4"
         style={{ fontFamily: 'Inter' }}
       >
-        Halaman Tidak Ditemukan
+        Page Not Found
       </Text>
       <Text 
         className="text-base text-slate-600 dark:text-slate-300 text-center mb-8 leading-7"
         style={{ fontFamily: 'Inter' }}
       >
-        Maaf, halaman yang Anda cari tidak tersedia.
+        Sorry, the page you are looking for is not available.
       </Text>
     </>
   );
-});
+}
 
-const BackToHomeButton = React.memo(function BackToHomeButton() {
+/**
+ * Simple button component - no need for memoization
+ */
+function BackToHomeButton() {
   return (
     <Link href="/" asChild>
       <Button 
-        title="Kembali ke Beranda"
+        title="Back to Home"
         variant="primary"
         style={{ minWidth: 200 }}
       />
     </Link>
   );
-});
+}
 
+/**
+ * 404 Not Found page with clean, simple components
+ * Follows KISS principle - no unnecessary optimization
+ */
 export default function NotFoundScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Halaman Tidak Ditemukan' }} />
+      <Stack.Screen options={{ title: 'Page Not Found' }} />
       <SafeAreaView className="flex-1 bg-neutral-50 dark:bg-neutral-900">
         <View className="flex-1 items-center justify-center px-6">
           <NotFoundIcon colors={colors} />

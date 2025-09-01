@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useNotification } from '@/hooks/utils/useNotification';
 
 interface NotifIdContextProps {
   notifId: string | null;
@@ -15,9 +16,30 @@ export const NotifIdProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [notifId, setNotifId] = useState<string | null>(null);
   const [notificationPermission, setNotificationPermission] = useState<'default' | 'granted' | 'denied' | null>(null);
   const [notifIdLoading, setNotifIdLoading] = useState<boolean>(true);
+  
+  // Use the simplified notification hook
+  const { notificationId, permission, loading } = useNotification();
+  
+  // Update local state when notification hook provides data
+  useEffect(() => {
+    if (notificationId) {
+      setNotifId(notificationId);
+    }
+    if (permission) {
+      setNotificationPermission(permission);
+    }
+    setNotifIdLoading(loading);
+  }, [notificationId, permission, loading]);
 
   return (
-    <NotifIdContext.Provider value={{ notifId, setNotifId, notificationPermission, setNotificationPermission, notifIdLoading, setNotifIdLoading }}>
+    <NotifIdContext.Provider value={{ 
+      notifId, 
+      setNotifId, 
+      notificationPermission, 
+      setNotificationPermission, 
+      notifIdLoading, 
+      setNotifIdLoading 
+    }}>
       {children}
     </NotifIdContext.Provider>
   );

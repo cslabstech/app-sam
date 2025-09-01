@@ -7,7 +7,7 @@ import { useRouter } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Input } from '@/components/ui/Input';
-import { useAuth } from '@/hooks/data/useAuth';
+import { useAuth } from '@/context/auth-context';
 import { useOutlet } from '@/hooks/data/useOutlet';
 import { useOutletLevelFields } from '@/hooks/data/useReference';
 import { useCurrentLocation } from '@/hooks/utils/useCurrentLocation';

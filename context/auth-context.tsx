@@ -1,4 +1,5 @@
-import { useAuth as useAuthHook, User } from '@/hooks/data/useAuth';
+import { useAuth as useAuthHook } from '@/hooks/auth/useAuth';
+import type { User } from '@/types/common';
 import { setAutoLogoutCallback } from '@/utils/api';
 import React, { createContext, useContext, useEffect } from 'react';
 
@@ -6,11 +7,11 @@ interface AuthContextProps {
   user: User | null;
   token: string | null;
   loading: boolean;
-  permissions: string[]; // wajib ada
+  permissions: string[];
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
-  loginWithToken: (token: string, user: any, permissions?: string[]) => Promise<void>;
+  loginWithToken: (token: string, user: User, permissions?: string[]) => Promise<void>;
   requestOtp: (phone: string) => Promise<any>;
   verifyOtp: (phone: string, otp: string) => Promise<any>;
 }
@@ -18,40 +19,18 @@ interface AuthContextProps {
 export const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const {
-    user,
-    token,
-    loading,
-    login,
-    logout,
-    refreshUser,
-    loginWithToken,
-    requestOtp,
-    verifyOtp,
-    permissions,
-  } = useAuthHook();
+  const authHook = useAuthHook();
 
-  // Setup auto logout callback untuk API
+  // Setup auto logout callback for API
   useEffect(() => {
     setAutoLogoutCallback(() => {
-      // Logout tanpa loading state untuk menghindari UI flicker
-      logout();
+      // Logout without loading state to avoid UI flicker
+      authHook.logout();
     });
-  }, [logout]);
+  }, [authHook.logout]);
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      token, 
-      loading, 
-      login, 
-      logout, 
-      refreshUser, 
-      loginWithToken, 
-      requestOtp, 
-      verifyOtp, 
-      permissions 
-    }}>
+    <AuthContext.Provider value={authHook}>
       {children}
     </AuthContext.Provider>
   );
